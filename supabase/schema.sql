@@ -1,6 +1,6 @@
 -- DulaHQ — Supabase Schema (Free Tier Optimized)
 -- Run this in Supabase Dashboard > SQL Editor
--- Idempotent: safe to re-run
+-- Idempotent: safe to re-run, even if "tournaments" already exists with different columns
 
 -- 1. Main tournaments table: stores entire S as JSONB (fastest migration from Sheets)
 -- Later you can normalize to categories/teams/matches tables, but JSONB keeps 100% compat today.
@@ -10,6 +10,10 @@ create table if not exists public.tournaments (
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+-- If the table already existed (different schema), add the missing columns:
+alter table public.tournaments add column if not exists data jsonb;
+alter table public.tournaments add column if not exists updated_at timestamptz default now();
+alter table public.tournaments add column if not exists created_at timestamptz default now();
 
 -- 2. Optional normalized tables for future queries/analytics (not required for MVP)
 -- Keep commented until you want to query "all matches where homeId = X"
@@ -42,8 +46,12 @@ create policy "authenticated can update tournaments"
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
--- 4. Realtime
-alter publication supabase_realtime add table public.tournaments;
+-- 4. Realtime (safe if already added)
+do $$
+begin
+  alter publication supabase_realtime add table public.tournaments;
+exception when duplicate_object then null;
+end $$;
 
 -- 5. Storage for tickler photos / documents (1GB free)
 -- Create bucket via Dashboard > Storage > New bucket: name = 'dulahq-docs', public = true
