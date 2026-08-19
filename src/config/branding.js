@@ -15,10 +15,11 @@ export const BRANDING = {
   appShortAccent: 'HQ', // second part colored with gold
   tagline: import.meta.env.VITE_BRAND_TAGLINE || 'Tournament Manager',
 
-  // Logos — env can be /branding/my-cup/logo.png or https://cdn...
-  logo: import.meta.env.VITE_BRAND_LOGO || '/branding/dulahq/logo.png',
-  logoWhite: import.meta.env.VITE_BRAND_LOGO_WHITE || '/branding/dulahq/logo.png',
-  favicon: import.meta.env.VITE_BRAND_FAVICON || '/branding/dulahq/logo.png',
+  // Logos — Dula HQ text is prevalent, logos are empty by default (admin uploads per spec)
+  // To restore Dula shield: set VITE_BRAND_LOGO=/branding/dulahq/logo.png
+  logo: import.meta.env.VITE_BRAND_LOGO || '',
+  logoWhite: import.meta.env.VITE_BRAND_LOGO_WHITE || '',
+  favicon: import.meta.env.VITE_BRAND_FAVICON || '',
 
   colors: {
     gold: import.meta.env.VITE_BRAND_GOLD || '#c8960a',
