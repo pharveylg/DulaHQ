@@ -31,9 +31,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);color:var(-
 .topbar{padding:14px 20px;border-bottom:2px solid var(--navaccb);display:flex;align-items:center;justify-content:space-between;background:var(--n2);position:sticky;top:0;z-index:50}
 .content{flex:1;padding:20px;max-width:1300px}
 .app-header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--n2);border-bottom:1px solid var(--nb);position:sticky;top:0;z-index:100;flex-wrap:wrap}
-.app-header-logo{width:32px;height:32px;object-fit:contain;flex-shrink:0}
+.app-header-logo{width:40px;height:40px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(0,0,0,.12))}
 .app-header-brand{display:flex;flex-direction:column;margin-right:4px}
-.app-header-name{font-size:var(--fs16);font-weight:700;line-height:1.1}
+.app-header-name{font-size:var(--fs18);font-weight:800;letter-spacing:-.5px;line-height:1.1}
 .app-header-sub{font-size:var(--fs12);color:var(--tm);margin-top:1px}
 .hdr-dropdown-wrap{position:relative}
 .hdr-dropdown-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:var(--r);border:1px solid var(--nb);background:var(--n3);color:var(--text);font-size:var(--fs14);font-weight:500;cursor:pointer;font-family:inherit}
@@ -1714,7 +1714,10 @@ function renderAdminDashboard() {
   // actually has something waiting, rather than always landing on the same one
   var pendingTarget = pendingReg ? 'registrations' : (pendingAccess ? 'accessrequests' : (pendingDocs ? 'documentreviews' : 'registrations'));
 
-  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:22px">'
+  var html = '';
+  // Hero — dashboard (Dula HQ prevalent, neon punch)
+  try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') { var _tmName = (S._tournamentMeta && S._tournamentMeta.name) || 'Mindanao Cup 2026'; var _venue = (S._tournamentMeta && S._tournamentMeta.venue) || 'CDO Sports Complex'; html += Hero('dashboard', { tournamentName: _tmName, venue: _venue, liveCount: liveMatches }); } } catch(e){}
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:22px">'
     + kpiTile_('Categories', S.categories.length, 'ti-layout-grid', null, "navTo('categories')")
     + kpiTile_('Teams', totalTeams, 'ti-users-group', null, "navTo('teams')")
     + kpiTile_('Live now', liveMatches, 'ti-player-play', liveMatches ? 'var(--red)' : null, "navTo('officials')")
@@ -2723,7 +2726,7 @@ function renderTeams() {
   if (S.role === 'admin' && S.viewAllCategories) { renderTeamsAllCategories(); return; }
   var cat = activeCategory();
   setTopbar('Teams', cat.teams.length + ' registered', '<button class="btn" onclick="addDemoTeam()"><i class="ti ti-wand"></i> Add demo team</button><button class="btn primary" onclick="openAddTeam()"><i class="ti ti-plus"></i> Add team</button>');
-  if (!cat.teams.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-users-group"></i><p>No teams in <strong>' + esc(cat.name) + '</strong> yet.</p></div>'; return; }
+  if (!cat.teams.length) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No teams in '+cat.name,subtitle:'Add teams or import via CSV to get started',primaryAction:"openAddTeam()",primaryLabel:'Add team',secondaryAction:"document.getElementById(\'ros-csv-file\')&&document.getElementById(\'ros-csv-file\').click()",secondaryLabel:'Import CSV'});}catch(e){} el('main-content').innerHTML = _h; return; }
   var html = '';
   for (var i = 0; i < cat.teams.length; i++) {
     var tm = cat.teams[i];
@@ -3317,7 +3320,7 @@ function getAdvancers() {
 function renderStandings() {
   if (S.role === 'admin' && S.viewAllCategories) { renderStandingsAllCategories(); return; }
   setTopbar('Standings', '', exportButtonsHtml('standings'));
-  if (!S.generated) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-medal"></i><p>Generate the draw first.</p></div>'; return; }
+  if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate the draw in Setup to see standings',primaryAction:"navTo('setup')"});}catch(e){} el('main-content').innerHTML = _h; return; }
   var all = [];
   for (var gi = 0; gi < S.groups.length; gi++) {
     var grp = S.groups[gi];
@@ -3549,14 +3552,14 @@ function renderBracket() {
   var mc = el('main-content');
   mc.innerHTML = '<div class="view-toggle"><button class="vt-btn' + (S.bracketView === 'chart' ? ' active' : '') + '" onclick="S.bracketView=\'chart\';renderBracket()"><i class="ti ti-tournament"></i> Chart</button><button class="vt-btn' + (S.bracketView === 'list' ? ' active' : '') + '" onclick="S.bracketView=\'list\';renderBracket()"><i class="ti ti-list"></i> List</button></div><div id="bk"></div>';
   var bk = el('bk');
-  if (!S.generated) { bk.innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Generate the draw first.</p></div>'; return; }
+  if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined'&&typeof Hero==='function') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate groups and kick-off times in Setup',primaryAction:"navTo('setup')",primaryLabel:'Go to Setup'});}catch(e){} bk.innerHTML = _h + '<div class="empty" style="padding-top:8px"><i class="ti ti-tournament" style="display:none"></i><p style="font-size:12px;color:var(--tm)">Generate the draw first.</p></div>'; return; }
   var k = S.tournament.structure || 'groups_knockout';
-  if (k === 'knockout' && !S.knockoutRounds.length) { bk.innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Enter the first round results to progress the bracket.</p></div>'; return; }
+  if (k === 'knockout' && !S.knockoutRounds.length) { var _h2=''; try{ if(typeof Hero!=='undefined') _h2=Hero('empty',{title:'Bracket not ready',subtitle:'Enter the first round results to progress',primaryAction:"navTo('officials')"});}catch(e){} bk.innerHTML = _h2; return; }
   var total = S.groupMatches.length, played = 0;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].played) played++; }
   if (k !== 'knockout' && played < total && !S.knockoutRounds.length && !S.tournament.allowEarlyKnockout) {
     var pct = Math.round(played / total * 100);
-    bk.innerHTML = '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
+    var _lockHero=''; try{ if(typeof Hero!=='undefined') _lockHero=Hero('live',{liveCount: played+' of '+total+' played', subtitle:'Dula HQ • Group stage in progress'});}catch(e){} bk.innerHTML = _lockHero + '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
     return;
   }
   if (!S.knockoutRounds.length) { var built = buildKnockout(); if (built) S.knockoutRounds = built; }
@@ -3643,7 +3646,7 @@ function saveKoScore(ri, mi) {
 /* ---------------- SCHEDULE ---------------- */
 function renderSchedule() {
   setTopbar('Match schedule', 'All fixtures', exportButtonsHtml('schedule'));
-  if (!S.generated) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-calendar"></i><p>Generate the draw first.</p></div>'; return; }
+  if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate the draw in Setup to see standings',primaryAction:"navTo('setup')"});}catch(e){} el('main-content').innerHTML = _h; return; }
   var playedCount = 0;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].played) playedCount++; }
   var html = '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
@@ -4173,7 +4176,7 @@ function renderOfficials() {
   if (S.role === 'admin' && S.viewAllCategories) { renderOfficialsAllCategories(); return; }
   var canManage = (S.role === 'admin' || S.role === 'official');
   setTopbar('Officials table', 'Live match overview & pitch assignments', (canManage ? '<button class="btn" onclick="generateOfficialsPacket && generateOfficialsPacket()"><i class="ti ti-printer"></i> Officials Packet</button><button class="btn primary" onclick="renderOfficials()"><i class="ti ti-refresh"></i> Refresh</button>' : '') + exportButtonsHtml('officials'));
-  if (!S.generated) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-table"></i><p>Generate the draw first.</p></div>'; return; }
+  if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate the draw in Setup to see standings',primaryAction:"navTo('setup')"});}catch(e){} el('main-content').innerHTML = _h; return; }
   var pitches = S.tournament.pitches || [];
   var html = '';
   var live = [];
@@ -4482,10 +4485,12 @@ function removeLiveEmbed(id) {
 function renderLiveView() {
   var cat = activeCategory();
   setTopbar('Live', cat.name);
+  var _liveCount2=0; for(var _lc=0;_lc<(S.groupMatches||[]).length;_lc++) if(S.groupMatches[_lc].inProgress) _liveCount2++;
+  var _heroLive=''; try { if(typeof Hero!=='undefined'&&typeof Hero==='function') _heroLive=Hero('live',{liveCount:_liveCount2? _liveCount2+' live':'', subtitle: 'Dula HQ • Tap a stream to watch'}); } catch(e){}
   var mine = [];
   for (var i = 0; i < S.liveEmbeds.length; i++) { if (S.liveEmbeds[i].categoryId === cat.id) mine.push(S.liveEmbeds[i]); }
-  if (!mine.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-player-play"></i><p>No live streams for this category yet.</p></div>'; return; }
-  var html = '';
+  if (!mine.length) { el('main-content').innerHTML = _heroLive + '<div class="empty"><i class="ti ti-player-play"></i><p>No live streams for this category yet.</p></div>'; return; }
+  var html = _heroLive;
   for (var j = 0; j < mine.length; j++) {
     var em = mine[j];
     var m = null;

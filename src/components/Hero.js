@@ -34,7 +34,11 @@ export function Hero(variant, opts = {}) {
       <div style="background:#0a0a0a;border-radius:20px;padding:22px;position:relative;overflow:hidden;text-align:left;color:#fff;min-height:320px;display:flex;flex-direction:column">
         <div style="position:absolute;right:-70px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle at center, #ff3b30 0%, #8b1a12 60%, transparent 70%);opacity:.9;pointer-events:none"></div>
         <div style="position:absolute;right:-10px;bottom:36px;font-size:72px;font-weight:900;letter-spacing:-4px;color:rgba(255,255,255,.06);transform:rotate(-4deg);pointer-events:none;white-space:nowrap">BRACKET</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:20px;background:#fff;color:#0a0a0a;display:inline-flex;width:fit-content;position:relative">LIVE NOW</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;position:relative">
+          <img src="${esc(logo)}" alt="" style="width:22px;height:22px;object-fit:contain;background:#fff;border-radius:6px;padding:3px" onerror="this.style.display='none'">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.7)">Dula HQ • Tournament Manager</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:20px;background:#fff;color:#0a0a0a;display:inline-flex">LIVE NOW</span>
+        </div>
         <div style="font-size:40px;font-weight:900;letter-spacing:-1.5px;line-height:.92;margin-top:14px;position:relative">${titleHtml}</div>
         <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:8px;position:relative">${esc(b.hero.signinSubtitle || 'Book the pitch. Run the bracket.')}</div>
         <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;position:relative">
