@@ -1,0 +1,19 @@
+{
+  "name": "dulahq",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:github": "VITE_DEPLOY_TARGET=github vite build",
+    "build:cloudflare": "VITE_DEPLOY_TARGET=cloudflare vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
