@@ -62,6 +62,7 @@ export function Hero(variant, opts = {}) {
         <div style="position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, #c8ff32 0%, transparent 70%);opacity:.15;pointer-events:none"></div>
         <div style="width:44px;height:44px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden"><img src="${esc(logo)}" alt="" style="width:36px;height:36px;object-fit:contain" onerror="this.style.display='none'"></div>
         <div style="flex:1;min-width:200px;position:relative">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:2px">Dula HQ • Tournament Manager</div>
           <div style="font-size:16px;font-weight:800;letter-spacing:-.5px">${esc(tournamentName)} <span style="font-weight:400;color:rgba(255,255,255,.6);font-size:12px">· ${esc(opts.venue || b.tournament.venue || '')}</span></div>
           <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px">${esc(b.hero.dashboardHero)}</div>
         </div>
@@ -75,6 +76,7 @@ export function Hero(variant, opts = {}) {
       const isTV = variant === 'tv'
       return `
       <div style="${isTV ? 'text-align:center;padding:8px 0' : 'margin-bottom:12px'}">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(0,0,0,.5);margin-bottom:6px;text-align:center">Dula HQ • Tournament Manager</div>
         <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;background:${isTV ? '#c8ff32' : '#0a0a0a'};border:1px solid ${isTV ? '#c8ff32' : '#0a0a0a'};font-family:'JetBrains Mono',monospace;font-size:${isTV ? '13px' : '12px'};font-weight:800;letter-spacing:.04em;color:${isTV ? '#0a0a0a' : '#fff'};text-transform:uppercase">
           <span style="width:8px;height:8px;background:${isTV ? '#0a0a0a' : '#c8ff32'};border-radius:50%;display:inline-block;animation:pulse 1.2s infinite"></span>
           ${esc(b.hero.liveHero)}${opts.liveCount ? ` · ${opts.liveCount}` : ''}
@@ -85,6 +87,7 @@ export function Hero(variant, opts = {}) {
     if (variant === 'empty') {
       return `
       <div style="text-align:center;padding:32px 20px;background:#0a0a0a;border-radius:20px;color:#fff;position:relative;overflow:hidden">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px">Dula HQ</div>
         <div style="width:64px;height:64px;margin:0 auto 12px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center"><i class="ti ti-trophy" style="font-size:32px;color:#0a0a0a"></i></div>
         <div style="font-size:18px;font-weight:800;margin-bottom:6px">${esc(opts.title || b.hero.emptyDrawTitle)}</div>
         <p style="font-size:13px;color:rgba(255,255,255,.7);max-width:420px;margin:0 auto 14px">${esc(opts.subtitle || b.hero.emptyDrawSubtitle)}</p>
@@ -94,6 +97,18 @@ export function Hero(variant, opts = {}) {
         </div>
       </div>`
     }
+  }
+
+  if (variant === 'page') {
+    // Generic page hero — used for every view (Setup, Categories, Teams, etc.)
+    return `
+    <div style="background:#0a0a0a;border-radius:16px;padding:16px;margin-bottom:14px;color:#fff;position:relative;overflow:hidden;border:1px solid #1a1a1a">
+      <div style="position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle, #c8ff32 0%, transparent 70%);opacity:.12;pointer-events:none"></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:6px;position:relative">Dula HQ • ${esc(opts.section || 'Tournament')}</div>
+      <div style="font-size:18px;font-weight:800;letter-spacing:-.5px;position:relative">${esc(opts.title || 'Setup')}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;position:relative">${esc(opts.subtitle || '')}</div>
+      ${opts.stats ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;position:relative">${opts.stats.map(function(s){return '<span style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;background:#fff;color:#0a0a0a">'+esc(s)+'</span>';}).join('')}</div>` : ''}
+    </div>`;
   }
 
   // Fallback — other styles (queue-black / dula-gold / cream-punch) keep original cream/gold look

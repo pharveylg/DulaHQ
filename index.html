@@ -1249,6 +1249,8 @@ function render() {
 /* ---------------- SETUP ---------------- */
 function renderSetup() {
   setTopbar('Tournament setup', 'Configure format, rules and categories', '<button class="btn primary" onclick="saveSetup()"><i class="ti ti-check"></i> Save</button>');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Setup', subtitle: 'Configure your tournament — format, pitches, rules', section: 'Setup'}); } catch(e){}
+  
   var t = S.tournament;
   var ageCats = ['U9', 'U10', 'U11', 'U12', 'U14', 'U16', 'U18', 'Open', '35+', 'Custom'];
   var ageOpts = '';
@@ -1303,7 +1305,7 @@ function renderSetup() {
     tbHtml += '<div class="tb-item"><div class="tb-rank">' + (ti + 1) + '</div><div><div style="font-size:var(--fs14);font-weight:600">' + tbItems[ti][0] + '</div><div style="font-size:var(--fs13);color:var(--tm);margin-top:2px">' + tbItems[ti][1] + '</div>' + tbItems[ti][2] + '</div></div>';
   }
   var canGen = S.teams.length >= 2;
-  var html = '';
+  var html = _pageHero + '';
   html += '<div class="card"><div class="card-title"><i class="ti ti-settings"></i> Details</div>';
   html += '<div class="g2"><div class="field"><label>Tournament name</label><input id="inp-name" value="' + esc(t.name) + '"></div>';
   html += '<div class="field"><label>Venue</label><input id="inp-venue" value="' + esc(t.venue) + '"></div></div>';
@@ -1500,6 +1502,8 @@ function saveBrandingColors(){
 }
 function renderBranding(){
   if (S.role !== 'admin') { setTopbar('Branding', 'Admin only'); el('main-content').innerHTML='<div class="empty"><i class="ti ti-lock"></i><p>Only admins can manage branding.</p></div>'; return; }
+  // Hero — Dula HQ page
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Branding', subtitle: 'Customize logos, colors & sponsors — white-label for any customer', section: 'Setup'}); } catch(e){}
   var b = ensureBranding();
   var eff = getEffectiveBranding();
   var hasCustomLogo = !!(b.logo);
@@ -1794,7 +1798,9 @@ function renderCategorySelect() {
 }
 function renderCategories() {
   setTopbar('Categories', S.categories.length + ' categor' + (S.categories.length === 1 ? 'y' : 'ies'), '<button class="btn primary" onclick="openAddCategory()"><i class="ti ti-plus"></i> Add category</button>');
-  var html = '';
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Categories', subtitle: 'Organize your divisions — Open, U14, Women', section: 'Setup'}); } catch(e){}
+  
+  var html = _pageHero + '';
   for (var i = 0; i < S.categories.length; i++) {
     var c = S.categories[i];
     var isActive = c.id === S.activeCategoryId;
@@ -1899,9 +1905,11 @@ function getAllTeamsAcrossCategories() {
 var USER_ROLE_LABELS = { admin: 'Tournament Manager', referee: 'Referee', official: 'Tournament Committee', team: 'Team Manager', audience: 'Guest' };
 function renderUsers() {
   setTopbar('Users', S.users.length + ' account' + (S.users.length === 1 ? '' : 's'), '<button class="btn primary" onclick="openAddUser()"><i class="ti ti-plus"></i> Add user</button>');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Users', subtitle: 'Manage accounts — admins, managers, referees', section: 'People'}); } catch(e){}
+  
   if (!S.users.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-user"></i><p>No users yet. Add tournament managers, referees, tournament committee members, team managers, or audience accounts.</p></div>'; return; }
   var allTeams = getAllTeamsAcrossCategories();
-  var html = '';
+  var html = _pageHero + '';
   for (var i = 0; i < S.users.length; i++) {
     var u = S.users[i];
     var teamNames = [];
@@ -2024,9 +2032,11 @@ function getAllScheduledMatches() {
 }
 function renderReferees() {
   setTopbar('Referees', S.referees.length + ' registered', '<button class="btn primary" onclick="openAddReferee()"><i class="ti ti-plus"></i> Add referee</button>');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Referees', subtitle: 'Assign and track match officials', section: 'People'}); } catch(e){}
+  
   if (!S.referees.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-whistle"></i><p>No referees yet. Add referees so they can be assigned to matches.</p></div>'; return; }
   var all = getAllScheduledMatches();
-  var html = '';
+  var html = _pageHero + '';
   for (var i = 0; i < S.referees.length; i++) {
     var r = S.referees[i];
     var assigned = [];
@@ -2234,7 +2244,7 @@ function renderOfficiatingTeam() {
     byLevel[lvl].push(m);
   }
   levels.sort(function (a, b) { return a - b; });
-  var html = '<div class="card"><div class="card-title"><i class="ti ti-shield-check"></i> Officiating Team \u2014 Org Chart</div>';
+  var html = _pageHero + '<div class="card"><div class="card-title"><i class="ti ti-shield-check"></i> Officiating Team \u2014 Org Chart</div>';
   for (var li = 0; li < levels.length; li++) {
     var lvl2 = levels[li];
     var members = byLevel[lvl2];
@@ -2414,6 +2424,8 @@ function renderRegisterPage() {
   if (S.regLastSubmitted) {
     var r = S.regLastSubmitted;
     setTopbar('Team Registration', 'Submitted');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Officiating Team', subtitle: 'Committee, commissioners, medical', section: 'People'}); } catch(e){}
+  
     el('main-content').innerHTML = '<div class="card" style="text-align:center;padding:32px 20px"><i class="ti ti-check" style="font-size:var(--fs46);color:var(--green)"></i>'
       + '<div style="font-weight:700;font-size:var(--fs20);margin:12px 0 6px">Registration submitted</div>'
       + '<div style="font-size:var(--fs14);color:var(--tm);margin-bottom:18px;max-width:420px;margin-left:auto;margin-right:auto">' + esc(r.teamName) + ' has been submitted for review. A tournament manager will check your roster and documents, then approve your registration \u2014 you\'ll get a login (Team Manager account) once that happens.</div>'
@@ -2533,10 +2545,12 @@ function renderRegistrations() {
   var pending = 0;
   for (var i = 0; i < S.registrations.length; i++) { if (S.registrations[i].status === 'pending') pending++; }
   setTopbar('Registrations', pending + ' pending review');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Registrations', subtitle: 'Review team entries', section: 'People'}); } catch(e){}
+  
   if (!S.registrations.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-user-plus"></i><p>No team registrations submitted yet.</p></div>'; return; }
   var order = { pending: 0, approved: 1, rejected: 2 };
   var sorted = S.registrations.slice().sort(function (a, b) { return order[a.status] - order[b.status]; });
-  var html = '';
+  var html = _pageHero + '';
   for (var s = 0; s < sorted.length; s++) {
     var r = sorted[s];
     var cat = getCategoryById(r.categoryId);
@@ -2739,8 +2753,10 @@ function renderTeams() {
   if (S.role === 'admin' && S.viewAllCategories) { renderTeamsAllCategories(); return; }
   var cat = activeCategory();
   setTopbar('Teams', cat.teams.length + ' registered', '<button class="btn" onclick="addDemoTeam()"><i class="ti ti-wand"></i> Add demo team</button><button class="btn primary" onclick="openAddTeam()"><i class="ti ti-plus"></i> Add team</button>');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Teams', subtitle: 'Manage squads — rosters, staff, documents', section: 'Teams'}); } catch(e){}
+  
   if (!cat.teams.length) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No teams in '+cat.name,subtitle:'Add teams or import via CSV to get started',primaryAction:"openAddTeam()",primaryLabel:'Add team',secondaryAction:"document.getElementById(\'ros-csv-file\')&&document.getElementById(\'ros-csv-file\').click()",secondaryLabel:'Import CSV'});}catch(e){} el('main-content').innerHTML = _h; return; }
-  var html = '';
+  var html = _pageHero + '';
   for (var i = 0; i < cat.teams.length; i++) {
     var tm = cat.teams[i];
     html += '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
@@ -3205,11 +3221,13 @@ function renderGroups() {
   var titles = { groups_knockout: 'Groups', knockout: 'Knockout', round_robin: 'Round Robin', double_round_robin: 'Double Round Robin', custom: 'Custom matches' };
   var pageTitle = titles[k] || 'Groups';
   setTopbar(pageTitle, '');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Groups', subtitle: 'View groups and fixtures', section: 'Competition'}); } catch(e){}
+  
   if (!S.generated) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-grid-3x3"></i><p>Generate the draw from Setup first.</p></div>'; return; }
   if (k === 'knockout') { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Knockout format \u2014 <a href="#" onclick="navTo(\'bracket\')" style="color:var(--gold)">go to Bracket</a> to enter results.</p></div>'; return; }
   if (k === 'custom') { renderCustomGroups(); return; }
   var isRR = (k === 'round_robin' || k === 'double_round_robin');
-  var html = '';
+  var html = _pageHero + '';
   for (var gi = 0; gi < S.groups.length; gi++) {
     var grp = S.groups[gi];
     var standings = calcGroupStandings(gi);
@@ -3333,6 +3351,8 @@ function getAdvancers() {
 function renderStandings() {
   if (S.role === 'admin' && S.viewAllCategories) { renderStandingsAllCategories(); return; }
   setTopbar('Standings', '', exportButtonsHtml('standings'));
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Standings', subtitle: 'Live tables with head-to-head & fair play', section: 'Competition'}); } catch(e){}
+  
   if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate the draw in Setup to see standings',primaryAction:"navTo('setup')"});}catch(e){} el('main-content').innerHTML = _h; return; }
   var all = [];
   for (var gi = 0; gi < S.groups.length; gi++) {
@@ -3369,7 +3389,7 @@ function renderStandings() {
     var fpA=fairPlayPoints(a.id), fpB=fairPlayPoints(b.id); if(fpA!==fpB) return fpA - fpB;
     return 0;
   });
-  var html = '<div class="card"><div class="card-title"><i class="ti ti-medal"></i> Overall standings</div>';
+  var html = _pageHero + '<div class="card"><div class="card-title"><i class="ti ti-medal"></i> Overall standings</div>';
   html += '<table class="tbl"><thead><tr><th>#</th><th>Team</th><th>Group</th><th class="num">MP</th><th class="num">Pts</th><th class="num">GD</th><th class="num">GF</th></tr></thead><tbody>';
   for (var i = 0; i < all.length; i++) {
     var s2 = all[i];
@@ -3659,10 +3679,12 @@ function saveKoScore(ri, mi) {
 /* ---------------- SCHEDULE ---------------- */
 function renderSchedule() {
   setTopbar('Match schedule', 'All fixtures', exportButtonsHtml('schedule'));
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Schedule', subtitle: 'All fixtures by pitch and time', section: 'Competition'}); } catch(e){}
+  
   if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate the draw in Setup to see standings',primaryAction:"navTo('setup')"});}catch(e){} el('main-content').innerHTML = _h; return; }
   var playedCount = 0;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].played) playedCount++; }
-  var html = '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
+  var html = _pageHero + '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
     + '<span class="badge bg">' + playedCount + '/' + S.groupMatches.length + ' group matches</span></div>';
   for (var gi = 0; gi < S.groups.length; gi++) {
     var grp = S.groups[gi];
@@ -4134,10 +4156,12 @@ function renderDocumentReviews() {
   var pending = 0;
   for (var i = 0; i < all.length; i++) { if (all[i].doc.status === 'pending') pending++; }
   setTopbar('Document Reviews', pending + ' pending review');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Document Reviews', subtitle: 'Verify player IDs & medicals', section: 'People'}); } catch(e){}
+  
   if (!all.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-file-text"></i><p>No document uploads yet.</p></div>'; return; }
   var order = { pending: 0, approved: 1, rejected: 2 };
   var sorted = all.slice().sort(function (a, b) { return order[a.doc.status] - order[b.doc.status]; });
-  var html = '<div class="alert alert-info"><i class="ti ti-info-circle"></i><span>National ID screenshots (eGov PH or LTMS Portal / LTO Digital ID) submitted in lieu of a birth certificate must still be validated in person against the actual image on the portal itself before final approval.</span></div>';
+  var html = _pageHero + '<div class="alert alert-info"><i class="ti ti-info-circle"></i><span>National ID screenshots (eGov PH or LTMS Portal / LTO Digital ID) submitted in lieu of a birth certificate must still be validated in person against the actual image on the portal itself before final approval.</span></div>';
   for (var s = 0; s < sorted.length; s++) {
     var rec = sorted[s];
     var doc = rec.doc;
@@ -4189,9 +4213,11 @@ function renderOfficials() {
   if (S.role === 'admin' && S.viewAllCategories) { renderOfficialsAllCategories(); return; }
   var canManage = (S.role === 'admin' || S.role === 'official');
   setTopbar('Officials table', 'Live match overview & pitch assignments', (canManage ? '<button class="btn" onclick="generateOfficialsPacket && generateOfficialsPacket()"><i class="ti ti-printer"></i> Officials Packet</button><button class="btn primary" onclick="renderOfficials()"><i class="ti ti-refresh"></i> Refresh</button>' : '') + exportButtonsHtml('officials'));
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Officials Table', subtitle: 'Live matches, assignments, scores', section: 'Competition'}); } catch(e){}
+  
   if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate the draw in Setup to see standings',primaryAction:"navTo('setup')"});}catch(e){} el('main-content').innerHTML = _h; return; }
   var pitches = S.tournament.pitches || [];
-  var html = '';
+  var html = _pageHero + '';
   var live = [];
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].inProgress) live.push(S.groupMatches[i]); }
   if (live.length) {
@@ -5733,10 +5759,12 @@ function renderAccessRequests() {
   var pending = 0;
   for (var i = 0; i < S.accessRequests.length; i++) { if (S.accessRequests[i].status === 'pending') pending++; }
   setTopbar('Access Requests', pending + ' pending review');
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Access Requests', subtitle: 'Referees & committee waiting', section: 'People'}); } catch(e){}
+  
   if (!S.accessRequests.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-user-plus"></i><p>No access requests yet.</p></div>'; return; }
   var order = { pending: 0, approved: 1, rejected: 2 };
   var sorted = S.accessRequests.slice().sort(function (a, b) { return order[a.status] - order[b.status]; });
-  var html = '';
+  var html = _pageHero + '';
   for (var s = 0; s < sorted.length; s++) {
     var r = sorted[s];
     var statusBadge = r.status === 'pending' ? '<span class="badge bamb">Pending</span>' : (r.status === 'approved' ? '<span class="badge bg">Approved</span>' : '<span class="badge brd">Rejected</span>');
