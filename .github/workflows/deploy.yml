@@ -31,6 +31,10 @@ jobs:
         run: npm ci
 
       - name: Build for GitHub Pages
+        # Default: uses /DulaHQ/ base for *.github.io URL.
+        # If you set a CUSTOM DOMAIN in GitHub → Settings → Pages, change this to:
+        #   npm run build:github:custom
+        # and also add VITE_CUSTOM_DOMAIN: 'true' (uncomment below).
         run: npm run build:github
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -38,6 +42,7 @@ jobs:
           VITE_SHEETS_SCRIPT_URL: ${{ secrets.VITE_SHEETS_SCRIPT_URL }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_BACKEND: supabase
+          # VITE_CUSTOM_DOMAIN: 'true'  # <-- uncomment when using custom domain
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
