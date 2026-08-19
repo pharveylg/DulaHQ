@@ -37,9 +37,10 @@ export const BRANDING = {
   sponsors: [],
 
   hero: {
-    signinTitle: import.meta.env.VITE_HERO_TITLE || 'Run Your Tournament Like a Pro',
-    signinSubtitle: import.meta.env.VITE_HERO_SUBTITLE || 'Categories · Draws · Live Officiating · Instant Bracket',
-    dashboardHero: 'Welcome back — your tournament at a glance',
+    style: import.meta.env.VITE_HERO_STYLE || 'neon-block', // queue-black | dula-gold | neon-block | cream-punch
+    signinTitle: import.meta.env.VITE_HERO_TITLE || 'Categories.\nDraws.\nLive.',
+    signinSubtitle: import.meta.env.VITE_HERO_SUBTITLE || 'Book the pitch. Run the bracket.',
+    dashboardHero: 'Host the cup. Own the day.',
     liveHero: 'Live Now',
     tvTicker: 'Powered by DulaHQ',
     emptyDrawTitle: 'No draw yet',
