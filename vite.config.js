@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 // GitHub Pages with default *.github.io URL needs base = '/DulaHQ/' (repo name)
-// GitHub Pages with CUSTOM DOMAIN or Cloudflare Pages or local dev use base = '/'
+// GitHub Pages with CUSTOM DOMAIN, Cloudflare Pages, Vercel, or local dev use base = '/'
 export default defineConfig(({ mode }) => {
   const target = process.env.VITE_DEPLOY_TARGET || process.env.DEPLOY_TARGET || ''
   const hasCustomDomain = process.env.VITE_CUSTOM_DOMAIN === 'true' || process.env.CUSTOM_DOMAIN === 'true'

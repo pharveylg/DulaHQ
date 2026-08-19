@@ -2,7 +2,7 @@
 
 Tournament OS for 7-a-side / 11-a-side football: categories → draw generation → live officiating → standings/bracket → officials & live streams.
 
-**Live:** GitHub Pages + Cloudflare Pages (both $0, same Supabase backend)
+**Live:** GitHub Pages + **Vercel** (both $0, same Supabase backend) — Cloudflare disabled
 
 [![Deploy to GitHub Pages](https://github.com/pharveylg/DulaHQ/actions/workflows/deploy.yml/badge.svg)](https://github.com/pharveylg/DulaHQ/actions/workflows/deploy.yml)
 
@@ -21,7 +21,8 @@ This repo is configured for **dual $0 hosting** from a single `main` branch:
 | Host | URL | Bandwidth | How it deploys |
 |------|-----|-----------|----------------|
 | **GitHub Pages** | `https://pharveylg.github.io/DulaHQ/` | 100GB/mo soft cap | Auto via `.github/workflows/deploy.yml` on `push to main` |
-| **Cloudflare Pages** | `https://dulahq.pages.dev` (your subdomain) | **Unlimited** | Connect repo in Cloudflare Dashboard → Pages → Create → Connect GitHub |
+| **Vercel** | `https://dulahq-xxx.vercel.app` | 100GB/mo Hobby | Import repo in Vercel → Build: `npm run build:vercel` → Output: `dist` |
+| <!-- Cloudflare Pages — DISABLED (using Vercel) — see CLOUDFLARE_PAGES_GUIDE.md.disabled | `https://dulahq.pages.dev` | **Unlimited** | Connect repo in Cloudflare → Build: `npm run build:cloudflare` | -->
 
 Both read the same `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — set once in each dashboard.
 
@@ -33,15 +34,16 @@ Both read the same `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — set once i
 
 Push to `main` → live in ~1 min.
 
-### 2. Cloudflare Pages (2 min)
+### 2. Vercel (2 min) — *Cloudflare disabled*
 
-1. https://dash.cloudflare.com → Pages → Create a project → Connect to Git
-2. Select `pharveylg/DulaHQ` → Build settings:
-   - Framework preset: `Vite`
-   - Build command: `npm run build:cloudflare`
+1. https://vercel.com → Add New → Project → Import `pharveylg/DulaHQ`
+2. Build settings (auto-detected from `vercel.json`):
+   - Framework: `Vite`
+   - Build command: `npm run build:vercel`
    - Output directory: `dist`
    - Env vars: Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (Production + Preview)
-3. Deploy → `https://dulahq-xxx.pages.dev` → add custom domain free
+3. Deploy → `https://dulahq-xxx.vercel.app`
+<!-- Cloudflare disabled — to re-enable: `mv CLOUDFLARE_PAGES_GUIDE.md.disabled CLOUDFLARE_PAGES_GUIDE.md` and uncomment `build:cloudflare` in package.json -->
 
 ## Backend — Supabase (Free Tier)
 
@@ -70,9 +72,10 @@ VITE_BACKEND=auto  # auto | supabase | sheets
 | Command | What |
 |---------|------|
 | `npm run dev` | Local dev, base `/` |
-| `npm run build` | Production (Cloudflare) |
+| `npm run build` | Production (Vercel) |
 | `npm run build:github` | GitHub Pages (base `/DulaHQ/`) |
-| `npm run build:cloudflare` | Cloudflare Pages (base `/`) |
+| `npm run build:vercel` | Vercel (base `/`) |
+| `npm run build:cloudflare` | Cloudflare Pages (base `/`) — *disabled* |
 | `npm run preview` | Preview `dist/` |
 
 ## Architecture

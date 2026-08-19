@@ -2,30 +2,53 @@
 -- Your project already has a "tournaments" table from an earlier experiment
 -- with different columns. This makes it match what DulaHQ expects.
 
--- 1. See what you currently have (run this first to confirm)
--- select column_name, data_type from information_schema.columns where table_schema='public' and table_name='tournaments';
+-- FIX for: ERROR 42703: column "data" does not exist  AND  ERROR 22P02: invalid input syntax for type uuid: "primary"
+-- AND ERROR 42804: foreign key categories_tournament_id_fkey cannot be implemented (uuid vs text)
+-- EASIEST FIX: DulaHQ stores categories inside tournaments.data JSONB, so the normalized
+-- "categories" table is not used. Drop it, then force tournaments.id to text.
+-- If you DO need categories later, it will be recreated as text.
 
--- 2. Add missing columns if they don't exist (safe to re-run)
+-- 0. Diagnose (uncomment to see)
+-- select table_name, column_name, data_type from information_schema.columns where table_schema='public' and table_name in ('tournaments','categories') order by table_name, ordinal_position;
+
+-- 1. Drop blocking FK/table (cascade removes the FK). Safe for DulaHQ — DulaHQ uses JSONB, not normalized tables.
+drop table if exists public.categories cascade;
+-- Also drop any other FKs that might reference tournaments(id) generically
+do $$
+declare r record;
+begin
+  for r in
+    select conname, conrelid::regclass::text as tbl
+    from pg_constraint
+    where confrelid = 'public.tournaments'::regclass and contype = 'f'
+  loop
+    begin execute 'alter table ' || r.tbl || ' drop constraint if exists ' || quote_ident(r.conname); exception when others then null; end;
+  end loop;
+end $$;
+
+-- 2. Force tournaments.id to text (works whether it was uuid or already text)
+do $$
+begin
+  begin execute 'alter table public.tournaments alter column id drop default'; exception when others then null; end;
+  begin execute 'alter table public.tournaments alter column id type text using id::text'; exception when others then null; end;
+end $$;
+
+-- 3. Add missing columns if they don't exist (safe to re-run)
 alter table public.tournaments add column if not exists data jsonb;
 alter table public.tournaments add column if not exists updated_at timestamptz default now();
 alter table public.tournaments add column if not exists created_at timestamptz default now();
 
--- 3. Make "data" not-null and ensure id is primary key (if table was created differently)
--- If this fails with "already has primary key", it's fine — ignore.
+-- 4. Ensure id is primary key (if table was created differently)
 do $$
 begin
-  -- Ensure id is primary key
   if not exists (
     select 1 from pg_constraint where conname = 'tournaments_pkey' and conrelid = 'public.tournaments'::regclass
   ) then
-    begin
-      alter table public.tournaments add primary key (id);
-    exception when others then null;
-    end;
+    begin alter table public.tournaments add primary key (id); exception when others then null; end;
   end if;
 end $$;
 
--- 4. Ensure RLS and policies exist
+-- 5. Ensure RLS and policies exist
 alter table public.tournaments enable row level security;
 
 drop policy if exists "public can read tournaments" on public.tournaments;

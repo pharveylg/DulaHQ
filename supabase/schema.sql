@@ -10,7 +10,19 @@ create table if not exists public.tournaments (
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
--- If the table already existed (different schema), add the missing columns:
+-- If the table already existed (different schema), fix it:
+--   • id might be uuid → convert to text so 'primary' works
+--   • missing columns → add them
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='tournaments' and column_name='id' and data_type='uuid'
+  ) then
+    begin execute 'alter table public.tournaments alter column id drop default'; exception when others then null; end;
+    execute 'alter table public.tournaments alter column id type text using id::text';
+  end if;
+end $$;
 alter table public.tournaments add column if not exists data jsonb;
 alter table public.tournaments add column if not exists updated_at timestamptz default now();
 alter table public.tournaments add column if not exists created_at timestamptz default now();

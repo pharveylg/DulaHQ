@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:github": "VITE_DEPLOY_TARGET=github vite build",
     "build:github:custom": "VITE_DEPLOY_TARGET=github VITE_CUSTOM_DOMAIN=true vite build",
-    "build:cloudflare": "VITE_DEPLOY_TARGET=cloudflare vite build",
+    "// build:cloudflare (DISABLED - using Vercel, uncomment to re-enable)": "VITE_DEPLOY_TARGET=cloudflare vite build",
+    "build:vercel": "VITE_DEPLOY_TARGET=vercel vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173"
   },
   "dependencies": {
