@@ -45,6 +45,18 @@ if (typeof window !== 'undefined') {
       const el = document.getElementById('sync-status-badge')
       if (el) console.log('[sync] status', s)
     })
+    // Apply custom branding from S._tournamentMeta.branding if admin uploaded (white-label)
+    try {
+      if (window.S && window.S._tournamentMeta && window.S._tournamentMeta.branding) {
+        if (typeof window.applyBrandingFromCustom === 'function') window.applyBrandingFromCustom();
+        // also update Hero/BRANDING globals if S has custom
+        const b = window.S._tournamentMeta.branding;
+        if (b.gold && window.BRANDING) window.BRANDING.colors.gold = b.gold;
+        if (b.accent && window.BRANDING) window.BRANDING.colors.accent = b.accent;
+        if (b.logo && window.BRANDING) window.BRANDING.logo = b.logo;
+        if (b.sponsors && window.BRANDING) window.BRANDING.sponsors = b.sponsors;
+      }
+    } catch {}
   })
   // Handle ?view=live or ?view=tv public hero without auth
   const params = new URLSearchParams(location.search)

@@ -305,6 +305,7 @@ var NAV = {
   admin: [
     { i: 'ti-home', l: 'Dashboard', p: 'admindashboard', g: 'Overview' },
     { i: 'ti-settings', l: 'Setup', p: 'setup', g: 'Setup' },
+    { i: 'ti-palette', l: 'Branding', p: 'branding', g: 'Setup' },
     { i: 'ti-layout-grid', l: 'Categories', p: 'categories', g: 'Setup' },
     { i: 'ti-users-group', l: 'Teams', p: 'teams', g: 'People' },
     { i: 'ti-user-plus', l: 'Registrations', p: 'registrations', g: 'People' },
@@ -458,7 +459,7 @@ function AC_generated()     { return activeCategory().generated; }
    category, so every existing function now operates per-category
    with zero changes elsewhere.
    ============================================================ */
-S._tournamentMeta = { name: 'Dula HQ Tournament', venue: '', date: '', pitches: [], guestAccessEnabled: false, allowEarlyKnockout: false };
+S._tournamentMeta = { name: 'Dula HQ Tournament', venue: '', date: '', pitches: [], guestAccessEnabled: false, allowEarlyKnockout: false, branding: {} };
 
 function defineCategoryProxy(prop, catField) {
   Object.defineProperty(S, prop, {
@@ -1208,6 +1209,7 @@ function render() {
   var p = S.page;
   if (p === 'admindashboard') renderAdminDashboard();
   else if (p === 'setup') renderSetup();
+  else if (p === 'branding') renderBranding();
   else if (p === 'manualdraw') renderManualDraw();
   else if (p === 'categoryselect') renderCategorySelect();
   else if (p === 'categories') renderCategories();
@@ -1333,6 +1335,241 @@ function renderSetup() {
   }
   el('main-content').innerHTML = html;
   setTimeout(renderStructureDetail, 0);
+}
+
+
+function ensureBranding(){
+  if (!S._tournamentMeta) S._tournamentMeta = {};
+  if (!S._tournamentMeta.branding) S._tournamentMeta.branding = {};
+  var b = S._tournamentMeta.branding;
+  if (!b.logo) b.logo = '';
+  if (!b.logoWhite) b.logoWhite = '';
+  if (!b.favicon) b.favicon = '';
+  if (!b.gold) b.gold = '';
+  if (!b.accent) b.accent = '';
+  if (!b.sponsors) b.sponsors = [];
+  return b;
+}
+function getEffectiveBranding(){
+  var defaults = { logo: '', logoWhite: '', favicon: '', gold: '', accent: '', sponsors: [] };
+  try {
+    if (typeof BRANDING !== 'undefined' && BRANDING) {
+      defaults.logo = BRANDING.logo || '';
+      defaults.gold = BRANDING.colors && BRANDING.colors.gold || '';
+      defaults.accent = BRANDING.colors && BRANDING.colors.accent || '';
+    }
+  } catch(e){}
+  var custom = (S._tournamentMeta && S._tournamentMeta.branding) || {};
+  // custom overrides if non-empty
+  return {
+    logo: custom.logo || defaults.logo,
+    logoWhite: custom.logoWhite || custom.logo || defaults.logo,
+    favicon: custom.favicon || custom.logo || defaults.logo,
+    gold: custom.gold || defaults.gold,
+    accent: custom.accent || defaults.accent,
+    sponsors: custom.sponsors || []
+  };
+}
+function handleBrandingUpload(type, input){
+  var file = input && input.files && input.files[0];
+  if (!file) return;
+  var allowed = ['image/png','image/jpeg','image/webp','image/svg+xml','image/x-icon','image/vnd.microsoft.icon'];
+  // favicon can be ico/png
+  if (type==='favicon' && file.type && allowed.indexOf(file.type)===-1 && file.name && !file.name.toLowerCase().endsWith('.ico')) {
+    showToast('Favicon must be ICO or PNG'); return;
+  }
+  if (type!=='favicon' && allowed.indexOf(file.type)===-1) {
+    showToast('Use PNG/JPG/WebP (or SVG for logo)'); return;
+  }
+  if (file.size > 800*1024) { showToast('File too large (max 800KB) — try compressing'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var dataUrl = e.target.result;
+    // check dimensions for logo (square)
+    if (type==='logo' || type==='logoWhite') {
+      var img = new Image();
+      img.onload = function(){
+        if (Math.abs(img.width - img.height) > 20) {
+          showToast('Spec: 512×512 square recommended (you uploaded '+img.width+'×'+img.height+') — will still work but may crop');
+        }
+        saveBrandingLogo(type, dataUrl);
+      };
+      img.onerror = function(){ saveBrandingLogo(type, dataUrl); };
+      img.src = dataUrl;
+    } else {
+      saveBrandingLogo(type, dataUrl);
+    }
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function saveBrandingLogo(type, dataUrl){
+  var b = ensureBranding();
+  b[type] = dataUrl;
+  applyBrandingFromCustom();
+  logAudit('Branding updated', type + ' logo updated', null);
+  renderBranding();
+  showToast('Branding saved — preview updated');
+  autoSave && autoSave();
+}
+function removeBrandingLogo(type){
+  var b = ensureBranding();
+  b[type] = '';
+  applyBrandingFromCustom();
+  renderBranding();
+  showToast('Removed — back to default Dula HQ');
+  autoSave && autoSave();
+}
+function applyBrandingFromCustom(){
+  try {
+    var b = getEffectiveBranding();
+    // update header logo
+    var hdr = document.querySelector('.app-header-logo');
+    if (hdr && b.logo) hdr.src = b.logo;
+    // update CSS vars
+    var root = document.documentElement;
+    if (b.gold) root.style.setProperty('--gold', b.gold);
+    if (b.accent) { root.style.setProperty('--navacc', b.accent); root.style.setProperty('--navaccl', b.accent+'1A'); root.style.setProperty('--navaccb', b.accent+'59'); }
+    // favicon
+    if (b.favicon) {
+      var link = document.querySelector("link[rel*='icon']");
+      if (!link) { link=document.createElement('link'); link.rel='icon'; document.head.appendChild(link); }
+      link.href = b.favicon;
+    }
+    // also update window.BRANDING for PDFs/Hero
+    if (window.BRANDING) {
+      if (b.gold) window.BRANDING.colors.gold = b.gold;
+      if (b.accent) window.BRANDING.colors.accent = b.accent;
+      if (b.logo) window.BRANDING.logo = b.logo;
+      if (b.sponsors) window.BRANDING.sponsors = b.sponsors;
+    }
+  } catch(e){}
+}
+function handleSponsorUpload(input){
+  var file = input && input.files && input.files[0];
+  if (!file) return;
+  if (['image/png','image/jpeg','image/webp','image/svg+xml'].indexOf(file.type)===-1) { showToast('Sponsor logo must be PNG/JPG/WebP/SVG'); return; }
+  if (file.size > 500*1024) { showToast('Max 500KB per sponsor logo'); return; }
+  var name = (prompt('Sponsor name (e.g. LGU CDO):') || file.name.replace(/\.[^/.]+$/,'')).trim();
+  if (!name) { showToast('Cancelled'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var b = ensureBranding();
+    b.sponsors.push({ id: uid(), name: name, logo: e.target.result });
+    renderBranding();
+    applyBrandingFromCustom();
+    logAudit('Sponsor added', name, null);
+    showToast('Sponsor added');
+    autoSave && autoSave();
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function removeSponsor(id){
+  var b = ensureBranding();
+  var out=[]; for(var i=0;i<b.sponsors.length;i++) if(b.sponsors[i].id!==id) out.push(b.sponsors[i]);
+  b.sponsors=out;
+  renderBranding();
+  applyBrandingFromCustom();
+  showToast('Sponsor removed');
+  autoSave && autoSave();
+}
+function updateBrandingColor(type, val){
+  var b = ensureBranding();
+  b[type] = val;
+  applyBrandingFromCustom();
+  // don't re-render fully, just update preview
+  var prev = document.getElementById('brand-preview-'+type);
+  if (prev) prev.style.background = val;
+}
+function saveBrandingColors(){
+  var g = (document.getElementById('brand-gold')||{}).value || '';
+  var a = (document.getElementById('brand-accent')||{}).value || '';
+  var b = ensureBranding();
+  b.gold = g; b.accent = a;
+  applyBrandingFromCustom();
+  renderBranding();
+  showToast('Colors saved');
+  autoSave && autoSave();
+}
+function renderBranding(){
+  if (S.role !== 'admin') { setTopbar('Branding', 'Admin only'); el('main-content').innerHTML='<div class="empty"><i class="ti ti-lock"></i><p>Only admins can manage branding.</p></div>'; return; }
+  var b = ensureBranding();
+  var eff = getEffectiveBranding();
+  var hasCustomLogo = !!(b.logo);
+  var hasWhite = !!(b.logoWhite);
+  var hasFavicon = !!(b.favicon);
+  setTopbar('Branding', 'Customize logos, colors & sponsors — white-label for any customer', '<button class="btn" onclick="if(confirm(\'Reset all branding to Dula HQ defaults?\')){ S._tournamentMeta.branding={}; applyBrandingFromCustom(); renderBranding(); showToast(\'Reset to Dula HQ defaults\'); autoSave&&autoSave(); }"><i class="ti ti-rotate"></i> Reset to Dula HQ</button>');
+  var html='';
+  // Spec helper
+  html += '<div class="card" style="background:var(--n3)"><div class="card-title"><i class="ti ti-info-circle"></i> Logo Spec — follow for any customer</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;color:var(--ts);line-height:1.5">';
+  html += '<div><b>Primary Logo</b> (header + sign-in + PDF header)<br>• 512×512 PNG, <b>transparent</b>, square<br>• &lt;500KB, 72 DPI<br>• Keep main mark centered, 20px padding<br>• Example: <code>/branding/dulahq/logo.png</code></div>';
+  html += '<div><b>White Logo</b> (dark header, optional)<br>• Same 512×512, <b>white/monochrome</b> on transparent<br>• Falls back to Primary if empty<br>• Use for dark/green header</div>';
+  html += '<div><b>Favicon</b> (browser tab)<br>• 64×64 ICO or PNG, &lt;100KB<br>• Auto-cropped to circle<br>• Falls back to Primary</div>';
+  html += '<div><b>Sponsor Logos</b> (PDF + TV strip)<br>• 400×200 PNG/JPG, &lt;300KB, white bg<br>• Add via <b>Add sponsor</b> → upload<br>• Shows in PDF header + TV marquee</div>';
+  html += '</div>';
+  html += '<div style="margin-top:10px;font-size:12px;color:var(--tm)">Files are stored in <code>S._tournamentMeta.branding</code> (Supabase JSONB + offline queue). No code redeploy needed — just Admin upload. Original Dula HQ files stay in <code>public/branding/dulahq/</code> as fallback.</div>';
+  html += '</div>';
+
+  // Primary Logo
+  html += '<div class="card"><div class="card-title"><i class="ti ti-photo"></i> Primary Logo ' + (hasCustomLogo?'<span class="badge bgr" style="margin-left:8px">Custom</span>':'<span class="badge bgy" style="margin-left:8px">Dula HQ default</span>') + '</div>';
+  html += '<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">';
+  html += '<div style="width:120px;height:120px;background:var(--n3);border:1px solid var(--nb);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="' + esc(eff.logo) + '" alt="Primary" style="width:100%;height:100%;object-fit:contain;padding:8px" onerror="this.style.display=\'none\'"><span style="font-size:11px;color:var(--tm);display:none">No logo</span></div>';
+  html += '<div style="flex:1;min-width:220px"><div style="font-size:13px;color:var(--tm);margin-bottom:8px">Used in header, sign-in hero, and PDF header. Transparent PNG recommended.</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="file" id="brand-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="handleBrandingUpload(\'logo\',this)"><button class="btn primary" onclick="document.getElementById(\'brand-logo-file\').click()"><i class="ti ti-upload"></i> Upload primary</button>';
+  if (hasCustomLogo) html += '<button class="btn" onclick="removeBrandingLogo(\'logo\')"><i class="ti ti-trash"></i> Use Dula default</button>';
+  html += '</div><div style="font-size:11px;color:var(--tm);margin-top:8px">Spec: 512×512, &lt;500KB, PNG transparent</div></div></div></div>';
+
+  // White Logo
+  html += '<div class="card"><div class="card-title"><i class="ti ti-photo"></i> White Logo <span style="font-weight:400;color:var(--tm);font-size:12px">(optional — for dark header)</span> ' + (hasWhite?'<span class="badge bgr" style="margin-left:8px">Custom</span>':'<span class="badge bgy" style="margin-left:8px">Falls back to Primary</span>') + '</div>';
+  html += '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">';
+  html += '<div style="width:120px;height:120px;background:#1a1a1a;border:1px solid var(--nb);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="' + esc(eff.logoWhite) + '" alt="White" style="width:100%;height:100%;object-fit:contain;padding:8px;filter:brightness(1.1)" onerror="this.style.display=\'none\'"></div>';
+  html += '<div style="flex:1;min-width:220px"><div style="font-size:13px;color:var(--tm);margin-bottom:8px">White/monochrome version for dark/green header. If empty, Primary is used.</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="file" id="brand-logoWhite-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="handleBrandingUpload(\'logoWhite\',this)"><button class="btn" onclick="document.getElementById(\'brand-logoWhite-file\').click()"><i class="ti ti-upload"></i> Upload white</button>';
+  if (hasWhite) html += '<button class="btn" onclick="removeBrandingLogo(\'logoWhite\')"><i class="ti ti-trash"></i> Remove</button>';
+  html += '</div></div></div></div>';
+
+  // Favicon
+  html += '<div class="card"><div class="card-title"><i class="ti ti-star"></i> Favicon ' + (hasFavicon?'<span class="badge bgr" style="margin-left:8px">Custom</span>':'<span class="badge bgy" style="margin-left:8px">Dula default</span>') + '</div>';
+  html += '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">';
+  html += '<div style="width:48px;height:48px;background:var(--n3);border:1px solid var(--nb);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="' + esc(eff.favicon) + '" alt="Favicon" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display=\'none\'"></div>';
+  html += '<div style="flex:1;min-width:220px"><div style="font-size:13px;color:var(--tm);margin-bottom:8px">64×64 ICO/PNG for browser tab.</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="file" id="brand-favicon-file" accept="image/png,image/x-icon,.ico" style="display:none" onchange="handleBrandingUpload(\'favicon\',this)"><button class="btn" onclick="document.getElementById(\'brand-favicon-file\').click()"><i class="ti ti-upload"></i> Upload favicon</button>';
+  if (hasFavicon) html += '<button class="btn" onclick="removeBrandingLogo(\'favicon\')"><i class="ti ti-trash"></i> Remove</button>';
+  html += '</div></div></div></div>';
+
+  // Colors
+  html += '<div class="card"><div class="card-title"><i class="ti ti-palette"></i> Colors</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  html += '<div class="field" style="margin-bottom:0"><label>Gold (primary)</label><div style="display:flex;gap:8px;align-items:center"><input type="color" id="brand-gold" value="' + esc(eff.gold || '#c8960a') + '" style="width:44px;height:36px;padding:2px;border:1px solid var(--nb);border-radius:8px" oninput="updateBrandingColor(\'gold\',this.value)"><span id="brand-preview-gold" style="width:16px;height:16px;border-radius:50%;background:' + esc(eff.gold||'#c8960a') + ';border:1px solid var(--nb);display:inline-block"></span><span style="font-size:13px;color:var(--tm)">' + esc(eff.gold||'#c8960a') + '</span></div></div>';
+  html += '<div class="field" style="margin-bottom:0"><label>Accent (green)</label><div style="display:flex;gap:8px;align-items:center"><input type="color" id="brand-accent" value="' + esc(eff.accent||'#15803d') + '" style="width:44px;height:36px;padding:2px;border:1px solid var(--nb);border-radius:8px" oninput="updateBrandingColor(\'accent\',this.value)"><span id="brand-preview-accent" style="width:16px;height:16px;border-radius:50%;background:' + esc(eff.accent||'#15803d') + ';border:1px solid var(--nb);display:inline-block"></span><span style="font-size:13px;color:var(--tm)">' + esc(eff.accent||'#15803d') + '</span></div></div>';
+  html += '</div>';
+  html += '<div style="margin-top:10px"><button class="btn primary" onclick="saveBrandingColors()"><i class="ti ti-check"></i> Save colors</button> <span style="font-size:12px;color:var(--tm);margin-left:8px">Live preview in header</span></div>';
+  html += '</div>';
+
+  // Sponsors
+  html += '<div class="card"><div class="card-title" style="display:flex;align-items:center;justify-content:space-between"><span><i class="ti ti-heart-handshake"></i> Sponsors (' + b.sponsors.length + ')</span><span style="display:flex;gap:6px"><input type="file" id="brand-sponsor-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="handleSponsorUpload(this)"><button class="btn primary sm" onclick="document.getElementById(\'brand-sponsor-file\').click()"><i class="ti ti-plus"></i> Add sponsor</button></span></div>';
+  html += '<div style="font-size:12px;color:var(--tm);margin-bottom:10px">400×200 PNG/JPG, &lt;300KB, shows in PDF header + TV marquee. Example: LGU CDO, Milo.</div>';
+  if (!b.sponsors.length) {
+    html += '<div style="font-size:13px;color:var(--tm);padding:8px;background:var(--n3);border:1px dashed var(--nb);border-radius:8px;text-align:center">No sponsors yet — they’ll appear in branded PDFs and TV wall.</div>';
+  } else {
+    for (var i=0;i<b.sponsors.length;i++) {
+      var sp=b.sponsors[i];
+      html += '<div class="trow"><div style="display:flex;align-items:center;gap:10px"><div style="width:60px;height:36px;background:var(--n3);border:1px solid var(--nb);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="' + esc(sp.logo) + '" style="max-width:100%;max-height:100%;object-fit:contain" onerror="this.style.display=\'none\'"></div><div><div style="font-weight:600">' + esc(sp.name) + '</div><div style="font-size:11px;color:var(--tm)">400×200 · &lt;300KB</div></div></div><button class="btn sm danger" onclick="removeSponsor(\'' + sp.id + '\')"><i class="ti ti-trash"></i></button></div>';
+    }
+  }
+  html += '</div>';
+
+  // Preview hero
+  html += '<div class="card" style="background:var(--n3)"><div class="card-title"><i class="ti ti-eye"></i> Preview — Sign-in hero</div>';
+  html += '<div style="background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:16px;text-align:center">';
+  html += '<img src="' + esc(eff.logo) + '" style="width:56px;height:56px;object-fit:contain;margin:0 auto 8px;display:block" onerror="this.style.display=\'none\'">';
+  html += '<div style="font-weight:800;font-style:italic">Dula <span style="color:var(--gold)">HQ</span> <span style="font-weight:400;color:var(--tm);font-size:12px">— Tournament Manager</span></div>';
+  html += '<div style="font-size:12px;color:var(--tm);margin-top:4px">Hero uses your Primary Logo + Gold/Accent + Sponsors</div>';
+  html += '</div></div>';
+
+  el('main-content').innerHTML = html;
 }
 
 function selFmt(f, elem) {
