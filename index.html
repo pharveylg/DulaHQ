@@ -267,7 +267,7 @@ var S = {
   tournament: {
     name: 'Dula HQ Tournament', venue: '', date: '', format: '7', duration: 60,
     ageCategory: 'Open', offside: false, extraTime: true, penalties: true,
-    structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1,
+    structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: false,
     pitches: []
   },
   teams: [],
@@ -458,7 +458,7 @@ function AC_generated()     { return activeCategory().generated; }
    category, so every existing function now operates per-category
    with zero changes elsewhere.
    ============================================================ */
-S._tournamentMeta = { name: 'Dula HQ Tournament', venue: '', date: '', pitches: [], guestAccessEnabled: false };
+S._tournamentMeta = { name: 'Dula HQ Tournament', venue: '', date: '', pitches: [], guestAccessEnabled: false, allowEarlyKnockout: false };
 
 function defineCategoryProxy(prop, catField) {
   Object.defineProperty(S, prop, {
@@ -817,28 +817,59 @@ function exportToExcel(filename, headers, rows, meta) {
 function exportToPDF(filename, headers, rows, meta) {
   if (typeof window.jspdf === 'undefined') { showToast('PDF export library did not load \u2014 check your connection'); return; }
   var doc = new window.jspdf.jsPDF();
-  var y = 14;
-  doc.setFontSize(14); doc.text(meta.tournament, 14, y); y += 7;
-  doc.setFontSize(11); doc.text(meta.title, 14, y); y += 6;
-  doc.setFontSize(9); doc.setTextColor(120);
-  doc.text('Generated: ' + meta.generatedAt + ' by ' + meta.generatedBy, 14, y); y += 5;
-  if (meta.filters) { doc.text('Filters: ' + meta.filters, 14, y); y += 5; }
-  doc.setTextColor(0);
+  var brand = (typeof BRANDING !== 'undefined' ? BRANDING : (window.BRANDING || { appName: 'Dula HQ', tagline: 'Tournament Manager', colors: { gold: '#c8960a', accent: '#15803d' }, sponsors: [] }));
+  var goldRgb = (function(hex){try{var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return [r,g,b];}catch(e){return [200,150,10];}})(brand.colors && brand.colors.gold || '#c8960a');
+  var accentRgb = (function(hex){try{var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return [r,g,b];}catch(e){return [21,128,61];}})(brand.colors && brand.colors.accent || '#15803d');
+  var liveUrl = (typeof location !== 'undefined' ? location.origin + location.pathname : 'https://dulahq.vercel.app') + '?view=live';
+  var y = 10;
+  // Top accent bar
+  doc.setFillColor(accentRgb[0], accentRgb[1], accentRgb[2]); doc.rect(0,0,210,12,'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text((brand.appName || 'Dula HQ') + ' — ' + (brand.tagline || 'Tournament Manager'), 8, 7.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.text((meta.tournament || brand.tournament && brand.tournament.name || 'Tournament') + ' · ' + new Date().toLocaleDateString(), 202, 7.5, {align:'right'});
+  y = 18;
+  // Title block
+  doc.setTextColor(0,0,0); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text(meta.title || 'Report', 14, y); y+=6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,100,100);
+  var sub = (meta.filters ? meta.filters + ' · ' : '') + (brand.sponsors && brand.sponsors.length ? 'Sponsors: ' + brand.sponsors.map(function(s){return s.name;}).join(' · ') + ' · ' : '');
+  sub += 'Generated: ' + meta.generatedAt + ' by ' + meta.generatedBy;
+  var splitSub = doc.splitTextToSize(sub, 182); doc.text(splitSub, 14, y); y+= splitSub.length*4 + 2;
+  doc.setDrawColor(230,220,194); doc.line(14, y, 196, y); y+=4;
+  doc.setTextColor(0,0,0);
   doc.autoTable({
     head: [headers],
     body: rows,
-    startY: y + 3,
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [200, 150, 10] }
+    startY: y,
+    styles: { fontSize: 7, cellPadding: 2 },
+    headStyles: { fillColor: goldRgb, textColor: 15, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [247,243,234] },
+    margin: { left: 8, right: 8 },
+    theme: 'grid',
+    headStyles: { fillColor: goldRgb }
   });
   var pageCount = doc.internal.getNumberOfPages();
   for (var p = 1; p <= pageCount; p++) {
     doc.setPage(p);
-    doc.setFontSize(8); doc.setTextColor(150);
-    doc.text('Page ' + p + ' of ' + pageCount + ' \u00b7 Dula HQ Tournament Manager', 14, doc.internal.pageSize.getHeight() - 8);
+    var h = doc.internal.pageSize.getHeight();
+    // Footer sponsor strip
+    if (brand.sponsors && brand.sponsors.length && p===pageCount) {
+      doc.setFontSize(6); doc.setTextColor(120); doc.setFont('helvetica','bold');
+      doc.text('Presented by: ' + brand.sponsors.map(function(s){return s.name;}).join('  •  '), 14, h-14);
+    }
+    // Footer line + QR placeholder + page
+    doc.setDrawColor(230,220,194); doc.line(14, h-10, 196, h-10);
+    doc.setFontSize(7); doc.setTextColor(150); doc.setFont('helvetica','normal');
+    doc.text('QR → ' + liveUrl + '  ·  Page ' + p + ' of ' + pageCount + ' · ' + (brand.appName || 'DulaHQ') + ' · ' + meta.generatedAt, 14, h-6);
+    // Verified badge if meta contains Verified
+    if (meta.title && meta.title.toLowerCase().indexOf('verified')>=0) {
+      doc.setFont('helvetica','bold'); doc.setTextColor(accentRgb[0],accentRgb[1],accentRgb[2]); doc.setFontSize(6);
+      doc.text('VERIFIED', 196, h-6, {align:'right'});
+    }
   }
   doc.save(filename + '.pdf');
-  logAudit('Report exported', meta.title + ' \u2014 PDF', null);
+  logAudit('Report exported', meta.title + ' — PDF', null);
   showToast('PDF downloaded');
 }
 function exportButtonsHtml(reportKey) {
@@ -1283,6 +1314,7 @@ function renderSetup() {
   html += '<div class="trow"><div><div class="tgl-label">Extra time enabled</div><div class="tgl-sub">For knockout ties</div></div><div class="tgl' + (t.extraTime ? ' on' : '') + '" id="tgl-et" onclick="this.classList.toggle(\'on\')"></div></div>';
   html += '<div class="trow"><div><div class="tgl-label">Penalty shootout</div><div class="tgl-sub">Best of 5, then sudden death</div></div><div class="tgl' + (t.penalties ? ' on' : '') + '" id="tgl-pen" onclick="this.classList.toggle(\'on\')"></div></div>';
   html += '<div class="trow"><div><div class="tgl-label">Half-time break</div><div class="tgl-sub">Two halves of ' + Math.floor((t.duration || 60) / 2) + ' min each, with a half-time break in the Referee view</div></div><div class="tgl' + (t.hasHalftime ? ' on' : '') + '" id="tgl-half" onclick="this.classList.toggle(\'on\')"></div></div>';
+  html += '<div class="trow"><div><div class="tgl-label">Allow early knockout</div><div class="tgl-sub">Start bracket before all groups finish (for postponed matches)</div></div><div class="tgl' + (t.allowEarlyKnockout ? ' on' : '') + '" id="tgl-early" onclick="t.allowEarlyKnockout=!t.allowEarlyKnockout;renderSetup();"></div></div>';
   html += '<div class="trow"><div><div class="tgl-label">Tiebreak criteria</div><div class="tgl-sub">Applied automatically when teams are level on points</div></div>';
   html += '<button style="display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(--ts);font-size:var(--fs13);cursor:pointer;font-family:inherit;font-weight:500" onclick="toggleTb()">';
   html += '<i class="ti ti-chevron-down" id="tb-icon"></i> View</button></div>';
@@ -1816,31 +1848,54 @@ function removeReferee(id) {
 }
 
 /* ---- Conflict prevention: same team / referee / pitch at the same kickoff time, tournament-wide ---- */
+function parseKickoffToMinutes(t) {
+  if (!t || typeof t !== 'string') return null;
+  var parts = t.trim().split(':');
+  if (parts.length !== 2) return null;
+  var h = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
+function intervalsOverlap(aStart, aDur, bStart, bDur) {
+  var aEnd = aStart + aDur, bEnd = bStart + bDur;
+  return aStart < bEnd && bStart < aEnd;
+}
 function findMatchConflicts(mid, proposed) {
-  // proposed: { kickoff, pitchName, refereeId } — only checked fields that are non-empty
+  // P0: time-overlap hard block (not just exact kickoff string match)
+  // Checks pitch / ref / team double-book within [kickoff, kickoff+duration)
   var all = getAllScheduledMatches();
   var target = null;
   for (var i = 0; i < all.length; i++) { if (all[i].match.id === mid) { target = all[i]; break; } }
   if (!target) return [];
   var kickoff = (proposed && proposed.kickoff !== undefined) ? proposed.kickoff : target.match.kickoff;
-  if (!kickoff) return []; // no kickoff time set yet — nothing to conflict on
+  if (!kickoff) return [];
+  var tStart = parseKickoffToMinutes(kickoff);
+  if (tStart === null) return [];
+  var dur = (S.tournament && S.tournament.duration) ? parseInt(S.tournament.duration, 10) : 60;
+  if (isNaN(dur) || dur <= 0) dur = 60;
   var pitchName = (proposed && proposed.pitchName !== undefined) ? proposed.pitchName : target.match.pitchName;
   var refereeId = (proposed && proposed.refereeId !== undefined) ? proposed.refereeId : target.match.refereeId;
+  // normalize pitch for trailing space / case
+  var normPitch = pitchName ? String(pitchName).trim() : '';
   var conflicts = [];
   for (var j = 0; j < all.length; j++) {
     var other = all[j].match;
     if (other.id === mid) continue;
-    if (other.played || !other.kickoff || other.kickoff !== kickoff) continue;
+    if (other.played || !other.kickoff) continue;
+    var oStart = parseKickoffToMinutes(other.kickoff);
+    if (oStart === null) continue;
+    if (!intervalsOverlap(tStart, dur, oStart, dur)) continue;
+    // Team clash: any team appears in both matches overlapping
     if (other.homeId === target.match.homeId || other.homeId === target.match.awayId || other.awayId === target.match.homeId || other.awayId === target.match.awayId) {
       var oh = getTeamById(other.homeId), oa = getTeamById(other.awayId);
-      conflicts.push('Team clash: a team in this match is already scheduled at ' + kickoff + ' (' + (oh ? oh.name : '?') + ' v ' + (oa ? oa.name : '?') + ')');
+      conflicts.push('Team clash: a team in this match is already playing at ' + other.kickoff + ' (' + (oh ? oh.name : '?') + ' v ' + (oa ? oa.name : '?') + ') — needs ' + dur + ' min rest');
     }
-    if (pitchName && other.pitchName === pitchName) {
-      conflicts.push('Pitch clash: ' + pitchName + ' is already booked at ' + kickoff);
+    if (normPitch && other.pitchName && String(other.pitchName).trim() === normPitch) {
+      conflicts.push('Pitch clash: ' + normPitch + ' is already booked at ' + other.kickoff + ' (' + dur + ' min block)');
     }
     if (refereeId && other.refereeId === refereeId) {
       var refc = getRefereeById(refereeId);
-      conflicts.push('Referee clash: ' + (refc ? refc.name : 'this referee') + ' is already assigned at ' + kickoff);
+      conflicts.push('Referee clash: ' + (refc ? refc.name : 'this referee') + ' is already assigned at ' + other.kickoff);
     }
   }
   return conflicts;
@@ -2335,6 +2390,38 @@ function updateRosterStaff(i, key, val) {
 function addRosterPlayer() { S.rosterDraft.players.push({ id: uid(), name: '', jersey: '', pos: '', age: '' }); render(); }
 function removeRosterPlayer(i) { S.rosterDraft.players.splice(i, 1); render(); }
 function updateRosterPlayer(i, key, val) { if (S.rosterDraft.players[i]) S.rosterDraft.players[i][key] = val; }
+function downloadRosterTemplate(){
+  var csv='Name,Jersey,Pos,Age\nJuan Dela Cruz,10,FWD,22\nPedro Santos,1,GK,24\n';
+  downloadTextFile(csv,'roster-template.csv','text/csv');
+  showToast('Template downloaded');
+}
+function handleRosterDraftCsv(input){
+  if(!input.files||!input.files[0]) return;
+  if(!S.rosterDraft){ showToast('Open a roster first'); return; }
+  readSpreadsheetFile(input, function(rows){
+    if(!rows||!rows.length){ showToast('No rows found'); return; }
+    var added=0, dups=[], addedJerseys={};
+    for(var i=0;i<S.rosterDraft.players.length;i++) if(S.rosterDraft.players[i].jersey) addedJerseys[String(S.rosterDraft.players[i].jersey).trim()]=true;
+    for(var r=0;r<rows.length;r++){
+      var row=rows[r];
+      var name=(csvField(row,['Name','name','Player','player','Full Name'])||'').trim();
+      if(!name) continue;
+      var jersey=(csvField(row,['Jersey','jersey','No','Number','number'])||'').trim();
+      var pos=(csvField(row,['Pos','pos','Position','position'])||'').trim().toUpperCase();
+      var age=(csvField(row,['Age','age'])||'').trim();
+      if(jersey && addedJerseys[jersey]) { dups.push(name+' (#'+jersey+' dup)'); continue; }
+      if(jersey) addedJerseys[jersey]=true;
+      // squad size guard 7-12 for 7s (configurable)
+      if(S.rosterDraft.players.length >= 12){ showToast('Squad full (12 max for 7s) — '+added+' added, '+ (rows.length-r) +' skipped'); break; }
+      S.rosterDraft.players.push({ id: uid(), name: name, jersey: jersey||'—', pos: (['GK','DEF','MID','FWD'].indexOf(pos)>=0?pos:'—'), age: age||'—' });
+      added++;
+    }
+    if(dups.length) showToast('Jersey dups skipped: '+dups.slice(0,3).join(', ')+(dups.length>3?' +'+(dups.length-3)+' more':''));
+    render();
+    showToast('Imported '+added+' players'+(dups.length?' ('+dups.length+' dups skipped)':'') );
+    input.value='';
+  });
+}
 function renderEditRoster() {
   var d = S.rosterDraft;
   if (!d) { navTo('teams'); return; }
@@ -2354,7 +2441,8 @@ function renderEditRoster() {
     if (s.role === 'Other') { html += '<div class="field" style="margin-bottom:10px"><label>Specify role</label><input value="' + esc(s.roleOther) + '" oninput="updateRosterStaff(' + i + ',\'roleOther\',this.value)" placeholder="e.g. Ground Marshal"></div>'; }
   }
   html += '<button class="btn" onclick="addRosterStaff()"><i class="ti ti-user-plus"></i> Add staff member</button></div>';
-  html += '<div class="card"><div class="card-title"><i class="ti ti-users"></i> Players (' + d.players.length + ')</div>';
+  html += '<div class="card"><div class="card-title" style="display:flex;align-items:center;justify-content:space-between"><span><i class="ti ti-users"></i> Players (' + d.players.length + ')</span><span style="display:flex;gap:6px"><input type="file" id="ros-csv-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleRosterDraftCsv(this)"><button class="btn sm" onclick="document.getElementById(\'ros-csv-file\').click()"><i class="ti ti-upload"></i> Import CSV/XLSX</button><button class="btn sm" onclick="downloadRosterTemplate()"><i class="ti ti-download"></i> Template</button></span></div>';
+  html += '<div style="font-size:12px;color:var(--tm);margin-bottom:8px">CSV columns: <code>Name,Jersey,Pos,Age</code> — jersey dup & squad size checked (7-12 for 7s)</div>';
   for (var j = 0; j < d.players.length; j++) {
     var p = d.players[j];
     html += '<div class="g4" style="align-items:end;margin-bottom:10px">'
@@ -2373,6 +2461,12 @@ function saveEditRoster() {
   if (!d) return;
   var backTo = d.returnPage || 'teams';
   if (!d.name || !d.name.trim()) { showToast('Enter a team name'); return; }
+  // P1: jersey dup + squad size guard (7-12 for 7s, allow 13-15 with warning)
+  var seen={}; var dups=[];
+  for(var i=0;i<d.players.length;i++){ var j=String(d.players[i].jersey||'').trim(); if(!j||j==='—') continue; if(seen[j]) dups.push(j); else seen[j]=true; }
+  if(dups.length){ showToast('Fix jersey dup(s): #'+dups.join(', ')); return; }
+  if(d.players.length < 7){ if(!confirm('Squad has only '+d.players.length+' players (7 min for 7s). Save anyway?')) return; }
+  if(d.players.length > 12){ if(!confirm('Squad has '+d.players.length+' players (12 max for 7s is typical). Save anyway?')) return; }
   var tm = getTeamById(d.teamId);
   if (!tm) { showToast('Team no longer exists'); S.rosterDraft = null; navTo(backTo); return; }
   tm.name = d.name.trim();
@@ -2998,10 +3092,29 @@ function renderStandings() {
       all.push(copy);
     }
   }
+  // P1: fairPlay + head-to-head tiebreak (after pts/GD/GF)
+  function headToHeadWinner(aId,bId){
+    var gIdx=null; for(var gi=0;gi<S.groups.length;gi++){var grp=S.groups[gi];var hasA=false,hasB=false;for(var si=0;si<grp.teamIds.length;si++){if(grp.teamIds[si]===aId)hasA=true;if(grp.teamIds[si]===bId)hasB=true;} if(hasA&&hasB){gIdx=gi;break;}}
+    if(gIdx===null) return 0;
+    for(var mi=0;mi<S.groupMatches.length;mi++){var m=S.groupMatches[mi];if(m.group!==gIdx)continue;if(!m.played)continue;var isAB=(m.homeId===aId&&m.awayId===bId)||(m.homeId===bId&&m.awayId===aId);if(!isAB)continue;var sc=getMatchScore(m);if(m.played){sc={hs:m.homeScore,as:m.awayScore};} // use final if played
+      if(sc.hs===sc.as) return 0;
+      if(m.homeId===aId) return sc.hs>sc.as ? -1 : 1; // a wins → a ahead → return -1
+      else return sc.as>sc.hs ? -1 : 1;
+    }
+    return 0;
+  }
+  function fairPlayPoints(teamId){
+    var y=0,r=0; var ms=(activeCategory()&&activeCategory().groupMatches)?activeCategory().groupMatches:S.groupMatches;
+    for(var i=0;i<ms.length;i++){for(var j=0;j<(ms[i].events||[]).length;j++){var ev=ms[i].events[j];if(ev.teamId!==teamId)continue;if(ev.type==='yellow')y++; else if(ev.type==='red_direct'||ev.type==='red_indirect'||ev.type==='red_yellow')r++;}}
+    return y*1 + r*3;
+  }
   all.sort(function (a, b) {
     if (b.pts !== a.pts) return b.pts - a.pts;
-    if ((b.gf - b.ga) !== (a.gf - a.ga)) return (b.gf - b.ga) - (a.gf - a.ga);
-    return b.gf - a.gf;
+    var gdB=(b.gf-b.ga), gdA=(a.gf-a.ga); if (gdB!==gdA) return gdB - gdA;
+    if (b.gf !== a.gf) return b.gf - a.gf;
+    var hth=headToHeadWinner(a.id,b.id); if(hth!==0) return hth;
+    var fpA=fairPlayPoints(a.id), fpB=fairPlayPoints(b.id); if(fpA!==fpB) return fpA - fpB;
+    return 0;
   });
   var html = '<div class="card"><div class="card-title"><i class="ti ti-medal"></i> Overall standings</div>';
   html += '<table class="tbl"><thead><tr><th>#</th><th>Team</th><th>Group</th><th class="num">MP</th><th class="num">Pts</th><th class="num">GD</th><th class="num">GF</th></tr></thead><tbody>';
@@ -3204,7 +3317,7 @@ function renderBracket() {
   if (k === 'knockout' && !S.knockoutRounds.length) { bk.innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Enter the first round results to progress the bracket.</p></div>'; return; }
   var total = S.groupMatches.length, played = 0;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].played) played++; }
-  if (k !== 'knockout' && played < total && !S.knockoutRounds.length) {
+  if (k !== 'knockout' && played < total && !S.knockoutRounds.length && !S.tournament.allowEarlyKnockout) {
     var pct = Math.round(played / total * 100);
     bk.innerHTML = '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
     return;
@@ -3822,7 +3935,7 @@ function getMatchScore(m) {
 function renderOfficials() {
   if (S.role === 'admin' && S.viewAllCategories) { renderOfficialsAllCategories(); return; }
   var canManage = (S.role === 'admin' || S.role === 'official');
-  setTopbar('Officials table', 'Live match overview & pitch assignments', (canManage ? '<button class="btn primary" onclick="renderOfficials()"><i class="ti ti-refresh"></i> Refresh</button>' : '') + exportButtonsHtml('officials'));
+  setTopbar('Officials table', 'Live match overview & pitch assignments', (canManage ? '<button class="btn" onclick="generateOfficialsPacket && generateOfficialsPacket()"><i class="ti ti-printer"></i> Officials Packet</button><button class="btn primary" onclick="renderOfficials()"><i class="ti ti-refresh"></i> Refresh</button>' : '') + exportButtonsHtml('officials'));
   if (!S.generated) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-table"></i><p>Generate the draw first.</p></div>'; return; }
   var pitches = S.tournament.pitches || [];
   var html = '';
@@ -4159,15 +4272,16 @@ function renderLiveView() {
 }
 
 /* ---------------- REFEREE ---------------- */
+function getSuspendedPlayers(teamId) {
+  var yellows={},reds={};
+  var matches=(activeCategory()&&activeCategory().groupMatches)?activeCategory().groupMatches:S.groupMatches;
+  for(var i=0;i<matches.length;i++){var m=matches[i];if(!m.played&&!m.inProgress)continue;for(var j=0;j<(m.events||[]).length;j++){var ev=m.events[j];if(ev.teamId!==teamId)continue;if(ev.type==='yellow'){yellows[ev.player]=(yellows[ev.player]||0)+1}else if(ev.type==='red_direct'||ev.type==='red_indirect'||ev.type==='red_yellow'){reds[ev.player]=true;}}}
+  var sus={};for(var pl in yellows)if(yellows[pl]>=2)sus[pl]=true;for(var pl in reds)sus[pl]=true;return sus;
+}
+function renderDisciplineNotice(teamId){var sus=getSuspendedPlayers(teamId);var n=Object.keys(sus);if(!n.length)return'';return'<div class="alert alert-err" style="margin-bottom:10px"><i class="ti ti-ban"></i><span><b>Suspended:</b> '+esc(n.join(', '))+' — cannot be selected (2 yellows / red)</span></div>';}
 function playerOpts(tid, selectedName) {
-  var tm = getTeamById(tid);
-  var html = '';
-  if (tm && tm.players.length) {
-    for (var i = 0; i < tm.players.length; i++) {
-      var nm = tm.players[i].name;
-      html += '<option value="' + esc(nm) + '"' + (selectedName && nm === selectedName ? ' selected' : '') + '>' + esc(nm) + ' #' + esc(tm.players[i].jersey) + '</option>';
-    }
-  } else { html = '<option value="">No players on roster \u2014 add players first</option>'; }
+  var tm=getTeamById(tid);var suspended=getSuspendedPlayers(tid);var html='';
+  if(tm&&tm.players.length){for(var i=0;i<tm.players.length;i++){var nm=tm.players[i].name;var isSus=!!suspended[nm];var label=esc(nm)+' #'+esc(tm.players[i].jersey)+(isSus?' \u2014 SUSPENDED':'');html+='<option value="'+esc(nm)+'"'+(selectedName&&nm===selectedName?' selected':'')+(isSus?' disabled style="color:var(--red)"':'')+'>'+label+'</option>';}} else {html='<option value="">No players on roster \u2014 add players first</option>';}
   return html;
 }
 
@@ -5158,7 +5272,7 @@ function freshTournamentState_() {
     tournament: {
       name: 'Dula HQ Tournament', venue: '', date: '', format: '7', duration: 60,
       ageCategory: 'Open', offside: false, extraTime: true, penalties: true,
-      structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1,
+      structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: false,
       pitches: []
     },
     categories: [],
@@ -5230,10 +5344,20 @@ function renderSignInPage() {
   var html = '';
   html += '<div id="signin-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);padding:20px;position:relative;overflow:hidden">';
   html += '<img src="' + APP_LOGO_URI + '" alt="" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100%;height:100%;max-width:900px;object-fit:contain;opacity:.14;filter:grayscale(100%);pointer-events:none;z-index:0" aria-hidden="true">';
-  html += '<div style="position:relative;z-index:1;background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:40px 32px;max-width:400px;width:100%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)">';
-  html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dula <span style="color:var(--gold)">HQ</span></div>';
-  html += '<div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div>';
-  html += '<div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
+  html += '<div style="position:relative;z-index:1;background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:32px 32px;max-width:420px;width:100%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)">';
+  // White-label hero
+  if (typeof Hero !== 'undefined' && typeof Hero === 'function') {
+    try {
+      var _cats=(S.categories||[]).length;var _teams=0;for(var _ci=0;_ci<(S.categories||[]).length;_ci++) _teams+=((S.categories[_ci].teams||[]).length);var _live=0;for(var _mi=0;_mi<(S.groupMatches||[]).length;_mi++) if(S.groupMatches[_mi].inProgress) _live++;
+      html += Hero('signin',{statsCategories:_cats+' categor'+(_cats===1?'y':'ies'),statsTeams:_teams+' teams',statsLive:_live?_live+' live':'Ready'});
+    } catch(e) {
+      html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dula <span style="color:var(--gold)">HQ</span></div><div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div><div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
+    }
+  } else {
+    html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dula <span style="color:var(--gold)">HQ</span></div>';
+    html += '<div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div>';
+    html += '<div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
+  }
   if (GOOGLE_CLIENT_ID) {
     html += '<div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:16px"></div>';
     html += '<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--tm);font-size:var(--fs13)"><div style="flex:1;height:1px;background:var(--nb)"></div>or<div style="flex:1;height:1px;background:var(--nb)"></div></div>';
@@ -5776,9 +5900,86 @@ migrateLegacyData(); // creates one empty default category so the app has somewh
 seedDemoData(); // restores the full demo scenario + 4 test accounts. To
                  // go back to a genuinely empty production boot instead,
                  // swap this line for seedDefaultAdmin().
-renderNav();
-var sw = el('signin-wrap');
-if (sw) sw.innerHTML = renderSignInPage();
+// P1: Public guest wall (?view=live / ?view=tv / ?public=1) — no login required
+var _isPublic = false;
+try {
+  var _params = new URLSearchParams(location.search);
+  var _view = _params.get('view');
+  _isPublic = _view==='live' || _view==='tv' || _view==='standings' || _view==='schedule' || _view==='bracket' || _params.get('public')==='1' || (S._tournamentMeta && S._tournamentMeta.guestAccessEnabled);
+  if (_isPublic) {
+    AUTH.signedIn = true; AUTH.email = 'guest@dulahq.local'; AUTH.name = 'Guest'; AUTH.role = 'audience';
+    S.role = 'audience';
+    if (_view==='tv') S.page='bracket';
+    else if (_view==='live') S.page='live';
+    else if (_view==='standings') S.page='standings';
+    else if (_view==='schedule') S.page='schedule';
+    else if (_view==='bracket') S.page='bracket';
+    else S.page = S.page || 'live';
+    var sWrap = el('signin-wrap'); if (sWrap) sWrap.innerHTML='';
+    var aEl = el('app-shell'); if (aEl) aEl.style.display='flex';
+    updateUserBadge(); renderNav(); render();
+    if (_view==='tv') {
+      var tvPages=['bracket','standings','live']; var tvIdx=tvPages.indexOf(S.page); if(tvIdx<0) tvIdx=0;
+      // TV polish: kiosk mode hides header/category, shows hero + sponsor marquee
+      try {
+        var isKiosk = _params.get('kiosk')==='1';
+        if (isKiosk) {
+          var hdr=document.getElementById('app-header'); if(hdr) hdr.style.display='none';
+          var cat=document.getElementById('category-strip'); if(cat) cat.style.display='none';
+          document.body.style.background = 'var(--navy)';
+        }
+        // Inject TV hero + sponsor marquee after render
+        function injectTVHero(){
+          try {
+            if (typeof Hero==='function' && window.BRANDING) {
+              var liveCount=0; for(var i=0;i<(S.groupMatches||[]).length;i++) if(S.groupMatches[i].inProgress) liveCount++;
+              var heroHtml = Hero('tv', { liveCount: liveCount ? liveCount+' live' : '', subtitle: (window.BRANDING.hero && window.BRANDING.hero.tvTicker) || 'Live bracket · Auto-rotating' });
+              var mc=document.getElementById('main-content');
+              if(mc && !document.getElementById('tv-hero')) {
+                var div=document.createElement('div'); div.id='tv-hero'; div.innerHTML=heroHtml;
+                mc.prepend(div);
+                // sponsor marquee every 3rd rotation
+                if (window.BRANDING && window.BRANDING.sponsors && window.BRANDING.sponsors.length) {
+                  var marq=document.createElement('div');
+                  marq.id='tv-sponsor-marquee';
+                  marq.style.cssText='margin:10px 0; padding:10px; background:var(--n2); border:1px solid var(--nb); border-radius:10px; text-align:center; font-size:12px; color:var(--tm)';
+                  marq.innerHTML='<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Presented by</div><div style="display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap">' + window.BRANDING.sponsors.map(function(sub){return '<span style="font-weight:600;color:var(--text)">'+sub.name+'</span>';}).join(' <span style="color:var(--tm)">•</span> ') + '</div>';
+                  // show every 3rd page
+                  var rotCount=0;
+                  var origRender=window.render;
+                  // we handle in interval below
+                }
+              }
+            }
+          } catch(e){}
+        }
+        setTimeout(injectTVHero, 300);
+        setInterval(function(){
+          tvIdx=(tvIdx+1)%tvPages.length; S.page=tvPages[tvIdx]; render();
+          setTimeout(injectTVHero, 400);
+          // every 3rd, show sponsor full-screen for 5s
+          if (window.BRANDING && window.BRANDING.sponsors && window.BRANDING.sponsors.length && tvIdx===1) {
+            setTimeout(function(){
+              var mc=document.getElementById('main-content');
+              if(mc){
+                var overlay=document.createElement('div');
+                overlay.style.cssText='position:fixed;inset:0;background:var(--n2);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;animation:slideIn .3s';
+                overlay.innerHTML='<div style="font-size:12px;color:var(--tm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px">Sponsors</div><div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;align-items:center">' + window.BRANDING.sponsors.map(function(sub){return '<div style="text-align:center"><div style="width:80px;height:80px;background:var(--n3);border:1px solid var(--nb);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--gold)">'+sub.name.slice(0,2).toUpperCase()+'</div><div style="font-size:12px;margin-top:6px">'+sub.name+'</div></div>';}).join('') + '</div>';
+                document.body.appendChild(overlay);
+                setTimeout(function(){ overlay.remove(); }, 5000);
+              }
+            }, 800);
+          }
+        }, 15000);
+      } catch(e){}
+    }
+  }
+} catch(e) {}
+if (!_isPublic) {
+  renderNav();
+  var sw = el('signin-wrap');
+  if (sw) sw.innerHTML = renderSignInPage();
+}
 hydrateIcons(document.body);
 if (GOOGLE_CLIENT_ID) {
   window.addEventListener('load', function () {
