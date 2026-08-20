@@ -3640,16 +3640,18 @@ function renderBracket() {
   if (k === 'knockout' && !S.knockoutRounds.length) { var _h2=''; try{ if(typeof Hero!=='undefined') _h2=Hero('empty',{title:'Bracket not ready',subtitle:'Enter the first round results to progress',primaryAction:"navTo('officials')"});}catch(e){} bk.innerHTML = _h2; return; }
   var total = S.groupMatches.length, played = 0;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].played) played++; }
-  if (k !== 'knockout' && played < total && !S.knockoutRounds.length && !S.tournament.allowEarlyKnockout) {
+  // Chart is always ON — show group progress as banner, never as lock (per your request)
+  var progressBanner = '';
+  if (k !== 'knockout' && played < total && !S.knockoutRounds.length) {
     var pct = Math.round(played / total * 100);
-    var _lockHero=''; try{ if(typeof Hero!=='undefined') _lockHero=Hero('live',{liveCount: played+' of '+total+' played', subtitle:'Dula HQ • Group stage in progress'});}catch(e){} bk.innerHTML = _lockHero + '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
-    return;
+    var _lockHero=''; try{ if(typeof Hero!=='undefined') _lockHero=Hero('live',{liveCount: played+' of '+total+' played', subtitle:'Dula HQ • Group stage in progress'});}catch(e){} 
+    progressBanner = _lockHero + '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
   }
   if (!S.knockoutRounds.length) { var built = buildKnockout(); if (built) S.knockoutRounds = built; }
   propagateKnockout();
   var lastRound = S.knockoutRounds[S.knockoutRounds.length - 1];
   var champion = (lastRound && lastRound.matches[0]) ? lastRound.matches[0].winner : null;
-  var html = '';
+  var html = progressBanner;
   if (champion) {
     var ct = getTeamById(champion.id);
     html += '<div class="trophy-card"><i class="ti ti-trophy trophy-icon"></i><div class="trophy-winner">' + (ct ? esc(ct.name) : 'Champion') + '</div><div class="trophy-sub">Tournament Champion</div></div>';
