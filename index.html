@@ -273,7 +273,7 @@ var S = {
   tournament: {
     name: 'Dula HQ Tournament', venue: '', date: '', format: '7', duration: 60,
     ageCategory: 'Open', offside: false, extraTime: true, penalties: true,
-    structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: false,
+    structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: true,
     pitches: []
   },
   teams: [],
@@ -465,7 +465,7 @@ function AC_generated()     { return activeCategory().generated; }
    category, so every existing function now operates per-category
    with zero changes elsewhere.
    ============================================================ */
-S._tournamentMeta = { name: 'Dula HQ Tournament', venue: '', date: '', pitches: [], guestAccessEnabled: false, allowEarlyKnockout: false, branding: {} };
+S._tournamentMeta = { name: 'Dula HQ Tournament', venue: '', date: '', pitches: [], guestAccessEnabled: false, allowEarlyKnockout: true, branding: {} };
 
 function defineCategoryProxy(prop, catField) {
   Object.defineProperty(S, prop, {
@@ -5553,7 +5553,7 @@ function freshTournamentState_() {
     tournament: {
       name: 'Dula HQ Tournament', venue: '', date: '', format: '7', duration: 60,
       ageCategory: 'Open', offside: false, extraTime: true, penalties: true,
-      structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: false,
+      structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: true,
       pitches: []
     },
     categories: [],
