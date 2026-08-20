@@ -270,6 +270,7 @@ var S = {
   role: 'admin',
   page: 'setup',
   bracketView: 'chart',
+  groupsView: 'chart',
   tournament: {
     name: 'Dula HQ Tournament', venue: '', date: '', format: '7', duration: 60,
     ageCategory: 'Open', offside: false, extraTime: true, penalties: true,
@@ -3222,12 +3223,61 @@ function renderGroups() {
   var pageTitle = titles[k] || 'Groups';
   setTopbar(pageTitle, '');
   var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Groups', subtitle: 'View groups and fixtures', section: 'Competition'}); } catch(e){}
+  var viewToggle = '<div class="view-toggle"><button class="vt-btn' + (S.groupsView === 'chart' ? ' active' : '') + '" onclick="S.groupsView=\'chart\';renderGroups()"><i class="ti ti-layout-grid"></i> Chart</button><button class="vt-btn' + (S.groupsView === 'list' ? ' active' : '') + '" onclick="S.groupsView=\'list\';renderGroups()"><i class="ti ti-list"></i> List</button></div>';
+  var isChart = S.groupsView !== 'list';
   
-  if (!S.generated) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-grid-3x3"></i><p>Generate the draw from Setup first.</p></div>'; return; }
-  if (k === 'knockout') { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Knockout format \u2014 <a href="#" onclick="navTo(\'bracket\')" style="color:var(--gold)">go to Bracket</a> to enter results.</p></div>'; return; }
+  if (!S.generated) { el('main-content').innerHTML = _pageHero + viewToggle + '<div class="empty"><i class="ti ti-grid-3x3"></i><p>Generate the draw from Setup first.</p></div>'; return; }
+  if (k === 'knockout') { el('main-content').innerHTML = _pageHero + viewToggle + '<div class="empty"><i class="ti ti-tournament"></i><p>Knockout format \u2014 <a href="#" onclick="navTo(\'bracket\')" style="color:var(--gold)">go to Bracket</a> to enter results.</p></div>'; return; }
   if (k === 'custom') { renderCustomGroups(); return; }
   var isRR = (k === 'round_robin' || k === 'double_round_robin');
-  var html = _pageHero + '';
+  if (isChart) {
+    var html = _pageHero + viewToggle;
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">';
+    for (var gi = 0; gi < S.groups.length; gi++) {
+      var grp = S.groups[gi];
+      var standings = calcGroupStandings(gi);
+      var grpMatches = []; for (var mi2=0; mi2 < S.groupMatches.length; mi2++) if (S.groupMatches[mi2].group===gi) grpMatches.push(S.groupMatches[mi2]);
+      var totalMP = grpMatches.length, playedMP=0; for(var pi=0;pi<grpMatches.length;pi++) if(grpMatches[pi].played) playedMP++;
+      html += '<div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:16px;padding:16px;position:relative;overflow:hidden">';
+      html += '<div style="position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle, #c8ff32 0%, transparent 65%);opacity:.08;pointer-events:none"></div>';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;position:relative">';
+      html += '<span style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#c8ff32;background:rgba(200,255,50,.12);padding:4px 8px;border-radius:20px;border:1px solid rgba(200,255,50,.2)">Group '+grp.name+'</span>';
+      html += '<span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:10px;color:rgba(255,255,255,.5)">'+standings.length+' teams · '+grpMatches.length+' fixtures</span>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;position:relative">';
+      for (var si=0; si<standings.length; si++) {
+        var st = standings[si]; var tm = getTeamById(st.id); var isTop = si < (isRR?1:Math.min(S.tournament.advancePer||2, standings.length));
+        html += '<div style="flex:1;min-width:80px;background:'+(isTop?'#c8ff32':'rgba(255,255,255,.06)')+';border:1px solid '+(isTop?'#c8ff32':'rgba(255,255,255,.1)')+';border-radius:10px;padding:8px;text-align:center;position:relative">'
+          + '<div style="font-size:11px;font-weight:800;color:'+(isTop?'#0a0a0a':'#fff')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(tm?esc(tm.name):'?')+'</div>'
+          + '<div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:'+(isTop?'rgba(10,10,10,.7)':'rgba(255,255,255,.6)')+';margin-top:4px">'+st.pts+' pts · '+(st.gf-st.ga>0?'+'+(st.gf-st.ga):(st.gf-st.ga))+' GD</div>'
+          + (isTop?'<span style="position:absolute;top:-6px;right:-6px;font-size:8px;background:#0a0a0a;color:#c8ff32;padding:2px 5px;border-radius:10px;border:1px solid #c8ff32">ADV</span>':'') + '</div>';
+      }
+      html += '</div>';
+      if (grpMatches.length) {
+        html += '<div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0;padding-top:10px;position:relative"><div style="font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px">Fixtures</div>';
+        for (var fi=0; fi<Math.min(grpMatches.length,6); fi++) {
+          var mm = grpMatches[fi]; var ht=getTeamById(mm.homeId), at=getTeamById(mm.awayId);
+          var status = mm.played ? ('<span style="font-family:JetBrains Mono,monospace;font-size:10px;background:#c8ff32;color:#0a0a0a;padding:2px 6px;border-radius:20px;font-weight:700">'+mm.homeScore+'–'+mm.awayScore+'</span>') : (mm.inProgress ? '<span style="font-family:JetBrains Mono,monospace;font-size:10px;background:#ff3b30;color:#fff;padding:2px 6px;border-radius:20px;font-weight:700;animation:pulse 1.2s infinite">LIVE</span>' : '<span style="font-family:JetBrains Mono,monospace;font-size:10px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);padding:2px 6px;border-radius:20px">'+(mm.kickoff||'TBD')+'</span>');
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px">'
+            + '<span style="flex:1;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(ht?esc(ht.name):'?')+'</span>'
+            + status
+            + '<span style="flex:1;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right">'+(at?esc(at.name):'?')+'</span>'
+            + '</div>';
+        }
+        if (grpMatches.length>6) html += '<div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;margin-top:6px">+'+(grpMatches.length-6)+' more fixtures</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    // Progress bar for group stage
+    var totalG = S.groupMatches.length, playedG=0; for(var i=0;i<S.groupMatches.length;i++) if(S.groupMatches[i].played) playedG++;
+    var pctG=Math.round(playedG/totalG*100)||0;
+    html += '<div style="margin-top:14px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;color:#fff"><span style="font-family:JetBrains Mono,monospace;font-size:11px;color:rgba(255,255,255,.6)">Group stage</span><div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pctG+'%;background:#c8ff32;border-radius:3px"></div></div><span style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#c8ff32">'+playedG+'/'+totalG+'</span></div>';
+    el('main-content').innerHTML = html;
+    return;
+  }
+  var html = _pageHero + viewToggle;
   for (var gi = 0; gi < S.groups.length; gi++) {
     var grp = S.groups[gi];
     var standings = calcGroupStandings(gi);
@@ -5556,6 +5606,7 @@ function freshTournamentState_() {
       structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: true,
       pitches: []
     },
+    groupsView: 'chart',
     categories: [],
     activeCategoryId: null,
     currentMatchId: null,
