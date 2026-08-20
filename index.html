@@ -3323,7 +3323,7 @@ function renderCustomGroups() {
   var html = '<div class="card"><div class="card-title"><i class="ti ti-adjustments"></i> Custom matches <span style="font-size:var(--fs13);font-weight:400;color:var(--tm);margin-left:4px">' + (S.tournament.customLabel || 'Manual setup') + '</span></div>'
     + '<button class="btn primary" style="margin-bottom:12px" onclick="openCustomMatchAdd()"><i class="ti ti-plus"></i> Add match</button>';
   if (S.groupMatches.length) {
-    html += '<table class="tbl"><thead><tr><th>#</th><th>Home</th><th>Away</th><th class="num">Score</th><th>Status</th><th></th></tr></thead><tbody>';
+    html += '<table class="tbl"><thead><tr><th>#</th><th>Team A</th><th>Team B</th><th class="num">Score</th><th>Status</th><th></th></tr></thead><tbody>';
     for (var i = 0; i < S.groupMatches.length; i++) {
       var m = S.groupMatches[i];
       var ht = getTeamById(m.homeId);
@@ -3363,11 +3363,12 @@ function openMatchEdit(mid) {
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].id === mid) { m = S.groupMatches[i]; break; } }
   if (!m) return;
   var ht = getTeamById(m.homeId), at = getTeamById(m.awayId);
+  // Neutral: Team A vs Team B (no home/away) — both editable, admin/authorized
   var body = '<div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-bottom:14px">'
-    + '<div style="text-align:center;flex:1"><div style="font-weight:600;margin-bottom:8px">' + (ht ? esc(ht.name) : 'Home') + '</div><input type="number" id="m-hs" value="' + (m.homeScore !== null ? m.homeScore : '') + '" min="0" max="30" placeholder="0" style="width:70px;text-align:center;font-size:var(--fs24);font-weight:600"></div>'
-    + '<div style="color:var(--tm);font-size:var(--fs22);font-weight:600">\u2013</div>'
-    + '<div style="text-align:center;flex:1"><div style="font-weight:600;margin-bottom:8px">' + (at ? esc(at.name) : 'Away') + '</div><input type="number" id="m-as" value="' + (m.awayScore !== null ? m.awayScore : '') + '" min="0" max="30" placeholder="0" style="width:70px;text-align:center;font-size:var(--fs24);font-weight:600"></div></div>'
-    + '<div class="field"><label>Status</label><select id="m-status"><option value="normal"' + (m.status === 'normal' ? ' selected' : '') + '>Normal</option><option value="default"' + (m.status === 'default' ? ' selected' : '') + '>Default win (home)</option><option value="dq"' + (m.status === 'dq' ? ' selected' : '') + '>Disqualification</option></select></div>';
+    + '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tm);margin-bottom:4px">Team A</div><div style="font-weight:700;margin-bottom:8px">' + (ht ? esc(ht.name) : 'Team A') + '</div><input type="number" id="m-hs" value="' + (m.homeScore !== null ? m.homeScore : '') + '" min="0" max="30" placeholder="0" style="width:80px;text-align:center;font-size:var(--fs24);font-weight:700;border:1px solid var(--nb);border-radius:8px;padding:6px"></div>'
+    + '<div style="color:var(--tm);font-size:var(--fs22);font-weight:700">\u2013</div>'
+    + '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tm);margin-bottom:4px">Team B</div><div style="font-weight:700;margin-bottom:8px">' + (at ? esc(at.name) : 'Team B') + '</div><input type="number" id="m-as" value="' + (m.awayScore !== null ? m.awayScore : '') + '" min="0" max="30" placeholder="0" style="width:80px;text-align:center;font-size:var(--fs24);font-weight:700;border:1px solid var(--nb);border-radius:8px;padding:6px"></div></div>'
+    + '<div class="field"><label>Status</label><select id="m-status"><option value="normal"' + (m.status === 'normal' ? ' selected' : '') + '>Normal</option><option value="default"' + (m.status === 'default' ? ' selected' : '') + '>Default win (Team A)</option><option value="dq"' + (m.status === 'dq' ? ' selected' : '') + '>Disqualification</option></select></div>';
   openModal((ht ? ht.name : 'Home') + ' vs ' + (at ? at.name : 'Away'), body, '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveMatchScore(\'' + mid + '\')"><i class="ti ti-check"></i> Save</button>');
 }
 function saveMatchScore(mid) {
@@ -3700,12 +3701,12 @@ function openKoEdit(ri, mi) {
   var m = S.knockoutRounds[ri].matches[mi];
   var p1 = m.p1 ? getTeamById(m.p1.id) : null, p2 = m.p2 ? getTeamById(m.p2.id) : null;
   var body = '<div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-bottom:14px">'
-    + '<div style="text-align:center;flex:1"><div style="font-weight:600;margin-bottom:8px">' + (p1 ? esc(p1.name) : 'Home') + '</div><input type="number" id="ko-s1" value="' + (m.s1 !== null ? m.s1 : '') + '" min="0" max="30" placeholder="0" style="width:70px;text-align:center;font-size:var(--fs24);font-weight:600"></div>'
-    + '<div style="color:var(--tm);font-size:var(--fs22);font-weight:600">\u2013</div>'
-    + '<div style="text-align:center;flex:1"><div style="font-weight:600;margin-bottom:8px">' + (p2 ? esc(p2.name) : 'Away') + '</div><input type="number" id="ko-s2" value="' + (m.s2 !== null ? m.s2 : '') + '" min="0" max="30" placeholder="0" style="width:70px;text-align:center;font-size:var(--fs24);font-weight:600"></div></div>'
-    + '<div class="g2"><div class="field"><label>Pen score (' + (p1 ? esc(p1.name) : 'Home') + ')</label><input type="number" id="ko-ps1" value="' + (m.ps1 !== null ? m.ps1 : '') + '" min="0" placeholder="\u2014"></div>'
-    + '<div class="field"><label>Pen score (' + (p2 ? esc(p2.name) : 'Away') + ')</label><input type="number" id="ko-ps2" value="' + (m.ps2 !== null ? m.ps2 : '') + '" min="0" placeholder="\u2014"></div></div>';
-  openModal((p1 ? p1.name : '?') + ' vs ' + (p2 ? p2.name : '?'), body, '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveKoScore(' + ri + ',' + mi + ')"><i class="ti ti-check"></i> Save</button>');
+    + '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tm);margin-bottom:4px">Team A</div><div style="font-weight:700;margin-bottom:8px">' + (p1 ? esc(p1.name) : 'Team A') + '</div><input type="number" id="ko-s1" value="' + (m.s1 !== null ? m.s1 : '') + '" min="0" max="30" placeholder="0" style="width:80px;text-align:center;font-size:var(--fs24);font-weight:700;border:1px solid var(--nb);border-radius:8px;padding:6px"></div>'
+    + '<div style="color:var(--tm);font-size:var(--fs22);font-weight:700">\u2013</div>'
+    + '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tm);margin-bottom:4px">Team B</div><div style="font-weight:700;margin-bottom:8px">' + (p2 ? esc(p2.name) : 'Team B') + '</div><input type="number" id="ko-s2" value="' + (m.s2 !== null ? m.s2 : '') + '" min="0" max="30" placeholder="0" style="width:80px;text-align:center;font-size:var(--fs24);font-weight:700;border:1px solid var(--nb);border-radius:8px;padding:6px"></div></div>'
+    + '<div class="g2"><div class="field"><label>Pen score (' + (p1 ? esc(p1.name) : 'Team A') + ')</label><input type="number" id="ko-ps1" value="' + (m.ps1 !== null ? m.ps1 : '') + '" min="0" placeholder="\u2014"></div>'
+    + '<div class="field"><label>Pen score (' + (p2 ? esc(p2.name) : 'Team B') + ')</label><input type="number" id="ko-ps2" value="' + (m.ps2 !== null ? m.ps2 : '') + '" min="0" placeholder="\u2014"></div></div>';
+  openModal((p1 ? p1.name : 'Team A') + ' vs ' + (p2 ? p2.name : 'Team B'), body, '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveKoScore(' + ri + ',' + mi + ')"><i class="ti ti-check"></i> Save</button>');
 }
 function saveKoScore(ri, mi) {
   var m = S.knockoutRounds[ri].matches[mi];
@@ -4313,7 +4314,7 @@ function renderOfficials() {
       var refOptsBase = [];
       refOptsBase.push({ v: '', l: '-- assign --' });
       for (var ri4 = 0; ri4 < S.referees.length; ri4++) { refOptsBase.push({ v: S.referees[ri4].id, l: S.referees[ri4].name + (S.referees[ri4].availability === 'unavailable' ? ' (unavailable)' : '') }); }
-      html += '<div class="card"><div class="card-title"><i class="ti ti-map-pin"></i> Match assignments</div><table class="tbl"><thead><tr><th>Match</th><th>Home</th><th>Away</th><th>Pitch</th><th>Kick-off</th><th>Referee</th><th></th></tr></thead><tbody>';
+      html += '<div class="card"><div class="card-title"><i class="ti ti-map-pin"></i> Match assignments</div><table class="tbl"><thead><tr><th>Match</th><th>Team A</th><th>Team B</th><th>Pitch</th><th>Kick-off</th><th>Referee</th><th></th></tr></thead><tbody>';
       var showU = upcoming.slice(0, 8);
       for (var uj = 0; uj < showU.length; uj++) {
         var m2 = showU[uj];
@@ -4803,9 +4804,9 @@ function renderReferee() {
       + '<div class="card" style="text-align:center">'
       + '<div style="font-size:var(--fs13);color:var(--tm);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Final score</div>'
       + '<div style="display:flex;align-items:center;justify-content:center;gap:16px">'
-      + '<div style="flex:1;text-align:right"><div style="font-weight:600;font-size:var(--fs15)">' + (ht ? esc(ht.name) : 'Home') + '</div></div>'
+      + '<div style="flex:1;text-align:right"><div style="font-weight:600;font-size:var(--fs15)">' + (ht ? esc(ht.name) : 'Team A') + '</div></div>'
       + '<div style="font-size:var(--fs41);font-weight:700;color:var(--gold)">' + m.homeScore + ' \u2013 ' + m.awayScore + '</div>'
-      + '<div style="flex:1;text-align:left"><div style="font-weight:600;font-size:var(--fs15)">' + (at ? esc(at.name) : 'Away') + '</div></div>'
+      + '<div style="flex:1;text-align:left"><div style="font-weight:600;font-size:var(--fs15)">' + (at ? esc(at.name) : 'Team B') + '</div></div>'
       + '</div>'
       + '<button class="btn sm" style="margin-top:10px" onclick="openMatchEdit(\'' + m.id + '\')"><i class="ti ti-edit"></i> Edit final score</button>'
       + (!m.verified ? '<div style="font-size:var(--fs13);color:var(--amber);margin-top:8px"><i class="ti ti-info-circle"></i> Pending verification by the tournament committee</div>' : '<div style="font-size:var(--fs13);color:var(--green);margin-top:8px"><i class="ti ti-check"></i> Verified</div>')
@@ -4845,13 +4846,13 @@ function renderReferee() {
       + '</div>'
       + '<div style="font-size:var(--fs13);color:var(--tm);margin-top:8px;text-transform:uppercase;letter-spacing:.06em">' + (S.timerRunning ? '\u25cf ' : '') + timerStatusLabel() + ' \u00b7 ' + S.tournament.duration + '\' match \u00b7 scroll digits to adjust</div>' + breakBadge + '</div>'
       + '<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;background:var(--n3);border:1px solid var(--nb);border-radius:10px;padding:14px 12px;margin-bottom:12px">'
-      + '<div style="text-align:center"><div style="font-size:var(--fs13);color:var(--tm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">' + (ht ? esc(ht.name) : 'Home') + '</div>'
+      + '<div style="text-align:center"><div style="font-size:var(--fs13);color:var(--tm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">' + (ht ? esc(ht.name) : 'Team A') + '</div>'
       + '<div style="display:flex;align-items:center;justify-content:center;gap:8px">'
       + '<button onclick="adjustScore(\'home\',-1)" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--nb);background:var(--n4);color:var(--ts);font-size:var(--fs22);cursor:pointer;display:flex;align-items:center;justify-content:center">\u2212</button>'
       + '<div id="score-home" style="font-size:var(--fs48);font-weight:700;color:var(--gold);min-width:40px;text-align:center">' + sc.hs + '</div>'
       + '<button onclick="adjustScore(\'home\',1)" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--gb);background:var(--gl);color:var(--gold);font-size:var(--fs22);cursor:pointer;display:flex;align-items:center;justify-content:center">+</button></div></div>'
       + '<div style="font-size:var(--fs26);font-weight:700;color:var(--tm)">\u2013</div>'
-      + '<div style="text-align:center"><div style="font-size:var(--fs13);color:var(--tm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">' + (at ? esc(at.name) : 'Away') + '</div>'
+      + '<div style="text-align:center"><div style="font-size:var(--fs13);color:var(--tm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">' + (at ? esc(at.name) : 'Team B') + '</div>'
       + '<div style="display:flex;align-items:center;justify-content:center;gap:8px">'
       + '<button onclick="adjustScore(\'away\',-1)" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--nb);background:var(--n4);color:var(--ts);font-size:var(--fs22);cursor:pointer;display:flex;align-items:center;justify-content:center">\u2212</button>'
       + '<div id="score-away" style="font-size:var(--fs48);font-weight:700;color:var(--gold);min-width:40px;text-align:center">' + sc.as + '</div>'
@@ -4878,9 +4879,9 @@ function renderReferee() {
       + '<button onclick="toggleTimer()" style="width:120px;height:56px;flex-shrink:0;border-radius:14px;border:2px solid ' + (S.timerRunning ? 'var(--rdb)' : 'var(--green)') + ';background:' + (S.timerRunning ? 'var(--rdbg)' : 'var(--grbg)') + ';color:' + (S.timerRunning ? 'var(--red)' : 'var(--green)') + ';font-size:var(--fs20);font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 0 0 1px ' + (S.timerRunning ? 'var(--rdb)' : 'var(--grb)') + ', 0 4px 14px ' + (S.timerRunning ? 'rgba(220,38,38,.25)' : 'rgba(22,163,74,.3)') + '"><i class="ti ' + (S.timerRunning ? 'ti-player-pause' : 'ti-player-play') + '" style="font-size:var(--fs26)"></i>' + timerButtonLabel() + '</button>'
       + '</div>'
       + '<div class="timer-s">' + timerStatusLabel() + ' \u00b7 ' + S.tournament.duration + '\' match \u00b7 scroll digits to adjust</div>' + breakBadge
-      + '<div class="ref-board"><div><div class="ref-tname">' + (ht ? esc(ht.name) : 'Home') + '</div><div class="ref-trole">Home</div></div>'
+      + '<div class="ref-board"><div><div class="ref-tname">' + (ht ? esc(ht.name) : 'Team A') + '</div><div class="ref-trole">Home</div></div>'
       + '<div><div class="ref-score">' + sc.hs + ' \u2013 ' + sc.as + '</div><div style="font-size:var(--fs13);color:var(--tm);text-align:center">' + S.tournament.duration + '\' total</div></div>'
-      + '<div><div class="ref-tname">' + (at ? esc(at.name) : 'Away') + '</div><div class="ref-trole">Away</div></div></div>'
+      + '<div><div class="ref-tname">' + (at ? esc(at.name) : 'Team B') + '</div><div class="ref-trole">Away</div></div></div>'
       + '<div style="margin-bottom:10px;font-size:var(--fs14);font-weight:600;color:var(--ts)">Log event</div>'
       + actionTiles
       + ticklerCard
@@ -4895,7 +4896,7 @@ function openCardModal(type) {
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].id === S.currentMatchId) { m = S.groupMatches[i]; break; } }
   var ht = getTeamById(m.homeId), at = getTeamById(m.awayId);
   var isRed = type === 'red_direct';
-  var body = '<div class="field"><label>Team</label><select id="ev-team" onchange="updatePlayerList()"><option value="' + m.homeId + '">' + (ht ? esc(ht.name) : 'Home') + '</option><option value="' + m.awayId + '">' + (at ? esc(at.name) : 'Away') + '</option></select></div>'
+  var body = '<div class="field"><label>Team</label><select id="ev-team" onchange="updatePlayerList()"><option value="' + m.homeId + '">' + (ht ? esc(ht.name) : 'Team A') + '</option><option value="' + m.awayId + '">' + (at ? esc(at.name) : 'Team B') + '</option></select></div>'
     + '<div class="field"><label>Player</label><select id="ev-player-sel">' + playerOpts(m.homeId) + '</select></div>'
     + (isRed ? '<div class="field"><label>Card type</label><select id="ev-redtype"><option value="red_direct">Direct red</option><option value="red_indirect">Indirect red</option><option value="red_yellow">Yellow + Red</option></select></div>' : '')
     + '<div class="field"><label>Minute</label><input type="number" id="ev-min" value="' + (elapsedMinute() || 1) + '" min="1" max="120"></div>';
@@ -5070,7 +5071,7 @@ function openLogGoal(type) {
   var m = null;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].id === S.currentMatchId) { m = S.groupMatches[i]; break; } }
   var ht = getTeamById(m.homeId), at = getTeamById(m.awayId);
-  var body = '<div class="field"><label>Team</label><select id="ev-team" onchange="updateGoalPlayers()"><option value="' + m.homeId + '">' + (ht ? esc(ht.name) : 'Home') + '</option><option value="' + m.awayId + '">' + (at ? esc(at.name) : 'Away') + '</option></select></div>'
+  var body = '<div class="field"><label>Team</label><select id="ev-team" onchange="updateGoalPlayers()"><option value="' + m.homeId + '">' + (ht ? esc(ht.name) : 'Team A') + '</option><option value="' + m.awayId + '">' + (at ? esc(at.name) : 'Team B') + '</option></select></div>'
     + '<div class="field"><label>Scorer</label><select id="ev-player-sel">' + playerOpts(m.homeId) + '</select></div>'
     + '<div class="field"><label>Minute</label><input type="number" id="ev-min" value="' + (elapsedMinute() || 1) + '" min="1" max="120"></div>';
   openModal(type === 'penalty_goal' ? '\ud83c\udfaf Penalty scored' : '\u26bd Goal', body, '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="logGoal(\'' + type + '\')"><i class="ti ti-check"></i> Log</button>');
@@ -5106,7 +5107,7 @@ function openSubModal() {
   var m = null;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].id === S.currentMatchId) { m = S.groupMatches[i]; break; } }
   var ht = getTeamById(m.homeId), at = getTeamById(m.awayId);
-  var body = '<div class="field"><label>Team</label><select id="sub-team" onchange="updateSubLists()"><option value="' + m.homeId + '">' + (ht ? esc(ht.name) : 'Home') + '</option><option value="' + m.awayId + '">' + (at ? esc(at.name) : 'Away') + '</option></select></div>'
+  var body = '<div class="field"><label>Team</label><select id="sub-team" onchange="updateSubLists()"><option value="' + m.homeId + '">' + (ht ? esc(ht.name) : 'Team A') + '</option><option value="' + m.awayId + '">' + (at ? esc(at.name) : 'Team B') + '</option></select></div>'
     + '<div class="field"><label>Player OFF</label><select id="sub-off">' + playerOpts(m.homeId) + '</select></div>'
     + '<div style="text-align:center;font-size:var(--fs24);color:var(--blue);margin:4px 0">\u21d5</div>'
     + '<div class="field"><label>Player ON</label><select id="sub-on">' + playerOpts(m.homeId) + '</select></div>'
@@ -5215,7 +5216,7 @@ function openEditEvent(evId, matchId) {
     ? '<div class="field"><label>Player OFF</label><select id="edit-ev-playeroff">' + playerOpts(ev.teamId, ev.playerOff) + '</select></div>'
     : '';
   var body = '<div class="field"><label>Event type</label><select id="edit-ev-type" onchange="toggleEditSubField()">' + typeSelHtml + '</select></div>'
-    + '<div class="field"><label>Team</label><select id="edit-ev-team" onchange="updateEditPlayerLists()"><option value="' + m.homeId + '"' + (ev.teamId === m.homeId ? ' selected' : '') + '>' + (ht ? esc(ht.name) : 'Home') + '</option><option value="' + m.awayId + '"' + (ev.teamId === m.awayId ? ' selected' : '') + '>' + (at ? esc(at.name) : 'Away') + '</option></select></div>'
+    + '<div class="field"><label>Team</label><select id="edit-ev-team" onchange="updateEditPlayerLists()"><option value="' + m.homeId + '"' + (ev.teamId === m.homeId ? ' selected' : '') + '>' + (ht ? esc(ht.name) : 'Team A') + '</option><option value="' + m.awayId + '"' + (ev.teamId === m.awayId ? ' selected' : '') + '>' + (at ? esc(at.name) : 'Team B') + '</option></select></div>'
     + '<div class="field"><label>Player' + (ev.type === 'sub' ? ' ON' : '') + '</label><select id="edit-ev-player">' + playerOpts(ev.teamId, ev.player) + '</select></div>'
     + '<div id="edit-sub-wrap">' + subFieldsHtml + '</div>'
     + '<div class="field"><label>Minute</label><input type="number" id="edit-ev-min" value="' + ev.minute + '" min="1" max="120"></div>'
@@ -5265,7 +5266,7 @@ function openDefaultDq() {
   var m = null;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].id === S.currentMatchId) { m = S.groupMatches[i]; break; } }
   var ht = getTeamById(m.homeId), at = getTeamById(m.awayId);
-  openModal('Default / DQ', '<div class="field"><label>Action</label><select id="dq-type"><option value="default">' + (at ? esc(at.name) : 'Away') + ' no-show \u2014 default win to ' + (ht ? esc(ht.name) : 'Home') + '</option><option value="dq">' + (at ? esc(at.name) : 'Away') + ' disqualified</option></select></div>', '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn danger" onclick="applyDefaultDq()">Confirm</button>');
+  openModal('Default / DQ', '<div class="field"><label>Action</label><select id="dq-type"><option value="default">' + (at ? esc(at.name) : 'Team B') + ' no-show \u2014 default win to ' + (ht ? esc(ht.name) : 'Team A') + '</option><option value="dq">' + (at ? esc(at.name) : 'Team B') + ' disqualified</option></select></div>', '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn danger" onclick="applyDefaultDq()">Confirm</button>');
 }
 function applyDefaultDq() {
   var m = null;
