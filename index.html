@@ -3368,19 +3368,31 @@ function openMatchEdit(mid) {
     + '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tm);margin-bottom:4px">Team A</div><div style="font-weight:700;margin-bottom:8px">' + (ht ? esc(ht.name) : 'Team A') + '</div><input type="number" id="m-hs" value="' + (m.homeScore !== null ? m.homeScore : '') + '" min="0" max="30" placeholder="0" style="width:80px;text-align:center;font-size:var(--fs24);font-weight:700;border:1px solid var(--nb);border-radius:8px;padding:6px"></div>'
     + '<div style="color:var(--tm);font-size:var(--fs22);font-weight:700">\u2013</div>'
     + '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tm);margin-bottom:4px">Team B</div><div style="font-weight:700;margin-bottom:8px">' + (at ? esc(at.name) : 'Team B') + '</div><input type="number" id="m-as" value="' + (m.awayScore !== null ? m.awayScore : '') + '" min="0" max="30" placeholder="0" style="width:80px;text-align:center;font-size:var(--fs24);font-weight:700;border:1px solid var(--nb);border-radius:8px;padding:6px"></div></div>'
-    + '<div class="field"><label>Status</label><select id="m-status"><option value="normal"' + (m.status === 'normal' ? ' selected' : '') + '>Normal</option><option value="default"' + (m.status === 'default' ? ' selected' : '') + '>Default win (Team A)</option><option value="dq"' + (m.status === 'dq' ? ' selected' : '') + '>Disqualification</option></select></div>';
+    + '<div class="field"><label>Status</label><select id="m-status" onchange="var v=this.value;var w=document.getElementById(\'m-winner-wrap\');if(w) w.style.display=(v!==\'normal\' ? \'block\' : \'none\'); var sc=document.getElementById(\'score-row\');if(sc) sc.style.opacity=(v!==\'normal\' ? \'0.5\' : \'1\');"><option value="normal"' + (m.status === 'normal' ? ' selected' : '') + '>Normal — use scores above</option><option value="default"' + (m.status === 'default' ? ' selected' : '') + '>Default / Walkover</option><option value="dq"' + (m.status === 'dq' ? ' selected' : '') + '>Disqualification</option></select></div>'
+    + '<div class="field" id="m-winner-wrap" style="display:' + (m.status !== 'normal' ? 'block' : 'none') + '"><label>Winner (for Default/DQ)</label><select id="m-winner"><option value="' + m.homeId + '"' + (m.homeScore > m.awayScore || m.status==='normal' ? ' selected' : '') + '>' + (ht ? esc(ht.name) : 'Team A') + ' wins (3–0)</option><option value="' + m.awayId + '"' + (m.awayScore > m.homeScore ? ' selected' : '') + '>' + (at ? esc(at.name) : 'Team B') + ' wins (3–0)</option></select></div>';
   openModal((ht ? ht.name : 'Home') + ' vs ' + (at ? at.name : 'Away'), body, '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveMatchScore(\'' + mid + '\')"><i class="ti ti-check"></i> Save</button>');
 }
 function saveMatchScore(mid) {
   var m = null;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].id === mid) { m = S.groupMatches[i]; break; } }
   if (!m) return;
-  var hs = parseInt(el('m-hs').value), as2 = parseInt(el('m-as').value);
-  m.status = el('m-status').value;
+  // Always read both inputs — robust (was isNaN blocking Team B intermittently)
+  var hsRaw = el('m-hs') ? el('m-hs').value.trim() : '';
+  var asRaw = el('m-as') ? el('m-as').value.trim() : '';
+  var hs = hsRaw === '' ? NaN : parseInt(hsRaw, 10);
+  var as2 = asRaw === '' ? NaN : parseInt(asRaw, 10);
+  m.status = el('m-status') ? el('m-status').value : 'normal';
   if (m.status === 'normal') {
-    if (isNaN(hs) || isNaN(as2) || hs < 0 || as2 < 0) return;
+    // Require both scores for normal — show error if missing
+    if (isNaN(hs) || isNaN(as2)) { showToast('Enter both scores (0–30)'); return; }
+    if (hs < 0 || as2 < 0 || hs > 30 || as2 > 30) { showToast('Scores must be 0–30'); return; }
     m.homeScore = hs; m.awayScore = as2;
-  } else { m.homeScore = 3; m.awayScore = 0; }
+  } else {
+    // Default/DQ: winner chosen via dropdown, not fixed to Team A
+    var winnerId = el('m-winner') ? el('m-winner').value : m.homeId;
+    if (winnerId === m.homeId) { m.homeScore = 3; m.awayScore = 0; }
+    else { m.homeScore = 0; m.awayScore = 3; }
+  }
   m.played = true; m.verified = false; S.knockoutRounds = [];
   var htE = getTeamById(m.homeId), atE = getTeamById(m.awayId);
   logAudit('Match score saved', (htE ? htE.name : '?') + ' ' + m.homeScore + '\u2013' + m.awayScore + ' ' + (atE ? atE.name : '?') + (m.status !== 'normal' ? (' (' + m.status + ')') : ''), m.id);
