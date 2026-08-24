@@ -265,21 +265,170 @@
     #plat-footer span:last-child{color:var(--limeTx)}
     @media(max-width:600px){#plat-footer{justify-content:center;gap:8px;flex-wrap:wrap}}
 
+    /* ---- dashboard (reference design) ---- */
+    /* the KPI tiles keep their fixed dark card treatment (matching the hero) regardless of
+       site theme; the shared ".card{background:var(--bg2)!important}" override above would
+       otherwise flip them white while their text stays hardcoded white, so pin it back here */
+    .card.kpi-dark{background:#0a0a0a!important;border-color:#1a1a1a!important}
+    .dash-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:26px}
+    /* --amber is aliased to the lime accent app-wide, so it can't distinguish a "needs
+       attention" state from the normal accent color — these dashboard pills use a real
+       orange instead, and both the orange and red text shades below are picked to clear
+       WCAG AA (4.5:1) against their own tinted pill background in each theme */
+    .dash-kpi-pill{font-family:var(--mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block;margin-top:10px;background:var(--tint10);color:var(--limeTx);border:1px solid var(--tint20)}
+    .dash-kpi-pill.live{background:rgba(239,68,68,.12);color:#F87171;border-color:rgba(239,68,68,.30)}
+    [data-theme="light"] .dash-kpi-pill.live{color:#B91C1C}
+    .dash-kpi-pill.warn{background:rgba(251,146,60,.14);color:#FB923C;border-color:rgba(251,146,60,.32)}
+    [data-theme="light"] .dash-kpi-pill.warn{background:rgba(194,65,12,.10);color:#9A3412;border-color:rgba(194,65,12,.30)}
+    .dash-sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px}
+    .dash-sec-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+    .dash-sec-note{font-size:12.5px;color:var(--mute)}
+    .dash-quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px}
+    .dash-qa-card{padding:20px}
+    .dash-qa-icon{width:40px;height:40px;border-radius:11px;background:var(--tint10);border:1px solid var(--tint20);color:var(--limeTx);display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:18px}
+    .dash-qa-title{font-size:15px;font-weight:700;margin-bottom:4px;color:var(--ink)}
+    .dash-qa-desc{font-size:12.5px;color:var(--mute);line-height:1.5}
+    .dash-two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:26px}
+    .dash-panel-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-bottom:14px;color:var(--ink)}
+    .dash-match-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+    .dash-match-row:last-child{border-bottom:none}
+    .dash-m-team{flex:1;font-size:13px;font-weight:600;color:var(--ink)}
+    .dash-m-score{font-family:var(--mono);font-weight:800;font-size:14px;background:var(--bg3);border:1px solid var(--line2);border-radius:8px;padding:4px 11px;color:var(--ink)}
+    .dash-m-live{font-family:var(--mono);font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:20px;background:var(--red);color:#fff;letter-spacing:.06em;display:inline-flex;align-items:center;gap:4px}
+    .dash-m-pulse{width:6px;height:6px;border-radius:50%;background:#fff}
+    .dash-m-meta{font-size:11px;color:var(--mute);width:70px;text-align:right}
+    .dash-reviews{display:flex;flex-direction:column;gap:12px}
+    .dash-rv-row{display:flex;align-items:center;gap:12px}
+    .dash-rv-icon{width:34px;height:34px;border-radius:9px;background:var(--tint10);color:var(--limeTx);display:flex;align-items:center;justify-content:center;flex:none;font-size:15px}
+    .dash-rv-label{flex:1;font-size:13px;font-weight:600;color:var(--ink)}
+    .dash-rv-count{font-family:var(--mono);font-size:11px;font-weight:800;color:#FB923C;background:rgba(251,146,60,.14);padding:3px 10px;border-radius:20px}
+    [data-theme="light"] .dash-rv-count{color:#9A3412;background:rgba(194,65,12,.10)}
+    .dash-tool-list{display:flex;flex-wrap:wrap;gap:10px}
+    .dash-tool-chip{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--fill);color:var(--sub);font-size:12.5px;font-weight:600;cursor:pointer}
+    .dash-tool-chip:hover{border-color:var(--limeTx);color:var(--limeTx)}
+    .dash-tool-chip .n{font-family:var(--mono);font-size:10px;font-weight:800;color:#FB923C;margin-left:2px}
+    [data-theme="light"] .dash-tool-chip .n{color:#9A3412}
+    .dash-empty-note{font-size:12.5px;color:var(--mute);padding:6px 0}
+    @media(max-width:900px){.dash-two-col{grid-template-columns:1fr}}
+
+    /* ---- categories (reference design) ---- */
+    .cat-intro{color:var(--sub);font-size:13.5px;margin:0 0 22px;max-width:640px;line-height:1.6}
+    .cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+    .cat-card2{padding:22px}
+    .cat-card2.active{border-color:var(--tint30)!important}
+    .cat-top2{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:10px}
+    .cat-name2{font-size:17px;font-weight:700;color:var(--ink)}
+    .cat-age2{font-family:var(--mono);font-size:10.5px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+    .cat-live-badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:800;padding:5px 10px;border-radius:20px;background:rgba(239,68,68,.12);color:#F87171;letter-spacing:.06em;white-space:nowrap}
+    [data-theme="light"] .cat-live-badge{color:#B91C1C}
+    .cat-live-dot{width:6px;height:6px;border-radius:50%;background:var(--red)}
+    .cat-viewing-badge{font-family:var(--mono);font-size:10px;font-weight:800;padding:5px 10px;border-radius:20px;background:var(--tint10);color:var(--limeTx);letter-spacing:.06em;white-space:nowrap}
+    .cat-avatars{display:flex;align-items:center;margin:18px 0 14px}
+    .cat-ava{width:28px;height:28px;border-radius:50%;background:var(--bg3);border:2px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--sub);margin-left:-10px;flex:none}
+    .cat-ava:first-child{margin-left:0}
+    .cat-ava.more{background:var(--tint10);color:var(--limeTx)}
+    .cat-team-count{margin-left:12px;font-size:12.5px;color:var(--mute)}
+    .cat-progress-row{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--mute);margin-bottom:8px}
+    .cat-progress-row b{color:var(--ink);font-weight:700}
+    .cat-bar{height:6px;border-radius:3px;background:var(--fill);overflow:hidden;margin-bottom:18px}
+    .cat-bar-fill{height:100%;background:var(--lime);border-radius:3px}
+    .cat-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+    .cat-fmt-tag{font-size:12px;color:var(--sub)}
+    .cat-actions{display:flex;gap:6px}
+
+    /* ---- teams (reference design) ---- */
+    .teams-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+    .teams-search{flex:1;max-width:340px;display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line2);border-radius:10px;background:var(--fill);color:var(--mute)}
+    .teams-search input{border:none;background:none;color:var(--ink);font-size:13.5px;outline:none;width:100%;font-family:var(--body)}
+    .teams-search input::placeholder{color:var(--mute)}
+    .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+    .team-card2{padding:20px}
+    .team-top2{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .team-ava2{width:42px;height:42px;border-radius:11px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--limeTx);flex:none}
+    .team-name2{font-size:14.5px;font-weight:700;color:var(--ink)}
+    .team-coach2{font-size:11.5px;color:var(--mute);margin-top:2px}
+    .team-meta2{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin-bottom:14px}
+    .doc-row{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+    .doc-chip{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;font-weight:700;padding:4px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em}
+    .doc-chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+    .doc-chip.ok{background:rgba(74,222,128,.12);color:#4ADE80}
+    [data-theme="light"] .doc-chip.ok{background:rgba(21,128,61,.10);color:#166534}
+    .doc-chip.pending{background:rgba(251,146,60,.12);color:#FB923C}
+    [data-theme="light"] .doc-chip.pending{background:rgba(194,65,12,.10);color:#9A3412}
+    .team-foot2{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+    .mini-btn{flex:1;text-align:center;padding:8px 0;border-radius:9px;border:1px solid var(--line2);font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;background:var(--fill)}
+    .mini-btn:hover{border-color:var(--limeTx);color:var(--limeTx)}
+    .filter-pill{padding:9px 15px;border-radius:20px;border:1px solid var(--line2);font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer;white-space:nowrap}
+    .filter-pill.active{background:var(--tint10);color:var(--limeTx);border-color:var(--tint30)}
+    .filter-pill:hover{border-color:var(--limeTx)}
+
+    /* ---- groups / draws chart view (reference design) ---- */
+    .grp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:18px}
+    .grp-card2{padding:22px}
+    .grp-head2{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .grp-pill2{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--limeTx);background:var(--tint10);border:1px solid var(--tint20);padding:5px 11px;border-radius:20px}
+    .grp-count2{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--mute)}
+    .grp-standings{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:16px}
+    .grp-st-tile{background:var(--fill);border:1px solid var(--line);border-radius:11px;padding:10px 8px;text-align:center;position:relative}
+    .grp-st-tile.adv{background:var(--lime);border-color:var(--lime)}
+    .grp-st-name{font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .grp-st-tile.adv .grp-st-name{color:#09090B}
+    .grp-st-meta{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--mute);margin-top:5px}
+    .grp-st-tile.adv .grp-st-meta{color:rgba(9,9,11,.65)}
+    .grp-adv-tag{position:absolute;top:-7px;right:-6px;font-family:var(--mono);font-size:8.5px;font-weight:800;background:#09090B;color:var(--lime);padding:2px 6px;border-radius:20px;border:1px solid var(--lime)}
+    .grp-fixtures{border-top:1px solid var(--line);padding-top:14px}
+    .grp-fx-label{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:10px}
+    .grp-fx-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+    .grp-fx-row:last-child{border-bottom:none}
+    .grp-fx-team{flex:1;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .grp-fx-status{font-family:var(--mono);font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:var(--fill);color:var(--sub);white-space:nowrap}
+    .grp-fx-status.played{background:var(--lime);color:#09090B}
+    .grp-fx-status.live{background:var(--red);color:#fff}
+    .grp-fx-more{font-size:11px;color:var(--mute);text-align:center;margin-top:6px}
+    .grp-stage-bar{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+    .grp-stage-label{font-family:var(--mono);font-size:11px;color:var(--mute);white-space:nowrap}
+    .grp-stage-track{flex:1;height:7px;border-radius:4px;background:var(--fill);overflow:hidden}
+    .grp-stage-fill{height:100%;background:var(--lime)}
+    .grp-stage-val{font-family:var(--mono);font-size:11.5px;font-weight:800;color:var(--limeTx)}
+
+    /* ---- standings (reference design) ---- */
+    .group-tabs2{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+    .g-tab2{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;color:var(--sub);cursor:pointer;border:1px solid transparent}
+    .g-tab2.active{background:var(--tint10);color:var(--limeTx);border-color:var(--tint20)}
+    .g-tab2:hover:not(.active){border-color:var(--line2)}
+    .standings-panel-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .standings-legend{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mute)}
+    .standings-sw{width:9px;height:9px;border-radius:3px;background:var(--lime);display:inline-block}
+    .standings-adv-row{background:var(--tint05)}
+    .standings-adv-tag{font-family:var(--mono);font-size:9.5px;font-weight:800;background:var(--tint10);color:var(--limeTx);padding:3px 8px;border-radius:20px;margin-left:8px}
+
     /* ---- split login (reference design) ---- */
+    /* the login screen is deliberately dark regardless of site theme, so its text below uses
+       fixed light-on-dark colors rather than the theme-following --ink/--sub/--limeTx vars
+       (those flip to dark values in light theme and would go near-invisible on this dark box) */
     .lg-split{flex:1;display:flex;min-height:calc(100vh - 50px)}
     .lg-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:8%}
-    .lg-box{background:#1a1d1c;padding:40px;border-radius:10px;max-width:400px;width:100%;border:1px solid var(--line)}
+    .lg-box{background:#1a1d1c;padding:40px;border-radius:10px;max-width:400px;width:100%;border:1px solid var(--line);color:#F4F4F5}
     .lg-label{color:var(--limeTx);font-family:var(--mono);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
-    .lg-h2{margin:0 0 20px;font-size:1.8rem;font-family:var(--disp);font-weight:600;letter-spacing:.5px}
-    .lg-input{width:100%;padding:15px;margin-bottom:15px;background:#0f1110;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:14px;box-sizing:border-box}
-    .lg-input:focus{border-color:var(--limeTx);outline:none;box-shadow:0 0 0 3px var(--tint20)}
+    .lg-box .lg-label,.lg-overlay-badge .lg-label{color:var(--lime)}
+    .lg-h2{margin:0 0 20px;font-size:1.8rem;font-family:var(--disp);font-weight:600;letter-spacing:.5px;color:#F4F4F5}
+    .lg-sub{color:rgba(244,244,245,.68);font-size:.85rem;line-height:1.6;margin:0 0 24px}
+    .lg-input{width:100%;padding:15px;margin-bottom:15px;background:#0f1110;border:1px solid var(--line);border-radius:8px;color:#F4F4F5;font-family:var(--mono);font-size:14px;box-sizing:border-box}
+    .lg-input::placeholder{color:rgba(244,244,245,.4)}
+    .lg-input:focus{border-color:var(--lime);outline:none;box-shadow:0 0 0 3px var(--tint20)}
     .lg-btn{width:100%;padding:15px;background:var(--lime);color:#09090B;border:none;border-radius:8px;font-family:var(--body);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;display:flex;justify-content:space-between;transition:all .18s ease-out}
     .lg-btn:hover{background:var(--lime-h);box-shadow:0 4px 24px var(--tint30)}
-    .lg-links{margin-top:20px;font-size:.8rem;line-height:2;color:var(--mute)}
-    .lg-links a{color:var(--ink);text-decoration:none;cursor:pointer;display:block}
-    .lg-links a:hover{color:var(--limeTx)}
+    .lg-divider{display:flex;align-items:center;gap:10px;margin:0 0 14px;color:rgba(244,244,245,.4);font-size:.72rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em}
+    .lg-divider .ln{flex:1;height:1px;background:rgba(255,255,255,.14)}
+    .lg-secondary-row{display:flex;gap:10px;margin-top:22px}
+    .lg-btn-outline{flex:1;padding:12px 14px;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:rgba(255,255,255,.03);color:#F4F4F5;font-family:var(--body);font-weight:600;font-size:12.5px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;text-align:center}
+    .lg-btn-outline:hover{border-color:var(--lime);color:var(--lime)}
+    .lg-links{margin-top:18px;font-size:.8rem;line-height:1.8;color:var(--mute);text-align:center}
+    .lg-links a{color:rgba(244,244,245,.72);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+    .lg-links a:hover{color:var(--lime)}
+    .lg-links .sep{margin:0 6px;opacity:.5}
     .lg-right{flex:1;position:relative;background:#181f1e url('/login-hero.jpg') center/cover;min-height:320px}
-    .lg-overlay-badge{position:absolute;bottom:30px;left:30px;right:30px;padding:18px 20px;background:rgba(10,17,17,.72);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px}
+    .lg-overlay-badge{position:absolute;bottom:30px;left:30px;right:30px;padding:18px 20px;background:rgba(10,17,17,.72);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;color:#fff}
     .lg-ticker{background:var(--lime);color:#09090B;min-height:50px;display:flex;align-items:center;gap:10px;padding:12px 20px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;font-family:var(--mono);flex-wrap:wrap}
     @media(max-width:860px){.lg-split{flex-direction:column}.lg-right{min-height:220px;order:-1}.lg-left{padding:24px}.lg-box{padding:26px}.lg-overlay-badge{bottom:16px;left:16px;right:16px}}
     /* ---- editorial page heroes (teams / groups / bracket) ---- */
@@ -1836,43 +1985,81 @@ function renderAdminDashboard() {
   // actually has something waiting, rather than always landing on the same one
   var pendingTarget = pendingReg ? 'registrations' : (pendingAccess ? 'accessrequests' : (pendingDocs ? 'documentreviews' : 'registrations'));
 
+  // gather live matches (across all categories) for the "Matches in progress" panel
+  var liveList = [];
+  for (var li = 0; li < S.categories.length; li++) {
+    var lc = S.categories[li];
+    for (var lj = 0; lj < lc.groupMatches.length; lj++) {
+      var lm = lc.groupMatches[lj];
+      if (!lm.inProgress) continue;
+      var ht = getTeamById(lm.homeId), at = getTeamById(lm.awayId);
+      var sc = getMatchScore(lm);
+      liveList.push({ home: ht ? ht.name : 'TBD', away: at ? at.name : 'TBD', hs: sc.hs, as: sc.as, pitch: lm.pitchName || 'TBD' });
+      if (liveList.length >= 6) break;
+    }
+    if (liveList.length >= 6) break;
+  }
+
   var html = '';
   // Hero — dashboard (Dulà HQ prevalent, neon punch)
   try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') { var _tmName = (S._tournamentMeta && S._tournamentMeta.name) || 'Mindanao Cup 2026'; var _venue = (S._tournamentMeta && S._tournamentMeta.venue) || 'CDO Sports Complex'; html += Hero('dashboard', { tournamentName: _tmName, venue: _venue, liveCount: liveMatches }); } } catch(e){}
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:22px">'
-    + kpiTile_('Categories', S.categories.length, 'ti-layout-grid', null, "navTo('categories')")
-    + kpiTile_('Teams', totalTeams, 'ti-users-group', null, "navTo('teams')")
-    + kpiTile_('Live now', liveMatches, 'ti-player-play', liveMatches ? 'var(--red)' : null, "navTo('officials')")
-    + kpiTile_('Pending reviews', totalPending, 'ti-alert-triangle', totalPending ? 'var(--amber)' : null, "navTo('" + pendingTarget + "')")
+
+  // KPI row
+  html += '<div class="dash-kpi-row">'
+    + '<div class="card" style="padding:18px 20px;cursor:pointer" onclick="navTo(\'categories\')"><div class="dash-qa-desc" style="margin-bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Categories</div><div style="font-family:var(--disp);font-size:32px;font-weight:700;color:var(--ink);line-height:1">' + S.categories.length + '</div><span class="dash-kpi-pill">All active</span></div>'
+    + '<div class="card" style="padding:18px 20px;cursor:pointer" onclick="navTo(\'teams\')"><div class="dash-qa-desc" style="margin-bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Teams</div><div style="font-family:var(--disp);font-size:32px;font-weight:700;color:var(--ink);line-height:1">' + totalTeams + '</div><span class="dash-kpi-pill">Registered</span></div>'
+    + '<div class="card" style="padding:18px 20px;cursor:pointer" onclick="navTo(\'officials\')"><div class="dash-qa-desc" style="margin-bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Live now</div><div style="font-family:var(--disp);font-size:32px;font-weight:700;color:var(--ink);line-height:1">' + liveMatches + '</div><span class="dash-kpi-pill' + (liveMatches ? ' live' : '') + '">' + (liveMatches ? 'On the pitch' : 'None live') + '</span></div>'
+    + '<div class="card" style="padding:18px 20px;cursor:pointer" onclick="navTo(\'' + pendingTarget + '\')"><div class="dash-qa-desc" style="margin-bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Pending reviews</div><div style="font-family:var(--disp);font-size:32px;font-weight:700;color:var(--ink);line-height:1">' + totalPending + '</div><span class="dash-kpi-pill' + (totalPending ? ' warn' : '') + '">' + (totalPending ? 'Needs attention' : 'All clear') + '</span></div>'
     + '</div>';
 
-  html += '<div class="sec-label" style="margin-bottom:8px">View as</div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px">'
-    + dashTile_('Team Manager', 'ti-users', "switchRole('team')")
-    + dashTile_('Referee', 'ti-whistle', "switchRole('referee')")
-    + dashTile_('Tournament Committee', 'ti-shield-check', "switchRole('official')")
-    + dashTile_('Guest', 'ti-trophy', "switchRole('audience')")
+  // Quick actions
+  html += '<div class="dash-sec-head"><div class="dash-sec-title">Quick actions</div><div class="dash-sec-note">Your most-used tools</div></div>';
+  html += '<div class="dash-quick-grid">'
+    + '<div class="card dash-qa-card" onclick="navTo(\'categories\')"><div class="dash-qa-icon"><i class="ti ti-layout-grid"></i></div><div class="dash-qa-title">Categories</div><div class="dash-qa-desc">Switch between age groups & divisions</div></div>'
+    + '<div class="card dash-qa-card" onclick="navTo(\'teams\')"><div class="dash-qa-icon"><i class="ti ti-users-group"></i></div><div class="dash-qa-title">Teams</div><div class="dash-qa-desc">Rosters, staff & registration docs</div></div>'
+    + '<div class="card dash-qa-card" onclick="navTo(\'groups\')"><div class="dash-qa-icon"><i class="ti ti-grid-3x3"></i></div><div class="dash-qa-title">Draws & groups</div><div class="dash-qa-desc">Fixtures, standings & the bracket</div></div>'
+    + '<div class="card dash-qa-card" onclick="navTo(\'standings\')"><div class="dash-qa-icon"><i class="ti ti-medal"></i></div><div class="dash-qa-title">Standings</div><div class="dash-qa-desc">Live tables & tie-breakers</div></div>'
     + '</div>';
 
-  html += '<div class="sec-label" style="margin-bottom:8px">Category</div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px">'
-    + dashTile_('Categories', 'ti-layout-grid', "navTo('categories')")
-    + dashTile_('Groups & Draw', 'ti-grid-3x3', "navTo('groups')")
-    + dashTile_('Bracket', 'ti-tournament', "navTo('bracket')")
-    + dashTile_('Standings', 'ti-medal', "navTo('standings')")
+  // Live matches + Needs your review
+  var liveRowsHtml = '';
+  if (liveList.length) {
+    for (var lk = 0; lk < liveList.length; lk++) {
+      var mr = liveList[lk];
+      liveRowsHtml += '<div class="dash-match-row"><div class="dash-m-team">' + esc(mr.home) + '</div><div class="dash-m-score">' + mr.hs + '–' + mr.as + '</div><div class="dash-m-team" style="text-align:right">' + esc(mr.away) + '</div><div class="dash-m-meta">' + esc(mr.pitch) + '</div></div>';
+    }
+  } else {
+    liveRowsHtml = '<div class="dash-empty-note">No matches in progress right now.</div>';
+  }
+  var reviewRowsHtml = '<div class="dash-reviews">'
+    + '<div class="dash-rv-row" style="cursor:pointer" onclick="navTo(\'registrations\')"><div class="dash-rv-icon"><i class="ti ti-user-plus"></i></div><div class="dash-rv-label">Team registrations</div><span class="dash-rv-count">' + pendingReg + '</span></div>'
+    + '<div class="dash-rv-row" style="cursor:pointer" onclick="navTo(\'accessrequests\')"><div class="dash-rv-icon"><i class="ti ti-login"></i></div><div class="dash-rv-label">Access requests</div><span class="dash-rv-count">' + pendingAccess + '</span></div>'
+    + '<div class="dash-rv-row" style="cursor:pointer" onclick="navTo(\'documentreviews\')"><div class="dash-rv-icon"><i class="ti ti-file-text"></i></div><div class="dash-rv-label">Document uploads</div><span class="dash-rv-count">' + pendingDocs + '</span></div>'
+    + '</div>';
+  html += '<div class="dash-two-col">'
+    + '<div class="card" style="padding:22px;cursor:pointer" onclick="navTo(\'officials\')"><div class="dash-panel-title">' + (liveMatches ? '<span class="dash-m-live"><span class="dash-m-pulse"></span>LIVE</span> ' : '') + 'Matches in progress</div>' + liveRowsHtml + '</div>'
+    + '<div class="card" style="padding:22px"><div class="dash-panel-title">Needs your review</div>' + reviewRowsHtml + '</div>'
     + '</div>';
 
-  html += '<div class="sec-label" style="margin-bottom:8px">Manage</div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">'
-    + dashTile_('Teams', 'ti-users-group', "navTo('teams')")
-    + dashTile_('Users', 'ti-user', "navTo('users')")
-    + dashTile_('Referees', 'ti-whistle', "navTo('referees')")
-    + dashTile_('Officiating Team', 'ti-shield-check', "navTo('officiatingteam')")
-    + dashTile_('Registrations', 'ti-user-plus', "navTo('registrations')", pendingReg)
-    + dashTile_('Access Requests', 'ti-login', "navTo('accessrequests')", pendingAccess)
-    + dashTile_('Document Reviews', 'ti-file-text', "navTo('documentreviews')", pendingDocs)
-    + dashTile_('Audit Trail', 'ti-list', "navTo('audit')")
-    + '</div>';
+  // Admin tools (deprioritized) — includes the relocated role-switcher
+  html += '<div class="dash-sec-head"><div class="dash-sec-title">Admin tools</div><div class="dash-sec-note">Used less often</div></div>';
+  html += '<div class="card" style="padding:20px 22px"><div class="dash-tool-list">'
+    + '<div class="dash-tool-chip" onclick="navTo(\'users\')"><i class="ti ti-user"></i>Users</div>'
+    + '<div class="dash-tool-chip" onclick="navTo(\'referees\')"><i class="ti ti-whistle"></i>Referees</div>'
+    + '<div class="dash-tool-chip" onclick="navTo(\'officiatingteam\')"><i class="ti ti-shield-check"></i>Officiating team</div>'
+    + '<div class="dash-tool-chip" onclick="navTo(\'registrations\')"><i class="ti ti-user-plus"></i>Registrations' + (pendingReg ? '<span class="n">' + pendingReg + '</span>' : '') + '</div>'
+    + '<div class="dash-tool-chip" onclick="navTo(\'accessrequests\')"><i class="ti ti-login"></i>Access requests' + (pendingAccess ? '<span class="n">' + pendingAccess + '</span>' : '') + '</div>'
+    + '<div class="dash-tool-chip" onclick="navTo(\'documentreviews\')"><i class="ti ti-file-text"></i>Document reviews' + (pendingDocs ? '<span class="n">' + pendingDocs + '</span>' : '') + '</div>'
+    + '<div class="dash-tool-chip" onclick="navTo(\'audit\')"><i class="ti ti-list"></i>Audit trail</div>'
+    + '</div></div>';
+
+  html += '<div class="dash-sec-head" style="margin-top:26px"><div class="dash-sec-title">View as</div><div class="dash-sec-note">Preview the app as another role</div></div>';
+  html += '<div class="card" style="padding:20px 22px"><div class="dash-tool-list">'
+    + '<div class="dash-tool-chip" onclick="switchRole(\'team\')"><i class="ti ti-users"></i>Team Manager</div>'
+    + '<div class="dash-tool-chip" onclick="switchRole(\'referee\')"><i class="ti ti-whistle"></i>Referee</div>'
+    + '<div class="dash-tool-chip" onclick="switchRole(\'official\')"><i class="ti ti-shield-check"></i>Tournament Committee</div>'
+    + '<div class="dash-tool-chip" onclick="switchRole(\'audience\')"><i class="ti ti-trophy"></i>Guest</div>'
+    + '</div></div>';
 
   el('main-content').innerHTML = html;
 }
@@ -1904,32 +2091,38 @@ function renderCategorySelect() {
 function renderCategories() {
   setTopbar('Categories', S.categories.length + ' categor' + (S.categories.length === 1 ? 'y' : 'ies'), '<button class="btn primary" onclick="openAddCategory()"><i class="ti ti-plus"></i> Add category</button>');
   var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Categories', subtitle: 'Organize your divisions — Open, U14, Women', section: 'Setup'}); } catch(e){}
-  
-  var html = _pageHero + '';
+
+  var html = _pageHero + '<p class="cat-intro">Pick a category to view its schedule, standings and bracket. Cards below show live status and how far the group stage has progressed at a glance.</p>';
+  if (!S.categories.length) { html += '<div class="empty"><i class="ti ti-layout-grid"></i><p>No categories set up yet.</p></div>'; el('main-content').innerHTML = html; return; }
+  html += '<div class="cat-grid">';
   for (var i = 0; i < S.categories.length; i++) {
     var c = S.categories[i];
     var isActive = c.id === S.activeCategoryId;
     var matchCount = c.groupMatches.length;
-    var playedCount = 0;
-    for (var j = 0; j < c.groupMatches.length; j++) { if (c.groupMatches[j].played) playedCount++; }
-    html += '<div class="card" style="border-color:' + (isActive ? 'var(--gb)' : 'var(--nb)') + '">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-      + '<div style="display:flex;align-items:center;gap:8px">'
-      + '<div style="font-weight:600;font-size:var(--fs16)">' + esc(c.name) + '</div>'
-      + (isActive ? '<span class="badge bg" style="color:var(--gold)">Active</span>' : '')
-      + '</div>'
-      + '<div style="display:flex;gap:6px">'
+    var playedCount = 0, liveCount = 0;
+    for (var j = 0; j < c.groupMatches.length; j++) { if (c.groupMatches[j].played) playedCount++; if (c.groupMatches[j].inProgress) liveCount++; }
+    var pct = matchCount ? Math.round((playedCount / matchCount) * 100) : 0;
+
+    var avatarsHtml = '';
+    var shown = c.teams.slice(0, 4);
+    for (var k = 0; k < shown.length; k++) { avatarsHtml += '<div class="cat-ava" title="' + esc(shown[k].name) + '">' + ini(shown[k].name) + '</div>'; }
+    if (c.teams.length > shown.length) avatarsHtml += '<div class="cat-ava more">+' + (c.teams.length - shown.length) + '</div>';
+
+    var statusBadge = liveCount ? ('<span class="cat-live-badge"><span class="cat-live-dot"></span>' + liveCount + ' live</span>') : (isActive ? '<span class="cat-viewing-badge">Viewing</span>' : '');
+
+    html += '<div class="card cat-card2' + (isActive ? ' active' : '') + '">'
+      + '<div class="cat-top2"><div><div class="cat-name2">' + esc(c.name) + '</div><div class="cat-age2">' + esc(c.ageGroup || 'Open') + ' · ' + structLabel(c.structure) + '</div></div>' + statusBadge + '</div>'
+      + '<div class="cat-avatars">' + (avatarsHtml || '<span class="dash-empty-note" style="padding:0">No teams yet</span>') + (c.teams.length ? ('<span class="cat-team-count">' + c.teams.length + ' team' + (c.teams.length === 1 ? '' : 's') + '</span>') : '') + '</div>'
+      + '<div class="cat-progress-row"><span>' + (c.structure === 'round_robin' || c.structure === 'double_round_robin' ? 'Round robin' : 'Group stage') + '</span><b>' + playedCount + '/' + matchCount + ' played</b></div>'
+      + '<div class="cat-bar"><div class="cat-bar-fill" style="width:' + pct + '%"></div></div>'
+      + '<div class="cat-foot"><span class="cat-fmt-tag">' + c.format + '-a-side</span>'
+      + '<div class="cat-actions">'
       + (isActive ? '' : '<button class="btn sm" onclick="setActiveCategory(\'' + c.id + '\')"><i class="ti ti-check"></i> Switch to</button>')
       + '<button class="btn sm" onclick="openEditCategory(\'' + c.id + '\')"><i class="ti ti-edit"></i></button>'
       + (S.categories.length > 1 ? '<button class="btn sm danger" onclick="removeCategory(\'' + c.id + '\')"><i class="ti ti-trash"></i></button>' : '')
-      + '</div></div>'
-      + '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs13);color:var(--tm)">'
-      + '<span><i class="ti ti-users-group"></i> ' + c.teams.length + ' teams</span>'
-      + '<span><i class="ti ti-ball-football"></i> ' + c.format + '-a-side</span>'
-      + '<span><i class="ti ti-tournament"></i> ' + structLabel(c.structure) + '</span>'
-      + '<span><i class="ti ti-calendar"></i> ' + playedCount + '/' + matchCount + ' matches played</span>'
-      + '</div></div>';
+      + '</div></div></div>';
   }
+  html += '</div>';
   el('main-content').innerHTML = html;
 }
 function structLabel(k) {
@@ -2339,7 +2532,8 @@ function renderOfficiatingTeam() {
     + '<button class="btn sm" onclick="document.getElementById(\'officiating-csv\').click()"><i class="ti ti-upload"></i> Import CSV</button>'
     + '<button class="btn primary" onclick="openAddOfficiatingMember()"><i class="ti ti-plus"></i> Add member</button>'
     + '</div>') : '');
-  if (!S.officiatingTeam.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-shield-check"></i><p>No officiating team members yet. Add referees, assistant referees, commissioners, timekeepers, and other designated roles here.</p></div>'; return; }
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Officiating Team', subtitle: 'Committee, commissioners, medical', section: 'People'}); } catch(e){}
+  if (!S.officiatingTeam.length) { el('main-content').innerHTML = _pageHero + '<div class="empty"><i class="ti ti-shield-check"></i><p>No officiating team members yet. Add referees, assistant referees, commissioners, timekeepers, and other designated roles here.</p></div>'; return; }
   var byLevel = {};
   var levels = [];
   for (var i = 0; i < S.officiatingTeam.length; i++) {
@@ -2854,53 +3048,99 @@ function saveEditRoster() {
   showToast('Roster updated');
 }
 
+/* shared card markup for the Teams grid (used by both the single-category
+   and all-categories views) — real doc status, real player count, wired to
+   the existing viewTeamProfile / openEditRoster / removeTeam handlers */
+function teamCardHtml_(tm, catLabel) {
+  var dcs = tm.docs || {};
+  var docDefs = [['birthCert', 'Birth cert'], ['medical', 'Medical'], ['registration', 'Reg. form']];
+  var docsHtml = '';
+  for (var d = 0; d < docDefs.length; d++) {
+    var key = docDefs[d][0], label = docDefs[d][1];
+    var ok = dcs[key] && dcs[key] !== 'pending';
+    docsHtml += '<span class="doc-chip ' + (ok ? 'ok' : 'pending') + '"><span class="dot"></span>' + label + '</span>';
+  }
+  var metaBits = [tm.players.length + ' player' + (tm.players.length === 1 ? '' : 's')];
+  if (catLabel) metaBits.push(esc(catLabel));
+  return '<div class="card team-card2">'
+    + '<div class="team-top2"><div class="team-ava2">' + ini(tm.name) + '</div><div><div class="team-name2">' + esc(tm.name) + '</div><div class="team-coach2">' + (tm.coach ? esc(tm.coach) : 'No coach assigned') + '</div></div></div>'
+    + '<div class="team-meta2"><i class="ti ti-users-group"></i>' + metaBits.join(' · ') + '</div>'
+    + '<div class="doc-row">' + docsHtml + '</div>'
+    + '<div class="team-foot2"><div class="mini-btn" onclick="viewTeamProfile(\'' + tm.id + '\')">View roster</div><div class="mini-btn" onclick="openEditRoster(\'' + tm.id + '\')">Edit</div><div class="mini-btn" style="flex:0 0 auto;padding-left:12px;padding-right:12px;color:var(--red);border-color:rgba(239,68,68,.3)" onclick="removeTeam(\'' + tm.id + '\')"><i class="ti ti-trash"></i></div></div>'
+    + '</div>';
+}
 function renderTeams() {
   if (S.role === 'admin' && S.viewAllCategories) { renderTeamsAllCategories(); return; }
   var cat = activeCategory();
   setTopbar('Teams', cat.teams.length + ' registered', '<button class="btn" onclick="addDemoTeam()"><i class="ti ti-wand"></i> Add demo team</button><button class="btn primary" onclick="openAddTeam()"><i class="ti ti-plus"></i> Add team</button>');
   var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Teams', subtitle: 'Manage squads — rosters, staff, documents', section: 'Teams'}); } catch(e){}
-  
+
   if (!cat.teams.length) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No teams in '+cat.name,subtitle:'Add teams or import via CSV to get started',primaryAction:"openAddTeam()",primaryLabel:'Add team',secondaryAction:"document.getElementById(\'ros-csv-file\')&&document.getElementById(\'ros-csv-file\').click()",secondaryLabel:'Import CSV'});}catch(e){} el('main-content').innerHTML = _h; return; }
-  var html = _pageHero + '';
+  var html = _pageHero + '<div class="teams-toolbar"><div class="teams-search"><i class="ti ti-search"></i><input id="teams-search-input" placeholder="Search teams or coaches" oninput="renderTeamsGrid_()"></div></div><div id="teams-grid-wrap"></div>';
+  el('main-content').innerHTML = html;
+  renderTeamsGrid_();
+}
+function renderTeamsGrid_() {
+  var wrap = el('teams-grid-wrap');
+  if (!wrap) return;
+  var cat = activeCategory();
+  var qEl = el('teams-search-input');
+  var q = (qEl && qEl.value || '').trim().toLowerCase();
+  var list = [];
   for (var i = 0; i < cat.teams.length; i++) {
     var tm = cat.teams[i];
-    html += '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
-      + '<div style="display:flex;align-items:center;gap:10px"><div class="ava" style="width:38px;height:38px;font-size:var(--fs15)">' + ini(tm.name) + '</div>'
-      + '<div><div style="font-weight:600">' + esc(tm.name) + '</div><div style="font-size:var(--fs13);color:var(--tm)">' + (tm.coach || 'No coach') + (teamManagerStaffName(tm) ? (' \u00b7 Mgr: ' + esc(teamManagerStaffName(tm))) : '') + ' \u00b7 ' + tm.players.length + ' players</div></div></div>'
-      + '<div style="display:flex;gap:6px"><button class="btn sm" onclick="openEditRoster(\'' + tm.id + '\')"><i class="ti ti-edit"></i> Edit roster</button>'
-      + '<button class="btn sm danger" onclick="removeTeam(\'' + tm.id + '\')"><i class="ti ti-trash"></i></button></div></div>';
-    if (tm.players.length) {
-      var show = tm.players.slice(0, 3);
-      for (var j = 0; j < show.length; j++) {
-        var p = show[j];
-        html += '<div class="p-row"><div class="ava">' + ini(p.name) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + ' <span style="color:var(--tm);font-weight:400">#' + esc(p.jersey) + '</span></div><div class="p-sub">' + esc(p.pos) + '</div></div></div>';
-      }
-      if (tm.players.length > 3) html += '<div style="font-size:var(--fs13);color:var(--tm);padding:6px 0">+' + (tm.players.length - 3) + ' more</div>';
-    } else { html += '<div style="font-size:var(--fs14);color:var(--tm)">No players yet.</div>'; }
-    html += '</div>';
+    if (q && tm.name.toLowerCase().indexOf(q) < 0 && !(tm.coach && tm.coach.toLowerCase().indexOf(q) >= 0)) continue;
+    list.push(tm);
   }
-  el('main-content').innerHTML = html;
+  if (!list.length) { wrap.innerHTML = '<div class="dash-empty-note" style="padding:16px 0">No teams match "' + esc(q) + '".</div>'; return; }
+  var html = '<div class="team-grid">';
+  for (var j = 0; j < list.length; j++) html += teamCardHtml_(list[j], null);
+  html += '</div>';
+  wrap.innerHTML = html;
 }
 function renderTeamsAllCategories() {
   var totalTeams = 0;
   for (var c = 0; c < S.categories.length; c++) { totalTeams += S.categories[c].teams.length; }
-  setTopbar('Teams \u2014 All Categories', totalTeams + ' teams across ' + S.categories.length + ' categor' + (S.categories.length === 1 ? 'y' : 'ies'), '');
-  var html = '';
+  setTopbar('Teams — All Categories', totalTeams + ' teams across ' + S.categories.length + ' categor' + (S.categories.length === 1 ? 'y' : 'ies'), '');
+  var html = '<div class="teams-toolbar"><div class="teams-search"><i class="ti ti-search"></i><input id="teams-search-input" placeholder="Search teams or coaches" oninput="renderTeamsAllGrid_()"></div>'
+    + '<div class="filters" id="teams-cat-filters" style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<span class="filter-pill active" data-cid="all" onclick="setTeamsFilter_(\'all\',this)">All (' + totalTeams + ')</span>';
+  for (var fi = 0; fi < S.categories.length; fi++) {
+    var fc = S.categories[fi];
+    html += '<span class="filter-pill" data-cid="' + fc.id + '" onclick="setTeamsFilter_(\'' + fc.id + '\',this)">' + esc(fc.name) + ' (' + fc.teams.length + ')</span>';
+  }
+  html += '</div></div><div id="teams-grid-wrap"></div>';
+  el('main-content').innerHTML = html;
+  renderTeamsAllGrid_();
+}
+var TEAMS_ALL_CAT_FILTER_ = 'all';
+function setTeamsFilter_(cid, elm) {
+  TEAMS_ALL_CAT_FILTER_ = cid;
+  var pills = el('teams-cat-filters');
+  if (pills) { var kids = pills.children; for (var i = 0; i < kids.length; i++) kids[i].classList.remove('active'); }
+  if (elm) elm.classList.add('active');
+  renderTeamsAllGrid_();
+}
+function renderTeamsAllGrid_() {
+  var wrap = el('teams-grid-wrap');
+  if (!wrap) return;
+  var qEl = el('teams-search-input');
+  var q = (qEl && qEl.value || '').trim().toLowerCase();
+  var list = [];
   for (var i = 0; i < S.categories.length; i++) {
     var cat = S.categories[i];
-    html += '<div class="card"><div class="card-title" style="display:flex;align-items:center;justify-content:space-between">'
-      + '<span><i class="ti ti-layout-grid"></i> ' + esc(cat.name) + ' <span style="font-weight:400;color:var(--tm);font-size:var(--fs13)">(' + esc(cat.ageGroup) + ')</span></span>'
-      + '<button class="btn sm" onclick="setActiveCategory(\'' + cat.id + '\');navTo(\'teams\')">Open <i class="ti ti-chevron-down" style="transform:rotate(-90deg)"></i></button></div>';
-    if (!cat.teams.length) { html += '<div style="font-size:var(--fs14);color:var(--tm)">No teams yet.</div>'; }
-    else {
-      for (var j = 0; j < cat.teams.length; j++) {
-        var tm = cat.teams[j];
-        html += '<div class="p-row"><div class="ava">' + ini(tm.name) + '</div><div class="p-info"><div class="p-name">' + esc(tm.name) + '</div><div class="p-sub">' + (tm.coach ? esc(tm.coach) + ' \u00b7 ' : '') + tm.players.length + ' players</div></div></div>';
-      }
+    if (TEAMS_ALL_CAT_FILTER_ !== 'all' && cat.id !== TEAMS_ALL_CAT_FILTER_) continue;
+    for (var j = 0; j < cat.teams.length; j++) {
+      var tm = cat.teams[j];
+      if (q && tm.name.toLowerCase().indexOf(q) < 0 && !(tm.coach && tm.coach.toLowerCase().indexOf(q) >= 0)) continue;
+      list.push({ tm: tm, catName: cat.name });
     }
-    html += '</div>';
   }
-  el('main-content').innerHTML = html || '<div class="empty"><i class="ti ti-layout-grid"></i><p>No categories yet.</p></div>';
+  if (!list.length) { wrap.innerHTML = '<div class="dash-empty-note" style="padding:16px 0">No teams match this search.</div>'; return; }
+  var html = '<div class="team-grid">';
+  for (var k = 0; k < list.length; k++) html += teamCardHtml_(list[k].tm, list[k].catName);
+  html += '</div>';
+  wrap.innerHTML = html;
 }
 function openAddTeam() {
   openModal('Add team', '<div class="field"><label>Team name</label><input id="m-tname" placeholder="e.g. Davao FC"></div><div class="field"><label>Coach</label><input id="m-tcoach" placeholder="Coach name"></div>', '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="addTeam()"><i class="ti ti-plus"></i> Add</button>');
@@ -3336,39 +3576,33 @@ function renderGroups() {
   var isRR = (k === 'round_robin' || k === 'double_round_robin');
   if (isChart) {
     var html = _pageHero + viewToggle;
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">';
+    html += '<div class="grp-grid">';
     for (var gi = 0; gi < S.groups.length; gi++) {
       var grp = S.groups[gi];
       var standings = calcGroupStandings(gi);
       var grpMatches = []; for (var mi2=0; mi2 < S.groupMatches.length; mi2++) if (S.groupMatches[mi2].group===gi) grpMatches.push(S.groupMatches[mi2]);
-      var totalMP = grpMatches.length, playedMP=0; for(var pi=0;pi<grpMatches.length;pi++) if(grpMatches[pi].played) playedMP++;
-      html += '<div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:16px;padding:16px;position:relative;overflow:hidden">';
-      html += '<div style="position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle, #c8ff32 0%, transparent 65%);opacity:.08;pointer-events:none"></div>';
-      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;position:relative">';
-      html += '<span style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#c8ff32;background:rgba(200,255,50,.12);padding:4px 8px;border-radius:20px;border:1px solid rgba(200,255,50,.2)">Group '+grp.name+'</span>';
-      html += '<span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:10px;color:rgba(255,255,255,.5)">'+standings.length+' teams · '+grpMatches.length+' fixtures</span>';
-      html += '</div>';
-      html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;position:relative">';
+      html += '<div class="card grp-card2">';
+      html += '<div class="grp-head2"><span class="grp-pill2">' + (isRR ? 'Standings' : ('Group ' + grp.name)) + '</span><span class="grp-count2">' + standings.length + ' teams · ' + grpMatches.length + ' fixtures</span></div>';
+      html += '<div class="grp-standings">';
       for (var si=0; si<standings.length; si++) {
         var st = standings[si]; var tm = getTeamById(st.id); var isTop = si < (isRR?1:Math.min(S.tournament.advancePer||2, standings.length));
-        html += '<div style="flex:1;min-width:80px;background:'+(isTop?'#c8ff32':'rgba(255,255,255,.06)')+';border:1px solid '+(isTop?'#c8ff32':'rgba(255,255,255,.1)')+';border-radius:10px;padding:8px;text-align:center;position:relative">'
-          + '<div style="font-size:11px;font-weight:800;color:'+(isTop?'#0a0a0a':'#fff')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(tm?esc(tm.name):'?')+'</div>'
-          + '<div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:'+(isTop?'rgba(10,10,10,.7)':'rgba(255,255,255,.6)')+';margin-top:4px">'+st.pts+' pts · '+(st.gf-st.ga>0?'+'+(st.gf-st.ga):(st.gf-st.ga))+' GD</div>'
-          + (isTop?'<span style="position:absolute;top:-6px;right:-6px;font-size:8px;background:#0a0a0a;color:#c8ff32;padding:2px 5px;border-radius:10px;border:1px solid #c8ff32">ADV</span>':'') + '</div>';
+        var gd2 = st.gf - st.ga;
+        html += '<div class="grp-st-tile' + (isTop?' adv':'') + '">' + (isTop?'<span class="grp-adv-tag">ADV</span>':'')
+          + '<div class="grp-st-name">'+(tm?esc(tm.name):'?')+'</div>'
+          + '<div class="grp-st-meta">'+st.pts+' pts · '+(gd2>0?'+'+gd2:gd2)+'</div></div>';
       }
       html += '</div>';
       if (grpMatches.length) {
-        html += '<div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0;padding-top:10px;position:relative"><div style="font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px">Fixtures</div>';
+        html += '<div class="grp-fixtures"><div class="grp-fx-label">Fixtures</div>';
         for (var fi=0; fi<Math.min(grpMatches.length,6); fi++) {
           var mm = grpMatches[fi]; var ht=getTeamById(mm.homeId), at=getTeamById(mm.awayId);
-          var status = mm.played ? ('<span style="font-family:JetBrains Mono,monospace;font-size:10px;background:#c8ff32;color:#0a0a0a;padding:2px 6px;border-radius:20px;font-weight:700">'+mm.homeScore+'–'+mm.awayScore+'</span>') : (mm.inProgress ? '<span style="font-family:JetBrains Mono,monospace;font-size:10px;background:#ff3b30;color:#fff;padding:2px 6px;border-radius:20px;font-weight:700;animation:pulse 1.2s infinite">LIVE</span>' : '<span style="font-family:JetBrains Mono,monospace;font-size:10px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);padding:2px 6px;border-radius:20px">'+(mm.kickoff||'TBD')+'</span>');
-          html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px">'
-            + '<span style="flex:1;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(ht?esc(ht.name):'?')+'</span>'
+          var status = mm.played ? ('<span class="grp-fx-status played">'+mm.homeScore+'–'+mm.awayScore+'</span>') : (mm.inProgress ? '<span class="grp-fx-status live">LIVE</span>' : '<span class="grp-fx-status">'+(mm.kickoff||'TBD')+'</span>');
+          html += '<div class="grp-fx-row"><span class="grp-fx-team">'+(ht?esc(ht.name):'?')+'</span>'
             + status
-            + '<span style="flex:1;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right">'+(at?esc(at.name):'?')+'</span>'
+            + '<span class="grp-fx-team" style="text-align:right">'+(at?esc(at.name):'?')+'</span>'
             + '</div>';
         }
-        if (grpMatches.length>6) html += '<div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;margin-top:6px">+'+(grpMatches.length-6)+' more fixtures</div>';
+        if (grpMatches.length>6) html += '<div class="grp-fx-more">+'+(grpMatches.length-6)+' more fixtures</div>';
         html += '</div>';
       }
       html += '</div>';
@@ -3377,7 +3611,7 @@ function renderGroups() {
     // Progress bar for group stage
     var totalG = S.groupMatches.length, playedG=0; for(var i=0;i<S.groupMatches.length;i++) if(S.groupMatches[i].played) playedG++;
     var pctG=Math.round(playedG/totalG*100)||0;
-    html += '<div style="margin-top:14px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;color:#fff"><span style="font-family:JetBrains Mono,monospace;font-size:11px;color:rgba(255,255,255,.6)">Group stage</span><div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pctG+'%;background:#c8ff32;border-radius:3px"></div></div><span style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#c8ff32">'+playedG+'/'+totalG+'</span></div>';
+    html += '<div class="grp-stage-bar"><span class="grp-stage-label">Group stage progress</span><div class="grp-stage-track"><div class="grp-stage-fill" style="width:'+pctG+'%"></div></div><span class="grp-stage-val">'+playedG+'/'+totalG+'</span></div>';
     el('main-content').innerHTML = html;
     return;
   }
@@ -3515,12 +3749,7 @@ function getAdvancers() {
   }
   return adv;
 }
-function renderStandings() {
-  if (S.role === 'admin' && S.viewAllCategories) { renderStandingsAllCategories(); return; }
-  setTopbar('Standings', '', exportButtonsHtml('standings'));
-  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Standings', subtitle: 'Live tables with head-to-head & fair play', section: 'Competition'}); } catch(e){}
-  
-  if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate the draw in Setup to see standings',primaryAction:"navTo('setup')"});}catch(e){} el('main-content').innerHTML = _h; return; }
+function computeOverallStandings_() {
   var all = [];
   for (var gi = 0; gi < S.groups.length; gi++) {
     var grp = S.groups[gi];
@@ -3556,22 +3785,79 @@ function renderStandings() {
     var fpA=fairPlayPoints(a.id), fpB=fairPlayPoints(b.id); if(fpA!==fpB) return fpA - fpB;
     return 0;
   });
-  var html = _pageHero + '<div class="card"><div class="card-title"><i class="ti ti-medal"></i> Overall standings</div>';
+  return all;
+}
+function buildOverallStandingsHtml_() {
+  var all = computeOverallStandings_();
+  var html = '<div class="card standings-panel"><div class="standings-panel-head"><div class="card-title" style="border:none;padding:0;margin:0">Overall standings</div><div class="standings-legend"><span class="standings-sw"></span>Advances to knockout</div></div>';
   html += '<table class="tbl"><thead><tr><th>#</th><th>Team</th><th>Group</th><th class="num">MP</th><th class="num">Pts</th><th class="num">GD</th><th class="num">GF</th></tr></thead><tbody>';
   for (var i = 0; i < all.length; i++) {
     var s2 = all[i];
     var tm = getTeamById(s2.id);
     var gd = s2.gf - s2.ga;
-    html += '<tr><td style="font-weight:600;color:' + (i < 3 ? 'var(--gold)' : 'var(--tm)') + '">' + (i + 1) + '</td>'
-      + '<td><span style="font-weight:500" class="team-link" onclick="viewTeamProfile(\'' + s2.id + '\')">' + (tm ? esc(tm.name) : '?') + '</span>' + (s2.grpRank < 2 ? '<span class="badge bgr" style="margin-left:6px;font-size:var(--fs12)">ADV</span>' : '') + '</td>'
+    var advCount = Math.min(S.tournament.advancePer || 2, 99);
+    var isAdv = s2.grpRank < advCount;
+    html += '<tr' + (isAdv ? ' class="standings-adv-row"' : '') + '><td style="font-weight:600;color:' + (isAdv ? 'var(--limeTx)' : 'var(--tm)') + '">' + (i + 1) + '</td>'
+      + '<td><span style="font-weight:500" class="team-link" onclick="viewTeamProfile(\'' + s2.id + '\')">' + (tm ? esc(tm.name) : '?') + '</span>' + (isAdv ? '<span class="standings-adv-tag">ADV</span>' : '') + '</td>'
       + '<td><span class="badge bgy">Grp ' + s2.grpName + '</span></td><td class="num">' + s2.mp + '</td>'
       + '<td class="num" style="font-weight:600">' + s2.pts + '</td>'
       + '<td class="num" style="color:' + (gd > 0 ? 'var(--green)' : (gd < 0 ? 'var(--red)' : 'var(--ts)')) + '">' + (gd > 0 ? '+' : '') + gd + '</td>'
       + '<td class="num">' + s2.gf + '</td></tr>';
   }
   html += '</tbody></table></div>';
-  el('main-content').innerHTML = html;
+  return html;
 }
+function buildGroupStandingsHtml_(gi) {
+  var grp = S.groups[gi];
+  if (!grp) return '<div class="empty"><p>Group not found.</p></div>';
+  var standings = calcGroupStandings(gi);
+  var advCount = Math.min(S.tournament.advancePer || 2, standings.length);
+  var html = '<div class="card standings-panel"><div class="standings-panel-head"><div class="card-title" style="border:none;padding:0;margin:0">Group ' + esc(grp.name) + '</div><div class="standings-legend"><span class="standings-sw"></span>Advances to knockout</div></div>';
+  html += '<table class="tbl"><thead><tr><th>#</th><th>Team</th><th class="num">MP</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">GF</th><th class="num">GA</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>';
+  for (var si = 0; si < standings.length; si++) {
+    var s = standings[si];
+    var tm = getTeamById(s.id);
+    var gd = s.gf - s.ga;
+    var isAdv = si < advCount;
+    html += '<tr' + (isAdv ? ' class="standings-adv-row"' : '') + '><td style="font-weight:600;color:' + (isAdv ? 'var(--limeTx)' : 'var(--tm)') + '">' + (si + 1) + '</td>'
+      + '<td><span style="font-weight:500" class="team-link" onclick="viewTeamProfile(\'' + s.id + '\')">' + (tm ? esc(tm.name) : '?') + '</span>' + (isAdv ? '<span class="standings-adv-tag">ADV</span>' : '') + '</td>'
+      + '<td class="num">' + s.mp + '</td><td class="num">' + s.w + '</td><td class="num">' + s.d + '</td><td class="num">' + s.l + '</td>'
+      + '<td class="num">' + s.gf + '</td><td class="num">' + s.ga + '</td>'
+      + '<td class="num" style="color:' + (gd > 0 ? 'var(--green)' : (gd < 0 ? 'var(--red)' : 'var(--ts)')) + '">' + (gd > 0 ? '+' : '') + gd + '</td>'
+      + '<td class="num" style="font-weight:600">' + s.pts + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+var STANDINGS_TAB_ = 'overall';
+function setStandingsTab_(tab, elm) {
+  STANDINGS_TAB_ = tab;
+  var tabs = el('standings-tabs');
+  if (tabs) { var kids = tabs.children; for (var i = 0; i < kids.length; i++) kids[i].classList.remove('active'); }
+  if (elm) elm.classList.add('active');
+  renderStandingsPanel_();
+}
+function renderStandingsPanel_() {
+  var wrap = el('standings-panel-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = (STANDINGS_TAB_ === 'overall') ? buildOverallStandingsHtml_() : buildGroupStandingsHtml_(parseInt(STANDINGS_TAB_, 10));
+}
+function renderStandings() {
+  if (S.role === 'admin' && S.viewAllCategories) { renderStandingsAllCategories(); return; }
+  setTopbar('Standings', '', exportButtonsHtml('standings'));
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Standings', subtitle: 'Live tables with head-to-head & fair play', section: 'Competition'}); } catch(e){}
+
+  if (!S.generated) { var _h=''; try{ if(typeof Hero!=='undefined') _h=Hero('empty',{title:'No draw yet',subtitle:'Generate the draw in Setup to see standings',primaryAction:"navTo('setup')"});}catch(e){} el('main-content').innerHTML = _h; return; }
+  STANDINGS_TAB_ = 'overall';
+  var tabsHtml = '<div class="group-tabs2" id="standings-tabs"><span class="g-tab2 active" onclick="setStandingsTab_(\'overall\',this)">Overall</span>';
+  for (var gi = 0; gi < S.groups.length; gi++) {
+    tabsHtml += '<span class="g-tab2" onclick="setStandingsTab_(\'' + gi + '\',this)">Group ' + esc(S.groups[gi].name) + '</span>';
+  }
+  tabsHtml += '</div>';
+  el('main-content').innerHTML = _pageHero + tabsHtml + '<div id="standings-panel-wrap"></div>';
+  renderStandingsPanel_();
+}
+
 function renderStandingsAllCategories() {
   setTopbar('Standings \u2014 All Categories', S.categories.length + ' categories');
   var html = '';
@@ -5813,18 +6099,21 @@ function renderSignInPage() {
   // LEFT — access
   html += '<div class="lg-left"><div class="lg-box">';
   html += '<div class="lg-label">ACCESS</div>';
-  html += '<h2 class="lg-h2">Email Sign in</h2>';
-  if (GOOGLE_CLIENT_ID) { html += '<div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:14px"></div><div style="display:flex;align-items:center;gap:10px;margin:0 0 14px;color:var(--tm);font-size:var(--fs13)"><div style="flex:1;height:1px;background:var(--nb)"></div>or<div style="flex:1;height:1px;background:var(--nb)"></div></div>'; }
+  html += '<h2 class="lg-h2">Welcome back</h2>';
+  html += '<p class="lg-sub">Sign in to manage your cup \u2014 draws, teams, results and live scoring, all in one place.</p>';
+  if (GOOGLE_CLIENT_ID) { html += '<div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:14px"></div><div class="lg-divider"><div class="ln"></div>or<div class="ln"></div></div>'; }
   html += '<input id="login-email" type="email" class="lg-input" placeholder="Email" onkeydown="if(event.key===\'Enter\')attemptEmailLogin()">';
   html += '<div id="auth-error" style="display:none;margin:10px 0;padding:10px 12px;border:1px solid var(--rdb);background:var(--rdbg);color:var(--red);border-radius:8px;font-size:var(--fs13)"></div>';
   html += '<button class="lg-btn" onclick="attemptEmailLogin()"><span>Email Sign in</span><span>\u2197</span></button>';
+  html += '<div class="lg-secondary-row">';
+  html += '<button class="lg-btn-outline" onclick="' + 'guestRegisterTeam()' + '">Register a team</button>';
+  html += '<button class="lg-btn-outline" onclick="showRequestAccessForm()">Referee / Committee</button>';
+  html += '</div>';
   html += '<div class="lg-links">';
-  html += '<a onclick="showRequestAccessForm()">New here? Request access (Referees / Committees)</a>';
-  html += '<a onclick="' + 'guestRegisterTeam()' + '">Register a team</a>';
   var guestLinks = [];
-  if (S._tournamentMeta.guestAccessEnabled) guestLinks.push('<a onclick="enterGuestView()">Continue as Guest</a>');
-  guestLinks.push('<a onclick="showOfflineMode()">Continue as guest (admin preview)</a>');
-  html += guestLinks.join('');
+  if (S._tournamentMeta.guestAccessEnabled) guestLinks.push('<a onclick="enterGuestView()">Continue as guest</a>');
+  guestLinks.push('<a onclick="showOfflineMode()">Admin preview</a>');
+  html += guestLinks.join('<span class="sep">\u00b7</span>');
   html += '</div></div></div>';
   // RIGHT — live tournament pane
   html += '<div class="lg-right">';
