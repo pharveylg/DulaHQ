@@ -18,8 +18,8 @@
         --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.16);
         --fill:rgba(255,255,255,.03); --fill2:rgba(255,255,255,.05);
         --ink:#F4F4F5; --sub:#A1A1AA; --mute:#71717A; --mute2:#52525B;
-        --lime:#CCFF00; --lime-h:#BEF264; --limeTx:#CCFF00; --red:#EF4444;
-        --tint05:rgba(204,255,0,.05); --tint10:rgba(204,255,0,.10); --tint20:rgba(204,255,0,.20); --tint30:rgba(204,255,0,.30);
+        --lime:#d4ff32; --lime-h:#e0ff70; --limeTx:#d4ff32; --red:#EF4444;
+        --tint05:rgba(212,255,50,.05); --tint10:rgba(212,255,50,.10); --tint20:rgba(212,255,50,.20); --tint30:rgba(212,255,50,.30);
         --navbg:rgba(9,9,11,.72);
         --disp:'Oswald',system-ui,sans-serif;
         --body:'Space Grotesk',system-ui,sans-serif;
@@ -174,7 +174,7 @@
     html{color-scheme:dark}
     [data-theme="light"]{
         color-scheme:light;
-        --bg:#FAFAFA; --bg2:#FFFFFF; --bg3:#F4F4F5;
+        --bg:#f6f7f2; --bg2:#FFFFFF; --bg3:#eaebe4;
         --line:rgba(9,9,11,.12); --line2:rgba(9,9,11,.18);
         --fill:rgba(9,9,11,.03); --fill2:rgba(9,9,11,.05);
         --ink:#18181B; --sub:#3F3F46; --mute:#71717A; --mute2:#A1A1AA;
@@ -264,6 +264,31 @@
     #plat-footer{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:14px 24px;font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--mute);text-transform:uppercase;background:var(--bg2)}
     #plat-footer span:last-child{color:var(--limeTx)}
     @media(max-width:600px){#plat-footer{justify-content:center;gap:8px;flex-wrap:wrap}}
+
+    /* ---- split login (reference design) ---- */
+    .lg-split{flex:1;display:flex;min-height:calc(100vh - 50px)}
+    .lg-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:8%}
+    .lg-box{background:#1a1d1c;padding:40px;border-radius:10px;max-width:400px;width:100%;border:1px solid var(--line)}
+    .lg-label{color:var(--limeTx);font-family:var(--mono);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
+    .lg-h2{margin:0 0 20px;font-size:1.8rem;font-family:var(--disp);font-weight:600;letter-spacing:.5px}
+    .lg-input{width:100%;padding:15px;margin-bottom:15px;background:#0f1110;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:14px;box-sizing:border-box}
+    .lg-input:focus{border-color:var(--limeTx);outline:none;box-shadow:0 0 0 3px var(--tint20)}
+    .lg-btn{width:100%;padding:15px;background:var(--lime);color:#09090B;border:none;border-radius:8px;font-family:var(--body);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;display:flex;justify-content:space-between;transition:all .18s ease-out}
+    .lg-btn:hover{background:var(--lime-h);box-shadow:0 4px 24px var(--tint30)}
+    .lg-links{margin-top:20px;font-size:.8rem;line-height:2;color:var(--mute)}
+    .lg-links a{color:var(--ink);text-decoration:none;cursor:pointer;display:block}
+    .lg-links a:hover{color:var(--limeTx)}
+    .lg-right{flex:1;position:relative;background:#181f1e url('/login-hero.jpg') center/cover;min-height:320px}
+    .lg-overlay-badge{position:absolute;bottom:30px;left:30px;right:30px;padding:18px 20px;background:rgba(10,17,17,.72);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px}
+    .lg-ticker{background:var(--lime);color:#09090B;min-height:50px;display:flex;align-items:center;gap:10px;padding:12px 20px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;font-family:var(--mono);flex-wrap:wrap}
+    @media(max-width:860px){.lg-split{flex-direction:column}.lg-right{min-height:220px;order:-1}.lg-left{padding:24px}.lg-box{padding:26px}.lg-overlay-badge{bottom:16px;left:16px;right:16px}}
+    /* ---- editorial page heroes (teams / groups / bracket) ---- */
+    .ed-hero{padding:8px 0 22px;border-bottom:1px solid var(--line);margin-bottom:22px}
+    .ed-hero .lg-label{margin-bottom:10px}
+    .ed-hero h1{font-family:var(--disp);font-weight:700;font-size:clamp(30px,4.6vw,54px);line-height:1.04;margin:0 0 10px;text-transform:none;letter-spacing:.3px}
+    .ed-hero h1 em{font-style:normal;color:var(--limeTx)}
+    .ed-hero .ed-sub{font-family:var(--mono);font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:1.5px}
+    .ed-hero .ed-sub b{color:var(--limeTx)}
 </style>
 </head>
 <body>
@@ -5767,46 +5792,50 @@ function doResetTournamentData(wipeAudit) {
 
 /* ---------------- AUTH ---------------- */
 function renderSignInPage() {
+  // dynamic status for right pane + ticker
+  var catName = 'WOMEN\u2019S OPEN';
+  try { var _c = (S.categories && S.categories.length) ? (S.categories[S.activeCategory != null ? S.activeCategory : 0] || S.categories[0]) : null; if (_c && _c.name) catName = String(_c.name).toUpperCase(); } catch(e){}
+  var played = 0, total = 0, teams = 0;
+  try { for (var g=0; g<(S.groupMatches||[]).length; g++) { total++; if (S.groupMatches[g].played || S.groupMatches[g].final || S.groupMatches[g].inProgress) played++; } } catch(e){}
+  try { for (var c2=0; c2<(S.categories||[]).length; c2++) teams += ((S.categories[c2].teams||[]).length); } catch(e){}
+  var cats = (S.categories||[]).length;
+  var tName = 'DULÀ HQ TOURNAMENT';
+  try { if (S._tournamentMeta && S._tournamentMeta.name) tName = String(S._tournamentMeta.name).toUpperCase(); } catch(e){}
+  var stageLine = total ? ('Group stage: ' + played + '/' + total) : 'Draw generated \u2014 Groups + Knockout format';
+  var tickerBits = [tName];
+  if (cats) tickerBits.push(cats + ' CATEGOR' + (cats === 1 ? 'Y' : 'IES'));
+  if (teams) tickerBits.push(teams + ' TEAMS');
+  tickerBits.push('DRAW GENERATED \u2014 GROUPS + KNOCKOUT FORMAT');
+
   var html = '';
-  html += '<div id="signin-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);padding:20px;position:relative;overflow:hidden">';
-  // Watermark removed — Dulà HQ text is prevalent via hero instead
-  // html += '<img src="' + APP_LOGO_URI + '" ...>'; // dropped per aesthetic revamp
-  html += '<div style="position:relative;z-index:1;background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:32px 32px;max-width:420px;width:100%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)">';
-  // White-label hero
-  if (typeof Hero !== 'undefined' && typeof Hero === 'function') {
-    try {
-      var _cats=(S.categories||[]).length;var _teams=0;for(var _ci=0;_ci<(S.categories||[]).length;_ci++) _teams+=((S.categories[_ci].teams||[]).length);var _live=0;for(var _mi=0;_mi<(S.groupMatches||[]).length;_mi++) if(S.groupMatches[_mi].inProgress) _live++;
-      html += Hero('signin',{statsCategories:_cats+' categor'+(_cats===1?'y':'ies'),statsTeams:_teams+' teams',statsLive:_live?_live+' live':'Ready'});
-    } catch(e) {
-      html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dulà <span style="color:var(--gold)">HQ</span></div><div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div><div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
-    }
-  } else {
-    html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dulà <span style="color:var(--gold)">HQ</span></div>';
-    html += '<div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div>';
-    html += '<div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
-  }
-  if (GOOGLE_CLIENT_ID) {
-    html += '<div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:16px"></div>';
-    html += '<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--tm);font-size:var(--fs13)"><div style="flex:1;height:1px;background:var(--nb)"></div>or<div style="flex:1;height:1px;background:var(--nb)"></div></div>';
-  }
-  html += '<div style="text-align:left"><div class="field" style="margin-bottom:10px"><label>Email</label><input id="login-email" placeholder="name@example.com" onkeydown="if(event.key===\'Enter\')attemptEmailLogin()"></div></div>';
-  html += '<button class="btn primary" style="width:100%;padding:11px" onclick="attemptEmailLogin()"><i class="ti ti-login"></i> Sign in</button>';
-  html += '<div id="auth-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-top:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb);text-align:left"></div>';
-  html += '<div style="margin:20px 0 14px;border-top:1px solid var(--nb)"></div>';
-  html += '<div style="font-size:var(--fs14);color:var(--tm);margin-bottom:10px">New here?</div>';
-  html += '<div style="display:flex;flex-direction:column;gap:8px">';
-  html += '<button class="btn sm" style="width:100%" onclick="showRequestAccessForm()"><i class="ti ti-user-plus"></i> Request access (Referee / Committee)</button>';
-  html += '<button class="btn sm" style="width:100%" onclick="guestRegisterTeam()"><i class="ti ti-users-group"></i> Register a team</button>';
-  html += '</div>';
+  html += '<div id="signin-screen" style="min-height:100vh;display:flex;flex-direction:column;background:#121413">';
+  html += '<div class="lg-split">';
+  // LEFT — access
+  html += '<div class="lg-left"><div class="lg-box">';
+  html += '<div class="lg-label">ACCESS</div>';
+  html += '<h2 class="lg-h2">Email Sign in</h2>';
+  if (GOOGLE_CLIENT_ID) { html += '<div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:14px"></div><div style="display:flex;align-items:center;gap:10px;margin:0 0 14px;color:var(--tm);font-size:var(--fs13)"><div style="flex:1;height:1px;background:var(--nb)"></div>or<div style="flex:1;height:1px;background:var(--nb)"></div></div>'; }
+  html += '<input id="login-email" type="email" class="lg-input" placeholder="Email" onkeydown="if(event.key===\'Enter\')attemptEmailLogin()">';
+  html += '<div id="auth-error" style="display:none;margin:10px 0;padding:10px 12px;border:1px solid var(--rdb);background:var(--rdbg);color:var(--red);border-radius:8px;font-size:var(--fs13)"></div>';
+  html += '<button class="lg-btn" onclick="attemptEmailLogin()"><span>Email Sign in</span><span>\u2197</span></button>';
+  html += '<div class="lg-links">';
+  html += '<a onclick="showRequestAccessForm()">New here? Request access (Referees / Committees)</a>';
+  html += '<a onclick="' + 'guestRegisterTeam()' + '">Register a team</a>';
   var guestLinks = [];
-  if (S._tournamentMeta.guestAccessEnabled) {
-    guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="enterGuestView()">Continue as Guest</span>');
-  }
-  guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showOfflineMode()">Continue as guest (admin preview)</span>');
-  html += '<div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">' + guestLinks.join('') + '</div>';
+  if (S._tournamentMeta.guestAccessEnabled) guestLinks.push('<a onclick="enterGuestView()">Continue as Guest</a>');
+  guestLinks.push('<a onclick="showOfflineMode()">Continue as guest (admin preview)</a>');
+  html += guestLinks.join('');
+  html += '</div></div></div>';
+  // RIGHT — live tournament pane
+  html += '<div class="lg-right">';
+  html += '<div class="lg-overlay-badge"><div class="lg-label" style="margin-bottom:6px">GROUPS \u00b7 ' + catName + '</div><h2 style="margin:0;font-size:2rem;font-family:var(--disp);font-weight:600;letter-spacing:.5px">' + stageLine + '</h2></div>';
   html += '</div></div>';
+  // TICKER
+  html += '<div class="lg-ticker">' + tickerBits.join(' \u00b7 ') + '<span style="margin-left:auto">POWERED BY DULÀ HQ</span></div>';
+  html += '</div>';
   return html;
 }
+
 function attemptEmailLogin() {
   var emailEl = el('login-email');
   var email = ((emailEl ? emailEl.value : '') || '').trim().toLowerCase();
@@ -6461,7 +6490,7 @@ var PLATFORM_ADMIN_EMAILS = ['pharveylg@gmail.com'];
 
 /* Vetted accent swatches — contrast-checked on zinc-950 & zinc-50 */
 var TENANT_SWATCHES = [
-  { id:'lime',   label:'PLATFORM LIME', fill:'#CCFF00', hover:'#BEF264', tx:'#CCFF00', txLight:'#4D7C0F', rgb:'204,255,0',   rgbLight:'101,163,13' },
+  { id:'lime',   label:'PLATFORM LIME', fill:'#d4ff32', hover:'#e0ff70', tx:'#d4ff32', txLight:'#4D7C0F', rgb:'212,255,50',  rgbLight:'101,163,13' },
   { id:'sky',    label:'SKY',           fill:'#7DD3FC', hover:'#BAE6FD', tx:'#7DD3FC', txLight:'#0369A1', rgb:'125,211,252', rgbLight:'3,105,161' },
   { id:'orange', label:'ORANGE',        fill:'#FB923C', hover:'#FDBA74', tx:'#FB923C', txLight:'#C2410C', rgb:'251,146,60',  rgbLight:'194,65,12' },
   { id:'violet', label:'VIOLET',        fill:'#C4B5FD', hover:'#DDD6FE', tx:'#C4B5FD', txLight:'#6D28D9', rgb:'196,181,253', rgbLight:'109,40,217' },
@@ -6678,6 +6707,26 @@ function injectSelfServeNote(){
   if (orig) { renderRegisterPage = function(){ orig(); try { injectSelfServeNote(); } catch(e){} }; }
 })();
 
+
+/* ---- editorial heroes (reference layouts) ----
+function __edHero(label, headline, subHtml){
+  var mc = document.getElementById('main-content');
+  if (!mc || document.getElementById('ed-hero-mount')) return '';
+  var d = document.createElement('div'); d.id = 'ed-hero-mount'; d.className = 'ed-hero';
+  d.innerHTML = '<div class="lg-label">' + label + '</div><h1>' + headline + '</h1>' + (subHtml ? '<div class="ed-sub">' + subHtml + '</div>' : '');
+  mc.insertBefore(d, mc.firstChild);
+  return '';
+}
+(function(){
+  function teamsSub(){ try { var t=0,g=0; for(var c=0;c<(S.categories||[]).length;c++){t+=((S.categories[c].teams||[]).length); g+=((S.categories[c].groups||[]).length);} var cat=(S.categories&&S.categories.length)?(S.categories[0].name||''):'';
+    return 'Groups \u00b7 ' + cat + ' &nbsp;\u2014&nbsp; <b>\u2691 ' + t + ' teams across ' + g + ' groups</b>'; } catch(e){ return ''; } }
+  function groupsSub(){ try { var cat=(S.categories&&S.categories.length)?(S.categories[0].name||''):''; var p=0,t2=0; for(var g2=0;g2<(S.groupMatches||[]).length;g2++){t2++; if(S.groupMatches[g2].played||S.groupMatches[g2].final)p++;} return cat + ' &nbsp;\u2014&nbsp; <b>Group stage ' + p + '/' + t2 + '</b>'; } catch(e){ return ''; } }
+  function wrap(name, fn){ var o = window[name]; if (typeof o === 'function') { window[name] = function(){ var r = o.apply(null, arguments); try { document.getElementById('ed-hero-mount') && document.getElementById('ed-hero-mount').remove(); fn(); } catch(e){} return r; }; } }
+  wrap('renderTeams', function(){ __edHero('TEAMS', 'The field is <em>set.</em>', teamsSub()); });
+  wrap('renderGroups', function(){ __edHero('GROUPS', 'Groups \u00b7 <em>' + ((S.categories&&S.categories.length)?(S.categories[0].name||''):'') + '</em>', groupsSub()); });
+  wrap('renderBracket', function(){ __edHero('BRACKET', 'Draw generated \u2014 <em>Groups + Knockout format</em>', ''); });
+})();
+
 /* init — includes /t/{slug} tenant routing (dulahq.app/t/copa) */
 (function(){
   try {
@@ -6687,6 +6736,7 @@ function injectSelfServeNote(){
       for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) { setOrgContext(orgs[i]); break; }
     }
   } catch(e) {}
+  try { if (typeof AUTH !== 'undefined' && AUTH && AUTH.signedIn && ['teams','groups','bracket'].indexOf(S.page) !== -1) render(); } catch(e){}
   applyTenantAccent(currentAccentHex());
   updateHeaderBrand();
   renderOrgBanner();

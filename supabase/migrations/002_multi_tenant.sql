@@ -52,7 +52,7 @@ create index if not exists tournaments_org_idx on public.tournaments(org_id);
 
 -- 5. Seed the default org + attach the existing 'primary' blob
 insert into public.organizations (slug, name, accent)
-values ('dula-hq', 'Dulà HQ', '#CCFF00')
+values ('dula-hq', 'Dulà HQ', '#d4ff32')
 on conflict (slug) do update set name = excluded.name;
 
 update public.tournaments
@@ -66,6 +66,7 @@ on conflict (org_id, email) do nothing;
 
 -- keep the org name current if seeded before the rename to 'Dulà HQ'
 update public.organizations set name = 'Dulà HQ' where slug = 'dula-hq' and name = 'Dula HQ';
+update public.organizations set accent = '#d4ff32' where slug = 'dula-hq' and accent = '#CCFF00';
 
 -- 6. RLS ------------------------------------------------------
 alter table public.organizations enable row level security;
