@@ -69,3 +69,19 @@ if (typeof document !== 'undefined') {
     root.style.setProperty('--navaccb', BRANDING.colors.accent + '59'); // 35%
   }
 }
+
+/**
+ * Multi-tenant accent system (phase 2)
+ * Vetted swatches only — each pair is contrast-checked:
+ *   fill  = solid fills (CTAs, badges) — always paired with #09090B text
+ *   tx    = text/outline variant on DARK surfaces (zinc-950)
+ *   txLight = text/outline variant on LIGHT surfaces (zinc-50)
+ * The red live-dot is never themeable. Platform default = lime.
+ */
+export const TENANT_SWATCHES = [
+  { id: 'lime',   label: 'Platform Lime', fill: '#CCFF00', hover: '#BEF264', tx: '#CCFF00', txLight: '#4D7C0F' },
+  { id: 'sky',    label: 'Sky',           fill: '#7DD3FC', hover: '#BAE6FD', tx: '#7DD3FC', txLight: '#0369A1' },
+  { id: 'orange', label: 'Orange',        fill: '#FB923C', hover: '#FDBA74', tx: '#FB923C', txLight: '#C2410C' },
+  { id: 'violet', label: 'Violet',        fill: '#C4B5FD', hover: '#DDD6FE', tx: '#C4B5FD', txLight: '#6D28D9' },
+  { id: 'mint',   label: 'Mint',          fill: '#6EE7B7', hover: '#A7F3D0', tx: '#6EE7B7', txLight: '#047857' },
+]

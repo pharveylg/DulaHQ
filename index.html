@@ -248,6 +248,18 @@
     /* theme toggle button (injected by JS) */
     #ops-theme-tog{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--line2);background:var(--fill);color:var(--sub);cursor:pointer;font-size:15px;line-height:1;flex:none}
     #ops-theme-tog:hover{border-color:var(--limeTx);color:var(--limeTx)}
+
+    /* multi-tenant layer */
+    #org-banner{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9998;display:flex;align-items:center;gap:12px;background:var(--lime);color:#09090B;border-radius:12px;padding:10px 16px;font-family:var(--mono);font-size:11px;letter-spacing:1px;font-weight:700;text-transform:uppercase;box-shadow:0 10px 40px var(--tint30)}
+    #org-banner button{background:#09090B;color:var(--lime);border:none;border-radius:8px;padding:6px 12px;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;font-weight:700;text-transform:uppercase;cursor:pointer}
+    .plat-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
+    .plat-stat{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px}
+    .plat-stat .v{font-family:var(--disp);font-weight:700;font-size:30px;color:var(--limeTx);line-height:1}
+    .plat-stat .l{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-top:6px}
+    .sw-row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 4px}
+    .sw-opt{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:8px 14px;background:var(--fill);cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--sub)}
+    .sw-opt i{width:14px;height:14px;border-radius:4px;display:block}
+    .sw-opt.on{border-color:var(--tint30);background:var(--tint05);color:var(--ink);font-weight:700}
 </style>
 </head>
 <body>
@@ -370,6 +382,7 @@ var S = {
 
 var NAV = {
   admin: [
+    { i: 'ti-building', l: 'Platform', p: 'platform', g: 'Platform' },
     { i: 'ti-home', l: 'Dashboard', p: 'admindashboard', g: 'Overview' },
     { i: 'ti-settings', l: 'Setup', p: 'setup', g: 'Setup' },
     { i: 'ti-palette', l: 'Branding', p: 'branding', g: 'Setup' },
@@ -1222,6 +1235,7 @@ function renderNav() {
           lastGroup = it.g;
         }
         var badge = it.p === 'teams' ? ('<span class="nav-badge">' + cat.teams.length + '</span>') : (it.p === 'officials' && liveNowDrawer ? ('<span class="nav-badge live-badge">' + liveNowDrawer + '</span>') : (it.p === 'registrations' ? (function () { var pc = 0; for (var pi = 0; pi < S.registrations.length; pi++) { if (S.registrations[pi].status === 'pending') pc++; } return pc ? ('<span class="nav-badge">' + pc + '</span>') : ''; })() : (it.p === 'accessrequests' ? (function () { var pc2 = 0; for (var pj = 0; pj < S.accessRequests.length; pj++) { if (S.accessRequests[pj].status === 'pending') pc2++; } return pc2 ? ('<span class="nav-badge">' + pc2 + '</span>') : ''; })() : (it.p === 'documentreviews' ? (function () { var pc3 = 0; var allDocs = getAllDocumentUploads(); for (var pk = 0; pk < allDocs.length; pk++) { if (allDocs[pk].doc.status === 'pending') pc3++; } return pc3 ? ('<span class="nav-badge">' + pc3 + '</span>') : ''; })() : ''))));
+        if (it.p === 'platform' && !(typeof isPlatformAdmin === 'function' && isPlatformAdmin())) continue;
         html += '<button class="nav-item' + (S.page === it.p ? ' active' : '') + '" onclick="navTo(\'' + it.p + '\')"><i class="ti ' + it.i + '"></i>' + it.l + badge + '</button>';
       }
       html += '</div>';
@@ -1274,7 +1288,8 @@ function setTopbar(title, sub, actions) {
 
 function render() {
   var p = S.page;
-  if (p === 'admindashboard') renderAdminDashboard();
+  if (p === 'platform') renderPlatformConsole();
+  else if (p === 'admindashboard') renderAdminDashboard();
   else if (p === 'setup') renderSetup();
   else if (p === 'branding') renderBranding();
   else if (p === 'manualdraw') renderManualDraw();
@@ -6428,6 +6443,200 @@ if (GOOGLE_CLIENT_ID) {
   }
   if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',place)}else{place()}
   setInterval(place,3000); /* re-place if header re-renders */
+})();
+</script>
+
+<script>
+/* ============================================================
+   MULTI-TENANT LAYER — orgs, tenant accent, platform console
+   Phase 2. Local-first: works without Supabase (registry in
+   localStorage). Run supabase/migrations/002_multi_tenant.sql
+   for server-side enforcement (RLS fence).
+   ============================================================ */
+var PLATFORM_ADMIN_EMAILS = ['pharveylg@gmail.com'];
+
+/* Vetted accent swatches — contrast-checked on zinc-950 & zinc-50 */
+var TENANT_SWATCHES = [
+  { id:'lime',   label:'PLATFORM LIME', fill:'#CCFF00', hover:'#BEF264', tx:'#CCFF00', txLight:'#4D7C0F', rgb:'204,255,0',   rgbLight:'101,163,13' },
+  { id:'sky',    label:'SKY',           fill:'#7DD3FC', hover:'#BAE6FD', tx:'#7DD3FC', txLight:'#0369A1', rgb:'125,211,252', rgbLight:'3,105,161' },
+  { id:'orange', label:'ORANGE',        fill:'#FB923C', hover:'#FDBA74', tx:'#FB923C', txLight:'#C2410C', rgb:'251,146,60',  rgbLight:'194,65,12' },
+  { id:'violet', label:'VIOLET',        fill:'#C4B5FD', hover:'#DDD6FE', tx:'#C4B5FD', txLight:'#6D28D9', rgb:'196,181,253', rgbLight:'109,40,217' },
+  { id:'mint',   label:'MINT',          fill:'#6EE7B7', hover:'#A7F3D0', tx:'#6EE7B7', txLight:'#047857', rgb:'110,231,183', rgbLight:'4,120,87' }
+];
+function swatchFor(hex){ for (var i=0;i<TENANT_SWATCHES.length;i++) if (TENANT_SWATCHES[i].fill.toLowerCase() === String(hex||'').toLowerCase()) return TENANT_SWATCHES[i]; return null; }
+
+/* Org registry (local-first; mirrors supabase organizations table) */
+var ORG_LS = 'dulahq:orgs';
+function orgRegistry(){
+  try { var r = JSON.parse(localStorage.getItem(ORG_LS) || 'null'); if (r && r.length) return r; } catch(e){}
+  return [ { slug:'dula-hq', name:'Dula HQ', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active' } ];
+}
+function saveOrgRegistry(list){ try { localStorage.setItem(ORG_LS, JSON.stringify(list)); } catch(e){} }
+
+/* Org context (impersonation) */
+var ORG_CTX_LS = 'dulahq:org-context';
+function getOrgContext(){ try { return JSON.parse(localStorage.getItem(ORG_CTX_LS) || 'null'); } catch(e){ return null; } }
+function setOrgContext(org){
+  try { org ? localStorage.setItem(ORG_CTX_LS, JSON.stringify(org)) : localStorage.removeItem(ORG_CTX_LS); } catch(e){}
+  applyTenantAccent(org ? org.accent : (getSavedAccent() || '#CCFF00'));
+  renderOrgBanner();
+  try { renderNav(); } catch(e){}
+}
+function renderOrgBanner(){
+  var old = document.getElementById('org-banner'); if (old) old.remove();
+  var ctx = getOrgContext(); if (!ctx) return;
+  var b = document.createElement('div'); b.id = 'org-banner';
+  b.innerHTML = 'VIEWING · ' + ctx.name.toUpperCase() + ' <button id="org-return">RETURN TO PLATFORM</button>';
+  document.body.appendChild(b);
+  document.getElementById('org-return').onclick = function(){ setOrgContext(null); try { navTo('platform'); } catch(e){} };
+}
+
+/* Tenant accent: sets inline tokens (overrides both themes correctly) */
+function applyTenantAccent(hex){
+  var sw = swatchFor(hex);
+  if (!sw) sw = TENANT_SWATCHES[0];
+  var root = document.documentElement;
+  var light = root.getAttribute('data-theme') === 'light';
+  var rgb = light ? sw.rgbLight : sw.rgb;
+  root.style.setProperty('--lime', sw.fill);
+  root.style.setProperty('--lime-h', sw.hover);
+  root.style.setProperty('--limeTx', light ? sw.txLight : sw.tx);
+  root.style.setProperty('--tint05','rgba(' + rgb + ',.05)');
+  root.style.setProperty('--tint10','rgba(' + rgb + ',.10)');
+  root.style.setProperty('--tint20','rgba(' + rgb + ',.20)');
+  root.style.setProperty('--tint30','rgba(' + rgb + ',.30)');
+}
+window.__reapplyAccent = function(){ applyTenantAccent(currentAccentHex()); };
+function currentAccentHex(){
+  var ctx = getOrgContext(); if (ctx) return ctx.accent;
+  return getSavedAccent() || '#CCFF00';
+}
+function getSavedAccent(){ try { return localStorage.getItem('dulahq:accent'); } catch(e){ return null; } }
+function saveAccent(hex){ try { localStorage.setItem('dulahq:accent', hex); } catch(e){} }
+
+/* hook theme toggle so accent re-applies with correct light/dark variant */
+(function(){
+  var tog = document.getElementById('ops-theme-tog');
+  if (tog) { var oc = tog.onclick; tog.onclick = function(){ if (oc) oc.call(tog); window.__reapplyAccent(); }; }
+  else { document.addEventListener('click', function(e){
+    if (e.target && e.target.id === 'ops-theme-tog') setTimeout(window.__reapplyAccent, 0);
+  }, true); }
+})();
+
+/* super admin check */
+function isPlatformAdmin(){
+  try {
+    var em = (typeof AUTH !== 'undefined' && AUTH && AUTH.email) ? String(AUTH.email).toLowerCase() : '';
+    if (!em) return false;
+    if (PLATFORM_ADMIN_EMAILS.indexOf(em) !== -1) return true;
+    var orgs = orgRegistry();
+    for (var i=0;i<orgs.length;i++) if (String(orgs[i].admin||'').toLowerCase() === em) return true;
+  } catch(e) {}
+  return false;
+}
+
+/* Branding page: inject identity/accent card (wraps renderBranding) */
+function buildAccentCardHTML(){
+  var cur = (getSavedAccent() || '#CCFF00').toLowerCase();
+  var ctx = getOrgContext();
+  var h = '<div class="card" style="margin-bottom:16px"><div class="card-title">Identity — platform accent</div>';
+  h += '<p style="color:var(--sub);font-size:13px">One accent color defines this tenant\'s CTAs, active states, focus rings, winners and live text. Vetted swatches only — each is contrast-checked on dark and light surfaces. ' + (ctx ? '<b style="color:var(--limeTx)">Managed by platform (impersonating ' + ctx.name + ')</b>.' : 'Applies instantly and is remembered.') + '</p>';
+  h += '<div class="sw-row">';
+  for (var i=0;i<TENANT_SWATCHES.length;i++){
+    var sw = TENANT_SWATCHES[i];
+    h += '<button type="button" class="sw-opt' + (sw.fill.toLowerCase()===cur?' on':'') + '" data-accent="' + sw.fill + '"><i style="background:' + sw.fill + '"></i>' + sw.label + '</button>';
+  }
+  h += '</div></div>';
+  return h;
+}
+function injectAccentCard(){
+  var mc = document.getElementById('main-content');
+  if (!mc || document.getElementById('accent-card-mount')) return;
+  var wrap = document.createElement('div'); wrap.id = 'accent-card-mount';
+  wrap.innerHTML = buildAccentCardHTML();
+  mc.insertBefore(wrap, mc.firstChild);
+  var btns = wrap.querySelectorAll('[data-accent]');
+  for (var i=0;i<btns.length;i++){
+    btns[i].onclick = function(){
+      var hex = this.getAttribute('data-accent');
+      saveAccent(hex); applyTenantAccent(hex);
+      try { if (typeof ensureBranding === 'function') { var b = ensureBranding(); b.accent = hex; } if (typeof autoSave === 'function') autoSave(); } catch(e){}
+      injectAccentCardRefresh();
+    };
+  }
+}
+function injectAccentCardRefresh(){ var m = document.getElementById('accent-card-mount'); if (m) m.innerHTML = buildAccentCardHTML(); var btns = document.querySelectorAll('#accent-card-mount [data-accent]');
+  for (var i=0;i<btns.length;i++){ btns[i].onclick = function(){ var hex=this.getAttribute('data-accent'); saveAccent(hex); applyTenantAccent(hex);
+    try { if (typeof ensureBranding === 'function'){ var b=ensureBranding(); b.accent=hex; } if (typeof autoSave==='function') autoSave(); } catch(e){} injectAccentCardRefresh(); }; } }
+(function(){
+  var orig = (typeof renderBranding === 'function') ? renderBranding : null;
+  if (orig) { renderBranding = function(){ orig(); try { injectAccentCard(); } catch(e){} }; }
+})();
+
+/* PLATFORM CONSOLE (super admin) */
+function renderPlatformConsole(){
+  if (!isPlatformAdmin()) { setTopbar('Platform', 'Super admin only'); el('main-content').innerHTML = '<div class="empty"><i class="ti ti-lock"></i><p>Platform console is restricted to super admins.</p></div>'; return; }
+  setTopbar('Platform', 'Super admin · all tenants');
+  var orgs = orgRegistry();
+  var teams = 0; try { for (var c=0;c<S.categories.length;c++) teams += (S.categories[c].teams||[]).length; } catch(e){}
+  var h = '';
+  h += '<div class="plat-stats">';
+  h += '<div class="plat-stat"><div class="v">' + orgs.length + '</div><div class="l">TENANTS</div></div>';
+  h += '<div class="plat-stat"><div class="v">' + teams + '</div><div class="l">TEAMS · THIS ORG</div></div>';
+  h += '<div class="plat-stat"><div class="v">' + (getOrgContext()?getOrgContext().name.toUpperCase().slice(0,8):'—') + '</div><div class="l">IMPERSONATING</div></div>';
+  h += '<div class="plat-stat"><div class="v">#CCFF00</div><div class="l">PLATFORM ACCENT</div></div>';
+  h += '</div>';
+  h += '<div class="card"><div class="card-title">Tenants</div>';
+  h += '<table class="tbl"><thead><tr><th>ORG</th><th>SLUG</th><th>ADMIN</th><th>ACCENT</th><th>STATUS</th><th></th></tr></thead><tbody>';
+  for (var i=0;i<orgs.length;i++){
+    var o = orgs[i];
+    h += '<tr><td><b>' + o.name + '</b></td><td style="font-family:var(--mono)">' + o.slug + '</td><td style="font-family:var(--mono)">' + (o.admin||'—') + '</td>';
+    h += '<td><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:' + o.accent + ';vertical-align:-2px"></span> <span style="font-family:var(--mono);font-size:11px">' + o.accent + '</span></td>';
+    h += '<td>' + (o.status||'active') + '</td>';
+    h += '<td><button class="btn" style="min-height:34px" onclick="impersonateOrg(\'' + o.slug + '\')">Impersonate</button></td></tr>';
+  }
+  h += '</tbody></table>';
+  h += '<p style="color:var(--mute);font-size:12px;margin-top:12px">Server-side fence: run <code style="font-family:var(--mono)">supabase/migrations/002_multi_tenant.sql</code> in the Supabase SQL editor. Until then this registry is local to your browser.</p>';
+  h += '</div>';
+  h += '<div class="card"><div class="card-title">Provision a tenant</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">';
+  h += '<div class="field"><label>Org name</label><input id="plat-new-name" placeholder="Copa Maynila"></div>';
+  h += '<div class="field"><label>Slug</label><input id="plat-new-slug" placeholder="copa-maynila"></div>';
+  h += '<div class="field"><label>Admin email</label><input id="plat-new-admin" placeholder="admin@cup.ph"></div>';
+  h += '<div class="field"><label>Accent</label><select id="plat-new-accent">';
+  for (var k=0;k<TENANT_SWATCHES.length;k++) h += '<option value="' + TENANT_SWATCHES[k].fill + '">' + TENANT_SWATCHES[k].label + ' (' + TENANT_SWATCHES[k].fill + ')</option>';
+  h += '</select></div></div>';
+  h += '<div style="margin-top:14px"><button class="btn-primary" style="margin-top:0" onclick="provisionOrg()">Provision →</button></div>';
+  h += '<p style="color:var(--mute);font-size:12px;margin-top:10px">Creates the org locally now; once the migration is applied, provisioning also inserts <code style="font-family:var(--mono)">organizations</code> + <code style="font-family:var(--mono)">org_members</code> rows (admin role) in Supabase.</p>';
+  h += '</div>';
+  el('main-content').innerHTML = h;
+  try { hydrateIcons(el('main-content')); } catch(e){}
+}
+function impersonateOrg(slug){
+  var orgs = orgRegistry(), org = null;
+  for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) org = orgs[i];
+  if (!org) return;
+  setOrgContext(org);
+  try { navTo('admindashboard'); } catch(e){}
+}
+function provisionOrg(){
+  var name = (document.getElementById('plat-new-name').value || '').trim();
+  var slug = (document.getElementById('plat-new-slug').value || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-');
+  var admin = (document.getElementById('plat-new-admin').value || '').trim();
+  var accent = document.getElementById('plat-new-accent').value;
+  if (!name || !slug || !admin) { alert('Name, slug and admin email are required.'); return; }
+  var orgs = orgRegistry();
+  for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) { alert('Slug already exists.'); return; }
+  orgs.push({ slug: slug, name: name, accent: accent, admin: admin, status: 'active' });
+  saveOrgRegistry(orgs);
+  renderPlatformConsole();
+}
+
+/* init */
+(function(){
+  applyTenantAccent(currentAccentHex());
+  renderOrgBanner();
+  try { renderNav(); } catch(e){}
 })();
 </script>
 </body>
