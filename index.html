@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dula HQ — Tournament Manager</title>
+<title>Dulà HQ — Tournament Manager</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -260,11 +260,15 @@
     .sw-opt{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:8px 14px;background:var(--fill);cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--sub)}
     .sw-opt i{width:14px;height:14px;border-radius:4px;display:block}
     .sw-opt.on{border-color:var(--tint30);background:var(--tint05);color:var(--ink);font-weight:700}
+
+    #plat-footer{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:14px 24px;font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--mute);text-transform:uppercase;background:var(--bg2)}
+    #plat-footer span:last-child{color:var(--limeTx)}
+    @media(max-width:600px){#plat-footer{justify-content:center;gap:8px;flex-wrap:wrap}}
 </style>
 </head>
 <body>
 <div class="shell" id="app-shell" style="display:none">
-<div class="app-header" id="app-header"><div class="app-header-brand"><div class="app-header-name" style="font-size:22px;letter-spacing:-0.8px">Dula <span style="color:var(--gold)">HQ</span></div><div class="app-header-sub" id="sb-trn-name">Tournament Manager</div></div><div class="hdr-dropdown-wrap" id="viewas-dropdown-wrap"></div><div class="hdr-dropdown-wrap" id="manage-dropdown-wrap"></div><button onclick="seedDemo()" class="hdr-demo-btn"><i class="ti ti-wand"></i> Demo</button><div class="app-header-user"><span id="user-badge" style="font-size:var(--fs13);color:var(--tm);white-space:nowrap">Not signed in</span><div id="sync-actions-wrap" style="display:flex;gap:6px"></div><button onclick="signOut()" class="hdr-icon-btn" title="Sign out"><i class="ti ti-logout"></i></button></div></div><div class="category-strip" id="category-strip"></div>
+<div class="app-header" id="app-header"><div class="app-header-brand"><div class="app-header-name" style="font-size:22px;letter-spacing:-0.8px">Dulà <span style="color:var(--gold)">HQ</span></div><div class="app-header-sub" id="sb-trn-name">Tournament Manager</div></div><div class="hdr-dropdown-wrap" id="viewas-dropdown-wrap"></div><div class="hdr-dropdown-wrap" id="manage-dropdown-wrap"></div><button onclick="seedDemo()" class="hdr-demo-btn"><i class="ti ti-wand"></i> Demo</button><div class="app-header-user"><span id="user-badge" style="font-size:var(--fs13);color:var(--tm);white-space:nowrap">Not signed in</span><div id="sync-actions-wrap" style="display:flex;gap:6px"></div><button onclick="signOut()" class="hdr-icon-btn" title="Sign out"><i class="ti ti-logout"></i></button></div></div><div class="category-strip" id="category-strip"></div>
 <!-- HERO COLLAGE (new theme) — shown on sign-in and dashboard via JS -->
 <div id="hero-collage" class="hero-collage" style="display:none">
     <div class="acid-splash splash-1"></div>
@@ -344,7 +348,7 @@ var S = {
   bracketView: 'chart',
   groupsView: 'chart',
   tournament: {
-    name: 'Dula HQ Tournament', venue: '', date: '', format: '7', duration: 60,
+    name: 'Dulà HQ Tournament', venue: '', date: '', format: '7', duration: 60,
     ageCategory: 'Open', offside: false, extraTime: true, penalties: true,
     structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: true,
     pitches: []
@@ -539,7 +543,7 @@ function AC_generated()     { return activeCategory().generated; }
    category, so every existing function now operates per-category
    with zero changes elsewhere.
    ============================================================ */
-S._tournamentMeta = { name: 'Dula HQ Tournament', venue: '', date: '', pitches: [], guestAccessEnabled: false, allowEarlyKnockout: true, branding: {} };
+S._tournamentMeta = { name: 'Dulà HQ Tournament', venue: '', date: '', pitches: [], guestAccessEnabled: false, allowEarlyKnockout: true, branding: {} };
 
 function defineCategoryProxy(prop, catField) {
   Object.defineProperty(S, prop, {
@@ -853,7 +857,7 @@ function downloadBlob(blob, filename) {
 function buildExportMeta(title, filtersText) {
   var who = (AUTH && AUTH.signedIn && (AUTH.name || AUTH.email)) || (S.role.charAt(0).toUpperCase() + S.role.slice(1));
   return {
-    tournament: (S.tournament && S.tournament.name) || 'Dula HQ Tournament',
+    tournament: (S.tournament && S.tournament.name) || 'Dulà HQ Tournament',
     title: title,
     generatedBy: who,
     generatedAt: new Date().toLocaleString(),
@@ -898,7 +902,7 @@ function exportToExcel(filename, headers, rows, meta) {
 function exportToPDF(filename, headers, rows, meta) {
   if (typeof window.jspdf === 'undefined') { showToast('PDF export library did not load \u2014 check your connection'); return; }
   var doc = new window.jspdf.jsPDF();
-  var brand = (typeof BRANDING !== 'undefined' ? BRANDING : (window.BRANDING || { appName: 'Dula HQ', tagline: 'Tournament Manager', colors: { gold: '#c8960a', accent: '#15803d' }, sponsors: [] }));
+  var brand = (typeof BRANDING !== 'undefined' ? BRANDING : (window.BRANDING || { appName: 'Dulà HQ', tagline: 'Tournament Manager', colors: { gold: '#c8960a', accent: '#15803d' }, sponsors: [] }));
   var goldRgb = (function(hex){try{var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return [r,g,b];}catch(e){return [200,150,10];}})(brand.colors && brand.colors.gold || '#c8960a');
   var accentRgb = (function(hex){try{var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return [r,g,b];}catch(e){return [21,128,61];}})(brand.colors && brand.colors.accent || '#15803d');
   var liveUrl = (typeof location !== 'undefined' ? location.origin + location.pathname : 'https://dulahq.vercel.app') + '?view=live';
@@ -906,7 +910,7 @@ function exportToPDF(filename, headers, rows, meta) {
   // Top accent bar
   doc.setFillColor(accentRgb[0], accentRgb[1], accentRgb[2]); doc.rect(0,0,210,12,'F');
   doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-  doc.text((brand.appName || 'Dula HQ') + ' — ' + (brand.tagline || 'Tournament Manager'), 8, 7.5);
+  doc.text((brand.appName || 'Dulà HQ') + ' — ' + (brand.tagline || 'Tournament Manager'), 8, 7.5);
   doc.setFont('helvetica','normal'); doc.setFontSize(7);
   doc.text((meta.tournament || brand.tournament && brand.tournament.name || 'Tournament') + ' · ' + new Date().toLocaleDateString(), 202, 7.5, {align:'right'});
   y = 18;
@@ -1280,7 +1284,7 @@ function setTopbar(title, sub, actions) {
   }
   el('tb-actions').innerHTML = actions || '';
   var t = S.tournament;
-  el('sb-trn-name').textContent = t.name || 'Dula HQ Tournament';
+  el('sb-trn-name').textContent = t.name || 'Dulà HQ Tournament';
   var meta = 'Not configured';
   if (t.format) { meta = S.categories.length + ' categor' + (S.categories.length === 1 ? 'y' : 'ies') + ' \u00b7 ' + t.venue; }
   el('sb-trn-meta').textContent = meta;
@@ -1501,7 +1505,7 @@ function removeBrandingLogo(type){
   b[type] = '';
   applyBrandingFromCustom();
   renderBranding();
-  showToast('Removed — back to default Dula HQ');
+  showToast('Removed — back to default Dulà HQ');
   autoSave && autoSave();
 }
 function applyBrandingFromCustom(){
@@ -1578,14 +1582,14 @@ function saveBrandingColors(){
 }
 function renderBranding(){
   if (S.role !== 'admin') { setTopbar('Branding', 'Admin only'); el('main-content').innerHTML='<div class="empty"><i class="ti ti-lock"></i><p>Only admins can manage branding.</p></div>'; return; }
-  // Hero — Dula HQ page
+  // Hero — Dulà HQ page
   var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Branding', subtitle: 'Customize logos, colors & sponsors — white-label for any customer', section: 'Setup'}); } catch(e){}
   var b = ensureBranding();
   var eff = getEffectiveBranding();
   var hasCustomLogo = !!(b.logo);
   var hasWhite = !!(b.logoWhite);
   var hasFavicon = !!(b.favicon);
-  setTopbar('Branding', 'Customize logos, colors & sponsors — white-label for any customer', '<button class="btn" onclick="if(confirm(\'Reset all branding to Dula HQ defaults?\')){ S._tournamentMeta.branding={}; applyBrandingFromCustom(); renderBranding(); showToast(\'Reset to Dula HQ defaults\'); autoSave&&autoSave(); }"><i class="ti ti-rotate"></i> Reset to Dula HQ</button>');
+  setTopbar('Branding', 'Customize logos, colors & sponsors — white-label for any customer', '<button class="btn" onclick="if(confirm(\'Reset all branding to Dulà HQ defaults?\')){ S._tournamentMeta.branding={}; applyBrandingFromCustom(); renderBranding(); showToast(\'Reset to Dulà HQ defaults\'); autoSave&&autoSave(); }"><i class="ti ti-rotate"></i> Reset to Dulà HQ</button>');
   var html='';
   // Spec helper
   html += '<div class="card" style="background:var(--n3)"><div class="card-title"><i class="ti ti-info-circle"></i> Logo Spec — follow for any customer</div>';
@@ -1595,11 +1599,11 @@ function renderBranding(){
   html += '<div><b>Favicon</b> (browser tab)<br>• 64×64 ICO or PNG, &lt;100KB<br>• Auto-cropped to circle<br>• Falls back to Primary</div>';
   html += '<div><b>Sponsor Logos</b> (PDF + TV strip)<br>• 400×200 PNG/JPG, &lt;300KB, white bg<br>• Add via <b>Add sponsor</b> → upload<br>• Shows in PDF header + TV marquee</div>';
   html += '</div>';
-  html += '<div style="margin-top:10px;font-size:12px;color:var(--tm)">Files are stored in <code>S._tournamentMeta.branding</code> (Supabase JSONB + offline queue). No code redeploy needed — just Admin upload. Original Dula HQ files stay in <code>public/branding/dulahq/</code> as fallback.</div>';
+  html += '<div style="margin-top:10px;font-size:12px;color:var(--tm)">Files are stored in <code>S._tournamentMeta.branding</code> (Supabase JSONB + offline queue). No code redeploy needed — just Admin upload. Original Dulà HQ files stay in <code>public/branding/dulahq/</code> as fallback.</div>';
   html += '</div>';
 
   // Primary Logo
-  html += '<div class="card"><div class="card-title"><i class="ti ti-photo"></i> Primary Logo ' + (hasCustomLogo?'<span class="badge bgr" style="margin-left:8px">Custom</span>':'<span class="badge bgy" style="margin-left:8px">Dula HQ default</span>') + '</div>';
+  html += '<div class="card"><div class="card-title"><i class="ti ti-photo"></i> Primary Logo ' + (hasCustomLogo?'<span class="badge bgr" style="margin-left:8px">Custom</span>':'<span class="badge bgy" style="margin-left:8px">Dulà HQ default</span>') + '</div>';
   html += '<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">';
   html += '<div style="width:120px;height:120px;background:var(--n3);border:1px solid var(--nb);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="' + esc(eff.logo) + '" alt="Primary" style="width:100%;height:100%;object-fit:contain;padding:8px" onerror="this.style.display=\'none\'"><span style="font-size:11px;color:var(--tm);display:none">No logo</span></div>';
   html += '<div style="flex:1;min-width:220px"><div style="font-size:13px;color:var(--tm);margin-bottom:8px">Used in header, sign-in hero, and PDF header. Transparent PNG recommended.</div>';
@@ -1651,7 +1655,7 @@ function renderBranding(){
   html += '<div class="card" style="background:var(--n3)"><div class="card-title"><i class="ti ti-eye"></i> Preview — Sign-in hero</div>';
   html += '<div style="background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:16px;text-align:center">';
   html += '<img src="' + esc(eff.logo) + '" style="width:56px;height:56px;object-fit:contain;margin:0 auto 8px;display:block" onerror="this.style.display=\'none\'">';
-  html += '<div style="font-weight:800;font-style:italic">Dula <span style="color:var(--gold)">HQ</span> <span style="font-weight:400;color:var(--tm);font-size:12px">— Tournament Manager</span></div>';
+  html += '<div style="font-weight:800;font-style:italic">Dulà <span style="color:var(--gold)">HQ</span> <span style="font-weight:400;color:var(--tm);font-size:12px">— Tournament Manager</span></div>';
   html += '<div style="font-size:12px;color:var(--tm);margin-top:4px">Hero uses your Primary Logo + Gold/Accent + Sponsors</div>';
   html += '</div></div>';
 
@@ -1733,7 +1737,7 @@ function updatePitchName(i, v) { if (S.tournament.pitches) S.tournament.pitches[
 
 function saveSetup() {
   var t = S.tournament;
-  t.name = el('inp-name').value.trim() || 'Dula HQ Tournament';
+  t.name = el('inp-name').value.trim() || 'Dulà HQ Tournament';
   t.venue = el('inp-venue').value.trim();
   t.date = el('inp-date').value;
   t.ageCategory = el('inp-age').value;
@@ -1808,7 +1812,7 @@ function renderAdminDashboard() {
   var pendingTarget = pendingReg ? 'registrations' : (pendingAccess ? 'accessrequests' : (pendingDocs ? 'documentreviews' : 'registrations'));
 
   var html = '';
-  // Hero — dashboard (Dula HQ prevalent, neon punch)
+  // Hero — dashboard (Dulà HQ prevalent, neon punch)
   try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') { var _tmName = (S._tournamentMeta && S._tournamentMeta.name) || 'Mindanao Cup 2026'; var _venue = (S._tournamentMeta && S._tournamentMeta.venue) || 'CDO Sports Complex'; html += Hero('dashboard', { tournamentName: _tmName, venue: _venue, liveCount: liveMatches }); } } catch(e){}
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:22px">'
     + kpiTile_('Categories', S.categories.length, 'ti-layout-grid', null, "navTo('categories')")
@@ -3732,7 +3736,7 @@ function renderBracket() {
   var progressBanner = '';
   if (k !== 'knockout' && played < total && !S.knockoutRounds.length) {
     var pct = Math.round(played / total * 100);
-    var _lockHero=''; try{ if(typeof Hero!=='undefined') _lockHero=Hero('live',{liveCount: played+' of '+total+' played', subtitle:'Dula HQ • Group stage in progress'});}catch(e){} 
+    var _lockHero=''; try{ if(typeof Hero!=='undefined') _lockHero=Hero('live',{liveCount: played+' of '+total+' played', subtitle:'Dulà HQ • Group stage in progress'});}catch(e){} 
     progressBanner = _lockHero + '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
   }
   if (!S.knockoutRounds.length) { var built = buildKnockout(); if (built) S.knockoutRounds = built; }
@@ -4665,7 +4669,7 @@ function renderLiveView() {
   var cat = activeCategory();
   setTopbar('Live', cat.name);
   var _liveCount2=0; for(var _lc=0;_lc<(S.groupMatches||[]).length;_lc++) if(S.groupMatches[_lc].inProgress) _liveCount2++;
-  var _heroLive=''; try { if(typeof Hero!=='undefined'&&typeof Hero==='function') _heroLive=Hero('live',{liveCount:_liveCount2? _liveCount2+' live':'', subtitle: 'Dula HQ • Tap a stream to watch'}); } catch(e){}
+  var _heroLive=''; try { if(typeof Hero!=='undefined'&&typeof Hero==='function') _heroLive=Hero('live',{liveCount:_liveCount2? _liveCount2+' live':'', subtitle: 'Dulà HQ • Tap a stream to watch'}); } catch(e){}
   var mine = [];
   for (var i = 0; i < S.liveEmbeds.length; i++) { if (S.liveEmbeds[i].categoryId === cat.id) mine.push(S.liveEmbeds[i]); }
   if (!mine.length) { el('main-content').innerHTML = _heroLive + '<div class="empty"><i class="ti ti-player-play"></i><p>No live streams for this category yet.</p></div>'; return; }
@@ -5691,7 +5695,7 @@ function pushToSheets() {
 function freshTournamentState_() {
   return {
     tournament: {
-      name: 'Dula HQ Tournament', venue: '', date: '', format: '7', duration: 60,
+      name: 'Dulà HQ Tournament', venue: '', date: '', format: '7', duration: 60,
       ageCategory: 'Open', offside: false, extraTime: true, penalties: true,
       structure: 'groups_knockout', numGroups: 2, advancePer: 2, ptsWin: 3, ptsDraw: 1, allowEarlyKnockout: true,
       pitches: []
@@ -5765,7 +5769,7 @@ function doResetTournamentData(wipeAudit) {
 function renderSignInPage() {
   var html = '';
   html += '<div id="signin-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);padding:20px;position:relative;overflow:hidden">';
-  // Watermark removed — Dula HQ text is prevalent via hero instead
+  // Watermark removed — Dulà HQ text is prevalent via hero instead
   // html += '<img src="' + APP_LOGO_URI + '" ...>'; // dropped per aesthetic revamp
   html += '<div style="position:relative;z-index:1;background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:32px 32px;max-width:420px;width:100%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)">';
   // White-label hero
@@ -5774,10 +5778,10 @@ function renderSignInPage() {
       var _cats=(S.categories||[]).length;var _teams=0;for(var _ci=0;_ci<(S.categories||[]).length;_ci++) _teams+=((S.categories[_ci].teams||[]).length);var _live=0;for(var _mi=0;_mi<(S.groupMatches||[]).length;_mi++) if(S.groupMatches[_mi].inProgress) _live++;
       html += Hero('signin',{statsCategories:_cats+' categor'+(_cats===1?'y':'ies'),statsTeams:_teams+' teams',statsLive:_live?_live+' live':'Ready'});
     } catch(e) {
-      html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dula <span style="color:var(--gold)">HQ</span></div><div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div><div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
+      html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dulà <span style="color:var(--gold)">HQ</span></div><div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div><div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
     }
   } else {
-    html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dula <span style="color:var(--gold)">HQ</span></div>';
+    html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dulà <span style="color:var(--gold)">HQ</span></div>';
     html += '<div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div>';
     html += '<div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
   }
@@ -6467,9 +6471,10 @@ function swatchFor(hex){ for (var i=0;i<TENANT_SWATCHES.length;i++) if (TENANT_S
 
 /* Org registry (local-first; mirrors supabase organizations table) */
 var ORG_LS = 'dulahq:orgs';
+function __esc(t){ var d = document.createElement('div'); d.textContent = String(t==null?'':t); return d.innerHTML; }
 function orgRegistry(){
-  try { var r = JSON.parse(localStorage.getItem(ORG_LS) || 'null'); if (r && r.length) return r; } catch(e){}
-  return [ { slug:'dula-hq', name:'Dula HQ', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active' } ];
+  try { var r = JSON.parse(localStorage.getItem(ORG_LS) || 'null'); if (r && r.length) { for (var q=0;q<r.length;q++) if (r[q].name === 'Dula HQ') r[q].name = 'Dulà HQ'; return r; } } catch(e){}
+  return [ { slug:'dula-hq', name:'Dulà HQ', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active' } ];
 }
 function saveOrgRegistry(list){ try { localStorage.setItem(ORG_LS, JSON.stringify(list)); } catch(e){} }
 
@@ -6479,8 +6484,24 @@ function getOrgContext(){ try { return JSON.parse(localStorage.getItem(ORG_CTX_L
 function setOrgContext(org){
   try { org ? localStorage.setItem(ORG_CTX_LS, JSON.stringify(org)) : localStorage.removeItem(ORG_CTX_LS); } catch(e){}
   applyTenantAccent(org ? org.accent : (getSavedAccent() || '#CCFF00'));
+  updateHeaderBrand();
   renderOrgBanner();
   try { renderNav(); } catch(e){}
+}
+function updateHeaderBrand(){
+  var elx = document.querySelector('.app-header-name'); if (!elx) return;
+  var ctx = getOrgContext(), name = ctx ? ctx.name : 'Dulà HQ';
+  var parts = name.split(' '); var last = parts.pop() || '';
+  elx.innerHTML = __esc(parts.join(' ')) + (last ? ' <span style="color:var(--gold)">' + __esc(last) + '</span>' : '');
+}
+function ensurePlatformFooter(){
+  if (document.getElementById('plat-footer')) return;
+  var shell = document.getElementById('app-shell') || document.body;
+  var f = document.createElement('div'); f.id = 'plat-footer';
+  var ctx = getOrgContext();
+  var left = '© ' + new Date().getFullYear() + ' ' + (ctx ? ctx.name.toUpperCase() : 'DULÀ HQ');
+  f.innerHTML = '<span>' + left + '</span><span>POWERED BY DULÀ HQ</span>';
+  shell.appendChild(f);
 }
 function renderOrgBanner(){
   var old = document.getElementById('org-banner'); if (old) old.remove();
@@ -6667,7 +6688,9 @@ function injectSelfServeNote(){
     }
   } catch(e) {}
   applyTenantAccent(currentAccentHex());
+  updateHeaderBrand();
   renderOrgBanner();
+  ensurePlatformFooter();
   try { renderNav(); } catch(e){}
 })();
 </script>

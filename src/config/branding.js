@@ -10,7 +10,7 @@
  *    or just edit the defaults below.
  */
 export const BRANDING = {
-  appName: import.meta.env.VITE_BRAND_NAME || 'Dula HQ',
+  appName: import.meta.env.VITE_BRAND_NAME || 'Dulà HQ',
   appShortName: import.meta.env.VITE_BRAND_SHORT || 'Dula',
   appShortAccent: 'HQ', // second part colored with gold
   tagline: import.meta.env.VITE_BRAND_TAGLINE || 'Tournament Manager',
@@ -52,7 +52,7 @@ export const BRANDING = {
 
   // Helper: split appName into short + accent for header (Dula | HQ)
   get headerParts() {
-    const parts = (this.appName || 'Dula HQ').split(' ');
+    const parts = (this.appName || 'Dulà HQ').split(' ');
     if (parts.length >= 2) return { a: parts[0], b: parts.slice(1).join(' ') };
     return { a: this.appName, b: '' };
   },
