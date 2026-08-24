@@ -2,5 +2,11 @@
   "framework": "vite",
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist",
-  "installCommand": "npm ci"
+  "installCommand": "npm ci",
+  "rewrites": [
+    {
+      "source": "/t/:slug*",
+      "destination": "/index.html"
+    }
+  ]
 }

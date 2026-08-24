@@ -6484,7 +6484,7 @@ function setOrgContext(org){
 }
 function renderOrgBanner(){
   var old = document.getElementById('org-banner'); if (old) old.remove();
-  var ctx = getOrgContext(); if (!ctx) return;
+  var ctx = getOrgContext(); if (!ctx || !isPlatformAdmin()) return;
   var b = document.createElement('div'); b.id = 'org-banner';
   b.innerHTML = 'VIEWING · ' + ctx.name.toUpperCase() + ' <button id="org-return">RETURN TO PLATFORM</button>';
   document.body.appendChild(b);
@@ -6593,7 +6593,7 @@ function renderPlatformConsole(){
     h += '<tr><td><b>' + o.name + '</b></td><td style="font-family:var(--mono)">' + o.slug + '</td><td style="font-family:var(--mono)">' + (o.admin||'—') + '</td>';
     h += '<td><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:' + o.accent + ';vertical-align:-2px"></span> <span style="font-family:var(--mono);font-size:11px">' + o.accent + '</span></td>';
     h += '<td>' + (o.status||'active') + '</td>';
-    h += '<td><button class="btn" style="min-height:34px" onclick="impersonateOrg(\'' + o.slug + '\')">Impersonate</button></td></tr>';
+    h += '<td><button class="btn" style="min-height:34px" onclick="impersonateOrg(\'' + o.slug + '\')">Impersonate</button> <button class="btn" style="min-height:34px" onclick="renameOrg(\'' + o.slug + '\')">Rename</button></td></tr>';
   }
   h += '</tbody></table>';
   h += '<p style="color:var(--mute);font-size:12px;margin-top:12px">Server-side fence: run <code style="font-family:var(--mono)">supabase/migrations/002_multi_tenant.sql</code> in the Supabase SQL editor. Until then this registry is local to your browser.</p>';
@@ -6631,9 +6631,41 @@ function provisionOrg(){
   saveOrgRegistry(orgs);
   renderPlatformConsole();
 }
+function renameOrg(slug){
+  var orgs = orgRegistry();
+  for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) {
+    var nn = prompt('New organization name:', orgs[i].name);
+    if (nn && nn.trim()) { orgs[i].name = nn.trim(); saveOrgRegistry(orgs); }
+    break;
+  }
+  renderPlatformConsole();
+}
 
 /* init */
+/* self-serve placeholder — invite-only beta (phase 2.1) */
+function injectSelfServeNote(){
+  var mc = document.getElementById('main-content');
+  if (!mc || document.getElementById('self-serve-note')) return;
+  var d = document.createElement('div'); d.id = 'self-serve-note';
+  d.innerHTML = '<div class="card" style="margin-top:18px;border-style:dashed"><div class="card-title">Run your own tournament?</div>'
+    + '<p style="color:var(--sub);font-size:13px">DulaHQ organizations are <b>invite-only</b> during beta. Request yours from the platform team and we will provision it (name, admin email, accent) for you.</p>'
+    + '<a href="mailto:pharveylg@gmail.com?subject=DulaHQ%20organization%20request" class="btn" style="display:inline-flex;align-items:center;margin-top:12px;text-decoration:none">Request an invite \u2709</a></div>';
+  mc.appendChild(d);
+}
 (function(){
+  var orig = (typeof renderRegisterPage === 'function') ? renderRegisterPage : null;
+  if (orig) { renderRegisterPage = function(){ orig(); try { injectSelfServeNote(); } catch(e){} }; }
+})();
+
+/* init — includes /t/{slug} tenant routing (dulahq.app/t/copa) */
+(function(){
+  try {
+    var m = location.pathname.match(/^\/t\/([a-z0-9-]+)/i);
+    if (m) {
+      var slug = m[1].toLowerCase(), orgs = orgRegistry();
+      for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) { setOrgContext(orgs[i]); break; }
+    }
+  } catch(e) {}
   applyTenantAccent(currentAccentHex());
   renderOrgBanner();
   try { renderNav(); } catch(e){}
