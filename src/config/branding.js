@@ -58,16 +58,30 @@ export const BRANDING = {
   },
 };
 
-// Inject CSS vars at boot so --gold / --navacc follow branding
-if (typeof document !== 'undefined') {
+// Inject CSS vars at boot so --gold / --navacc follow branding.
+// Light theme uses a darker, WCAG-legible variant (matches the approved
+// --limeTx accent text color) since the default gold reads too light/thin
+// on a white background; dark theme keeps the brand gold as-is.
+const BRAND_GOLD_LIGHT = '#166534';
+function applyBrandingCSS() {
+  if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  if (root && BRANDING.colors.gold) root.style.setProperty('--gold', BRANDING.colors.gold);
-  if (root && BRANDING.colors.accent) {
+  if (!root) return;
+  const isLight = root.getAttribute('data-theme') === 'light';
+  if (BRANDING.colors.gold) {
+    root.style.setProperty('--gold', isLight ? BRAND_GOLD_LIGHT : BRANDING.colors.gold);
+  }
+  if (BRANDING.colors.accent) {
     root.style.setProperty('--navacc', BRANDING.colors.accent);
     // derived with opacity for --navaccl/b — keep original alpha
     root.style.setProperty('--navaccl', BRANDING.colors.accent + '1A'); // 10%
     root.style.setProperty('--navaccb', BRANDING.colors.accent + '59'); // 35%
   }
+}
+if (typeof document !== 'undefined') {
+  applyBrandingCSS();
+  // Re-apply whenever the theme toggle fires, so gold follows light/dark.
+  if (typeof window !== 'undefined') window.__reapplyBrandGold = applyBrandingCSS;
 }
 
 /**
@@ -79,7 +93,7 @@ if (typeof document !== 'undefined') {
  * The red live-dot is never themeable. Platform default = lime.
  */
 export const TENANT_SWATCHES = [
-  { id: 'lime',   label: 'Platform Lime', fill: '#CCFF00', hover: '#BEF264', tx: '#CCFF00', txLight: '#4D7C0F' },
+  { id: 'lime',   label: 'Platform Lime', fill: '#CCFF00', hover: '#BEF264', tx: '#CCFF00', txLight: '#166534' },
   { id: 'sky',    label: 'Sky',           fill: '#7DD3FC', hover: '#BAE6FD', tx: '#7DD3FC', txLight: '#0369A1' },
   { id: 'orange', label: 'Orange',        fill: '#FB923C', hover: '#FDBA74', tx: '#FB923C', txLight: '#C2410C' },
   { id: 'violet', label: 'Violet',        fill: '#C4B5FD', hover: '#DDD6FE', tx: '#C4B5FD', txLight: '#6D28D9' },

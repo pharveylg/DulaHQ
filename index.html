@@ -69,7 +69,7 @@
     .hdr-dropdown-panel{background:#141414;border:2px solid #333;color:var(--paper-grey)}
     .hdr-demo-btn{background:var(--dark-ink);color:var(--acid-green);border:2px solid var(--dark-ink)}
     .hdr-icon-btn{border-color:var(--dark-ink);color:var(--dark-ink)}
-    .category-strip{background:var(--dark-ink);border-bottom:2px solid #333;padding:10px 40px;gap:8px}
+    .category-strip{background:var(--dark-ink);border-bottom:2px solid #333;padding:10px 40px;gap:8px;display:flex;flex-wrap:wrap;align-items:center}
     .cat-pill{background:#141414;border:1px solid #333;color:var(--paper-grey);font-family:'Space Mono',monospace;font-weight:700;text-transform:uppercase;font-size:11px}
     .cat-pill.active{background:var(--acid-green);color:var(--dark-ink);border-color:var(--acid-green)}
     .cat-pill:hover{background:#1a1a1a;color:var(--paper-grey)}
@@ -131,6 +131,9 @@
     .bamb{background:transparent;color:var(--acid-green);border:1px solid var(--acid-green)}
     .bgy{background:#1a1a1a;color:var(--paper-grey);border:1px solid #333}
     .bpur{background:var(--card-bg);color:var(--paper-grey);border:1px solid #333}
+    /* NOTE: the modifiers above are the pre-redesign dark-only palette. The v3.1 override
+       layer further down replaces them with theme-aware colors (search "badge status
+       modifiers") since --amber/--green alias to --lime and can't carry their own meaning. */
     .tbl{font-family:'Space Mono',monospace}
     .tbl th{background:var(--acid-green);color:var(--dark-ink);font-family:'Anton',sans-serif;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--dark-ink)}
     .tbl td{border-bottom:1px solid #333;color:var(--paper-grey)}
@@ -178,9 +181,17 @@
         --line:rgba(9,9,11,.12); --line2:rgba(9,9,11,.18);
         --fill:rgba(9,9,11,.03); --fill2:rgba(9,9,11,.05);
         --ink:#18181B; --sub:#3F3F46; --mute:#71717A; --mute2:#A1A1AA;
-        --limeTx:#4D7C0F; --red:#DC2626;
+        --limeTx:#166534; --red:#DC2626;
         --tint05:rgba(101,163,13,.06); --tint10:rgba(101,163,13,.10); --tint20:rgba(101,163,13,.20); --tint30:rgba(101,163,13,.28);
         --navbg:rgba(250,250,250,.80);
+        /* --gold/--green/--amber all alias to the raw --lime yellow-green in the base
+           (dark-first) :root and were never re-pointed for light mode, so every "highlighted
+           stat" (goals, MVP, winner name, pitch chips, nav labels) had the same low-legibility
+           yellow-on-white problem as --limeTx above. --gold/--green now follow --limeTx;
+           --amber gets its own real amber since "yellow card" stats etc. would read wrong
+           in green (reusing the WCAG-checked orange already used for pending/warn pills). */
+        --gold:var(--limeTx); --green:var(--limeTx); --amber:#9A3412;
+        --navacc:var(--limeTx); --purple:var(--limeTx);
     }
     ::selection{background:var(--tint30);color:var(--ink)}
     *{scrollbar-width:thin;scrollbar-color:var(--bg3) var(--bg)}
@@ -197,8 +208,15 @@
         border:1px solid var(--line)!important;background:var(--bg2)!important;box-shadow:none!important}
     .card:hover{border-color:var(--tint30)}
     .card-title{color:var(--ink)!important;border-bottom:2px solid var(--limeTx)!important}
+    .card-title i{color:var(--limeTx)!important}
     .acid-splash{background:var(--tint10)!important;clip-path:none!important;border-radius:50%!important;filter:blur(50px)!important;opacity:.55!important}
-    .hero-content h1{color:var(--ink)!important}
+    /* .hero-content's background is always the bright lime acid-green regardless of
+       theme, so its text must stay a fixed dark color rather than the theme-flipping
+       --ink/--dark-ink (those follow --bg, which goes light in light theme and made
+       this white-on-lime). .slogan already has its own tinted chip background so it's
+       unaffected and stays var(--limeTx). */
+    .hero-content h1{color:#09090B!important}
+    .hero-content p{color:#09090B!important}
     .hero-content .slogan{background:var(--tint10)!important;color:var(--limeTx)!important;border:1px solid var(--tint30)!important;font-family:var(--mono)!important;transform:rotate(-1.5deg)!important}
 
     /* header + nav */
@@ -207,6 +225,9 @@
     .app-header-sub{color:var(--sub)!important}
     .hdr-demo-btn,.hdr-icon-btn{border:1px solid var(--line2)!important;color:var(--sub)!important;background:var(--fill)!important;border-radius:9px!important;min-height:38px}
     .hdr-demo-btn:hover,.hdr-icon-btn:hover{border-color:var(--limeTx)!important;color:var(--limeTx)!important}
+    /* the ADMIN/SETUP/etc header dropdown triggers were still the raw yellow-green
+       --acid-green (same root cause as --limeTx above) with no light-theme override */
+    .hdr-dropdown-btn{color:var(--limeTx)!important}
     .category-strip{background:var(--bg2)!important;border-bottom:1px solid var(--line)!important}
     .cat-pill{background:var(--fill)!important;border:1px solid var(--line)!important;color:var(--sub)!important;border-radius:99px!important;min-height:36px}
     .cat-pill:hover{background:var(--fill2)!important;color:var(--ink)!important}
@@ -229,8 +250,19 @@
     .btn-primary:active{transform:none!important;box-shadow:0 4px 24px var(--tint30)!important}
 
     /* data + tables */
-    .badge{border-radius:99px!important;clip-path:none!important;border:1px solid var(--tint20)!important;background:var(--tint05)!important;color:var(--limeTx)!important;letter-spacing:.08em}
+    .badge{border-radius:99px!important;clip-path:none!important;letter-spacing:.08em;padding:4px 10px;font-size:11px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;line-height:1.5;border:1px solid var(--line2)!important;background:var(--fill)!important;color:var(--sub)!important}
+    /* badge status modifiers — theme-aware, distinct per meaning (the .bg/.bgr/etc rules
+       above this are the old dark-only palette and would otherwise leave every status
+       badge the same lime color since --green/--amber alias to --lime app-wide) */
+    .bg,.bgr{background:var(--tint10)!important;color:var(--limeTx)!important;border-color:var(--tint30)!important}
+    .brd{background:rgba(239,68,68,.12)!important;color:#F87171!important;border-color:rgba(239,68,68,.32)!important}
+    [data-theme="light"] .brd{color:#B91C1C!important}
+    .bamb{background:rgba(251,146,60,.14)!important;color:#FB923C!important;border-color:rgba(251,146,60,.34)!important}
+    [data-theme="light"] .bamb{background:rgba(194,65,12,.10)!important;color:#9A3412!important;border-color:rgba(194,65,12,.32)!important}
+    .bgy{background:var(--fill)!important;color:var(--mute)!important;border-color:var(--line2)!important}
+    .bpur{background:var(--tint05)!important;color:var(--sub)!important;border-color:var(--line2)!important}
     .tbl th{background:var(--tint10)!important;color:var(--limeTx)!important;border-bottom:1px solid var(--tint30)!important;font-size:11px;letter-spacing:1.5px}
+    .tbl tr:hover td{color:var(--limeTx)!important}
     .mc-score{background:var(--bg)!important;border:1px solid var(--tint30)!important;color:var(--limeTx)!important;border-radius:10px!important}
 
     /* forms */
@@ -438,6 +470,99 @@
     .ed-hero h1 em{font-style:normal;color:var(--limeTx)}
     .ed-hero .ed-sub{font-family:var(--mono);font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:1.5px}
     .ed-hero .ed-sub b{color:var(--limeTx)}
+
+    /* ============================================================
+       SHARED FORM & LIST COMPONENTS — foundational (v3.2)
+       .g2/.g3/.g4 grids, .field, .tgl, .trow, .alert, .ava, .empty,
+       .fmt-opt/.struct-opt, .tb-item, .expand-btn/.mc-expand,
+       .org-node/.org-tier — used across Setup, Branding, Users,
+       Referees, Officiating Team, Registrations and most other
+       screens, but were never given real rules (gap-only grids,
+       unstyled toggles/rows/avatars/empty-states). Added here once,
+       theme-aware, so every screen that already uses these markup
+       patterns picks the fix up automatically.
+       ============================================================ */
+    .g2{display:grid;grid-template-columns:repeat(2,1fr)}
+    .g3{display:grid;grid-template-columns:repeat(3,1fr)}
+    .g4{display:grid;grid-template-columns:repeat(4,1fr)}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:11px;margin-bottom:7px}
+    .field input,.field select,.field textarea{width:100%;padding:10px 12px;font-size:13.5px}
+
+    .ava{width:36px;height:36px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--limeTx);flex:none}
+
+    .trow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
+    .trow:last-child{border-bottom:none}
+    .tgl-label{font-size:14px;font-weight:600;color:var(--ink)}
+    .tgl-sub{font-size:12.5px;color:var(--mute);margin-top:2px;line-height:1.5}
+
+    .tgl{width:40px;height:23px;border-radius:20px;background:var(--fill);border:1px solid var(--line2);position:relative;cursor:pointer;flex:none}
+    .tgl::after{content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--bg2);border:1px solid var(--line2);transition:transform .18s ease-out,background-color .18s ease-out,border-color .18s ease-out}
+    .tgl.on{background:var(--tint20);border-color:var(--tint30)}
+    .tgl.on::after{transform:translateX(17px);background:var(--lime);border-color:var(--lime)}
+
+    .alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.55;margin-bottom:14px;background:var(--fill);border:1px solid var(--line2);color:var(--sub)}
+    .alert i{font-size:16px;flex:none;margin-top:1.5px;color:var(--mute)}
+    .alert-info{background:var(--tint05);border-color:var(--tint20)}
+    .alert-info i{color:var(--limeTx)}
+    .alert-warn{background:rgba(251,146,60,.10);border-color:rgba(251,146,60,.28)}
+    .alert-warn i{color:#FB923C}
+    [data-theme="light"] .alert-warn i{color:#9A3412}
+    .alert-err{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.28)}
+    .alert-err i{color:var(--red)}
+
+    .empty{text-align:center;padding:56px 24px;color:var(--mute)}
+    .empty i{font-size:38px;color:var(--line2);margin-bottom:14px;display:block}
+    .empty p{font-size:13.5px;margin:0 auto;max-width:380px;line-height:1.6}
+
+    .fmt-opt{border:1px solid var(--line);border-radius:12px;padding:16px 12px;text-align:center;cursor:pointer;background:var(--fill)}
+    .fmt-opt:hover{border-color:var(--tint30)}
+    .fmt-opt.sel{border-color:var(--lime);background:var(--tint10)}
+    .fmt-label{font-weight:700;font-size:13.5px;margin-top:8px;color:var(--ink)}
+    .fmt-sub{font-size:11.5px;color:var(--mute);margin-top:2px}
+    .struct-opt{border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;background:var(--fill)}
+    .struct-opt:hover{border-color:var(--tint30)}
+    .struct-opt.sel{border-color:var(--lime);background:var(--tint10)}
+
+    .tb-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+    .tb-item:last-child{border-bottom:none}
+    .tb-rank{width:26px;height:26px;border-radius:8px;background:var(--tint10);border:1px solid var(--tint20);color:var(--limeTx);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11.5px;font-weight:800;flex:none}
+    .tb-list-panel{display:none;margin-top:6px}
+    .tb-list-panel.open{display:block}
+    .pip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:var(--fill);border:1px solid var(--line2);color:var(--sub)}
+    .pip.bamb{background:rgba(251,146,60,.14);color:#FB923C;border-color:rgba(251,146,60,.32)}
+    [data-theme="light"] .pip.bamb{background:rgba(194,65,12,.10);color:#9A3412}
+    .pip.brd{background:rgba(239,68,68,.12);color:#F87171;border-color:rgba(239,68,68,.3)}
+    [data-theme="light"] .pip.brd{color:#B91C1C}
+    .pip.bpur{background:var(--tint05);color:var(--sub);border-color:var(--line2)}
+
+    .expand-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--limeTx);font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0;font-family:inherit}
+    .expand-btn:hover{text-decoration:underline}
+    .mc-expand{display:none;margin-top:10px}
+    .mc-expand.open{display:block}
+
+    .org-tier{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-bottom:4px}
+    .org-tier-label{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:18px 0 12px}
+    .org-tier-label:first-child{margin-top:0}
+    .org-connector{width:1px;height:20px;background:var(--line);margin:0 auto}
+    .org-node{background:var(--fill);border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center;min-width:150px;max-width:190px}
+    .org-node:hover{border-color:var(--tint30)}
+
+    /* ---- people grid (Users / Referees — reference design) ---- */
+    .people-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+    .person-card{padding:20px}
+    .person-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .person-id{flex:1;min-width:0}
+    .person-name{font-size:14.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .person-sub{font-size:11.5px;color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .person-meta{font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:14px}
+    .person-meta i{color:var(--mute);margin-right:5px}
+    .person-foot{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+
+    /* re-assert the mobile grid collapse (defined earlier in the file) since the base
+       .g2/.g3/.g4 grid-template-columns rules above are unconditional and, appearing
+       later in source, would otherwise win over that earlier @media block on mobile */
+    @media(max-width:768px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -798,7 +923,7 @@ function renderCategoryStrip() {
   var html = '';
   if (S.role === 'admin') {
     var allActive = !!S.viewAllCategories;
-    html += '<button class="cat-pill' + (allActive ? ' active' : '') + '" onclick="setViewAllCategories()"><i class="ti ti-layout-grid"></i> All Categories <span style="opacity:.7">(' + cats.length + ')</span></button>';
+    html += '<button class="cat-pill' + (allActive ? ' active' : '') + '" onclick="setViewAllCategories()">All Categories <span style="opacity:.7">(' + cats.length + ')</span></button>';
   }
   if (cats.length === 0) {
     html += '<div style="font-size:var(--fs13);color:var(--tm);padding:6px 10px;white-space:nowrap">No categories yet.</div>';
@@ -1690,7 +1815,13 @@ function applyBrandingFromCustom(){
     if (hdr && b.logo) hdr.src = b.logo;
     // update CSS vars
     var root = document.documentElement;
-    if (b.gold) root.style.setProperty('--gold', b.gold);
+    // Platform default gold (#c8960a) fails WCAG contrast on a white background —
+    // use the approved legible green on light theme. An admin's own custom gold
+    // (uploaded via Branding studio) is respected as-is on any theme.
+    var customBrand = (S._tournamentMeta && S._tournamentMeta.branding) || {};
+    var goldToApply = b.gold;
+    if (goldToApply && !customBrand.gold && root.getAttribute('data-theme') === 'light') goldToApply = '#166534';
+    if (goldToApply) root.style.setProperty('--gold', goldToApply);
     if (b.accent) { root.style.setProperty('--navacc', b.accent); root.style.setProperty('--navaccl', b.accent+'1A'); root.style.setProperty('--navaccb', b.accent+'59'); }
     // favicon
     if (b.favicon) {
@@ -2069,23 +2200,23 @@ function selectCategoryAndGo(id) {
 }
 function renderCategorySelect() {
   setTopbar('Categories', S.categories.length + ' categor' + (S.categories.length === 1 ? 'y' : 'ies'));
-  if (!S.categories.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-layout-grid"></i><p>No categories set up yet.</p></div>'; return; }
-  var html = '<div style="font-size:var(--fs14);color:var(--tm);margin-bottom:14px">Pick a category to view its schedule, standings, and bracket.</div>';
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Categories', subtitle: 'Pick a category to follow', section: 'Setup'}); } catch(e){}
+  if (!S.categories.length) { el('main-content').innerHTML = _pageHero + '<div class="empty"><i class="ti ti-layout-grid"></i><p>No categories set up yet.</p></div>'; return; }
+  var html = _pageHero + '<p class="cat-intro">Pick a category to view its schedule, standings and bracket.</p><div class="cat-grid">';
   for (var i = 0; i < S.categories.length; i++) {
     var c = S.categories[i];
     var isActive = c.id === S.activeCategoryId;
     var live = 0, played = 0;
     for (var j = 0; j < c.groupMatches.length; j++) { if (c.groupMatches[j].inProgress) live++; if (c.groupMatches[j].played) played++; }
-    html += '<div class="card" style="cursor:pointer;border-color:' + (isActive ? 'var(--gb)' : 'var(--nb)') + '" onclick="selectCategoryAndGo(\'' + c.id + '\')">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between">'
-      + '<div style="font-weight:600;font-size:var(--fs18)">' + esc(c.name) + (isActive ? ' <span class="badge bg" style="font-size:var(--fs12);margin-left:6px">Viewing</span>' : '') + '</div>'
-      + (live ? ('<span class="badge brd" style="animation:pulse 1.5s infinite">\u25cf ' + live + ' live</span>') : '')
-      + '</div>'
-      + '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs13);color:var(--tm);margin-top:8px">'
+    var statusBadge = live ? ('<span class="cat-live-badge"><span class="cat-live-dot"></span>' + live + ' live</span>') : (isActive ? '<span class="cat-viewing-badge">Viewing</span>' : '');
+    html += '<div class="card cat-card2' + (isActive ? ' active' : '') + '" style="cursor:pointer" onclick="selectCategoryAndGo(\'' + c.id + '\')">'
+      + '<div class="cat-top2"><div><div class="cat-name2">' + esc(c.name) + '</div><div class="cat-age2">' + esc(c.ageGroup || 'Open') + '</div></div>' + statusBadge + '</div>'
+      + '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--sub);margin-top:14px">'
       + '<span><i class="ti ti-users-group"></i> ' + c.teams.length + ' teams</span>'
       + '<span><i class="ti ti-calendar"></i> ' + played + '/' + c.groupMatches.length + ' matches played</span>'
       + '</div></div>';
   }
+  html += '</div>';
   el('main-content').innerHTML = html;
 }
 function renderCategories() {
@@ -2205,9 +2336,9 @@ function renderUsers() {
   setTopbar('Users', S.users.length + ' account' + (S.users.length === 1 ? '' : 's'), '<button class="btn primary" onclick="openAddUser()"><i class="ti ti-plus"></i> Add user</button>');
   var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Users', subtitle: 'Manage accounts — admins, managers, referees', section: 'People'}); } catch(e){}
   
-  if (!S.users.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-user"></i><p>No users yet. Add tournament managers, referees, tournament committee members, team managers, or audience accounts.</p></div>'; return; }
+  if (!S.users.length) { el('main-content').innerHTML = _pageHero + '<div class="empty"><i class="ti ti-user"></i><p>No users yet. Add tournament managers, referees, tournament committee members, team managers, or audience accounts.</p></div>'; return; }
   var allTeams = getAllTeamsAcrossCategories();
-  var html = _pageHero + '';
+  var html = _pageHero + '<div class="people-grid">';
   for (var i = 0; i < S.users.length; i++) {
     var u = S.users[i];
     var teamNames = [];
@@ -2219,16 +2350,21 @@ function renderUsers() {
       var cc = getCategoryById(u.activeCategoryAccess[m]);
       if (cc) catNames.push(cc.name);
     }
-    html += '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-      + '<div style="display:flex;align-items:center;gap:10px"><div class="ava" style="width:36px;height:36px;font-size:var(--fs14)">' + ini(u.name || u.email) + '</div>'
-      + '<div><div style="font-weight:600">' + esc(u.name || '(no name)') + '</div><div style="font-size:var(--fs13);color:var(--tm)">' + esc(u.email || 'no email') + '</div></div></div>'
-      + '<div style="display:flex;align-items:center;gap:6px"><span class="badge bpur">' + esc(USER_ROLE_LABELS[u.role] || u.role) + '</span>'
-      + '<button class="btn sm" onclick="openEditUser(\'' + u.id + '\')"><i class="ti ti-edit"></i></button>'
-      + '<button class="btn sm danger" onclick="removeUser(\'' + u.id + '\')"><i class="ti ti-trash"></i></button></div></div>'
-      + (u.role === 'team' ? ('<div style="font-size:var(--fs13);color:var(--tm)">Teams: ' + (teamNames.length ? esc(teamNames.join(', ')) : 'none assigned') + '</div>') : '')
-      + (catNames.length ? ('<div style="font-size:var(--fs13);color:var(--tm);margin-top:2px">Category access: ' + esc(catNames.join(', ')) + '</div>') : '<div style="font-size:var(--fs13);color:var(--tm);margin-top:2px">Category access: all categories</div>')
-      + '</div>';
+    html += '<div class="card person-card"><div class="person-top">'
+      + '<div class="ava">' + ini(u.name || u.email) + '</div>'
+      + '<div class="person-id"><div class="person-name">' + esc(u.name || '(no name)') + '</div><div class="person-sub">' + esc(u.email || 'no email') + '</div></div>'
+      + '<span class="badge bpur">' + esc(USER_ROLE_LABELS[u.role] || u.role) + '</span>'
+      + '</div>'
+      + '<div class="person-meta">'
+      + (u.role === 'team' ? ('<div><i class="ti ti-users-group"></i> ' + (teamNames.length ? esc(teamNames.join(', ')) : 'No teams assigned') + '</div>') : '')
+      + '<div><i class="ti ti-layout-grid"></i> ' + (catNames.length ? esc(catNames.join(', ')) : 'All categories') + '</div>'
+      + '</div>'
+      + '<div class="person-foot">'
+      + '<div class="mini-btn" onclick="openEditUser(\'' + u.id + '\')"><i class="ti ti-edit"></i> Edit</div>'
+      + '<div class="mini-btn" style="flex:0 0 auto;padding-left:12px;padding-right:12px;color:var(--red);border-color:rgba(239,68,68,.3)" onclick="removeUser(\'' + u.id + '\')"><i class="ti ti-trash"></i></div>'
+      + '</div></div>';
   }
+  html += '</div>';
   el('main-content').innerHTML = html;
 }
 function userFormFields(u) {
@@ -2332,23 +2468,25 @@ function renderReferees() {
   setTopbar('Referees', S.referees.length + ' registered', '<button class="btn primary" onclick="openAddReferee()"><i class="ti ti-plus"></i> Add referee</button>');
   var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Referees', subtitle: 'Assign and track match officials', section: 'People'}); } catch(e){}
   
-  if (!S.referees.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-whistle"></i><p>No referees yet. Add referees so they can be assigned to matches.</p></div>'; return; }
+  if (!S.referees.length) { el('main-content').innerHTML = _pageHero + '<div class="empty"><i class="ti ti-whistle"></i><p>No referees yet. Add referees so they can be assigned to matches.</p></div>'; return; }
   var all = getAllScheduledMatches();
-  var html = _pageHero + '';
+  var html = _pageHero + '<div class="people-grid">';
   for (var i = 0; i < S.referees.length; i++) {
     var r = S.referees[i];
     var assigned = [];
     for (var j = 0; j < all.length; j++) { if (all[j].match.refereeId === r.id) assigned.push(all[j]); }
-    html += '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-      + '<div style="display:flex;align-items:center;gap:10px"><div class="ava" style="width:36px;height:36px;font-size:var(--fs14)">' + ini(r.name) + '</div>'
-      + '<div><div style="font-weight:600">' + esc(r.name || '(no name)') + '</div><div style="font-size:var(--fs13);color:var(--tm)">' + esc(r.phone || 'no phone') + '</div></div></div>'
-      + '<div style="display:flex;align-items:center;gap:6px">'
+    html += '<div class="card person-card"><div class="person-top">'
+      + '<div class="ava">' + ini(r.name) + '</div>'
+      + '<div class="person-id"><div class="person-name">' + esc(r.name || '(no name)') + '</div><div class="person-sub">' + esc(r.phone || 'no phone') + '</div></div>'
       + '<span class="badge ' + (r.availability === 'available' ? 'bg' : 'bgy') + '">' + (r.availability === 'available' ? 'Available' : 'Unavailable') + '</span>'
-      + '<button class="btn sm" onclick="openEditReferee(\'' + r.id + '\')"><i class="ti ti-edit"></i></button>'
-      + '<button class="btn sm danger" onclick="removeReferee(\'' + r.id + '\')"><i class="ti ti-trash"></i></button></div></div>'
-      + '<div style="font-size:var(--fs13);color:var(--tm)">' + assigned.length + ' assigned match' + (assigned.length === 1 ? '' : 'es') + (assigned.length ? (': ' + assigned.map(function (a) { var h = getTeamById(a.match.homeId), aw = getTeamById(a.match.awayId); return (h ? h.name : '?') + ' v ' + (aw ? aw.name : '?') + (a.match.kickoff ? (' @' + a.match.kickoff) : ''); }).join('; ')) : '') + '</div>'
-      + '</div>';
+      + '</div>'
+      + '<div class="person-meta"><div><i class="ti ti-calendar-event"></i> ' + assigned.length + ' assigned match' + (assigned.length === 1 ? '' : 'es') + (assigned.length ? (': ' + assigned.map(function (a) { var h = getTeamById(a.match.homeId), aw = getTeamById(a.match.awayId); return (h ? h.name : '?') + ' v ' + (aw ? aw.name : '?') + (a.match.kickoff ? (' @' + a.match.kickoff) : ''); }).join('; ')) : '') + '</div></div>'
+      + '<div class="person-foot">'
+      + '<div class="mini-btn" onclick="openEditReferee(\'' + r.id + '\')"><i class="ti ti-edit"></i> Edit</div>'
+      + '<div class="mini-btn" style="flex:0 0 auto;padding-left:12px;padding-right:12px;color:var(--red);border-color:rgba(239,68,68,.3)" onclick="removeReferee(\'' + r.id + '\')"><i class="ti ti-trash"></i></div>'
+      + '</div></div>';
   }
+  html += '</div>';
   el('main-content').innerHTML = html;
 }
 function openAddReferee() {
@@ -2723,19 +2861,20 @@ function renderRegisterPage() {
   if (S.regLastSubmitted) {
     var r = S.regLastSubmitted;
     setTopbar('Team Registration', 'Submitted');
-  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Officiating Team', subtitle: 'Committee, commissioners, medical', section: 'People'}); } catch(e){}
-  
-    el('main-content').innerHTML = '<div class="card" style="text-align:center;padding:32px 20px"><i class="ti ti-check" style="font-size:var(--fs46);color:var(--green)"></i>'
+  var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Team Registration', subtitle: 'Your submission is in review', section: 'People'}); } catch(e){}
+
+    el('main-content').innerHTML = _pageHero + '<div class="card" style="text-align:center;padding:32px 20px"><i class="ti ti-check" style="font-size:var(--fs46);color:var(--green)"></i>'
       + '<div style="font-weight:700;font-size:var(--fs20);margin:12px 0 6px">Registration submitted</div>'
       + '<div style="font-size:var(--fs14);color:var(--tm);margin-bottom:18px;max-width:420px;margin-left:auto;margin-right:auto">' + esc(r.teamName) + ' has been submitted for review. A tournament manager will check your roster and documents, then approve your registration \u2014 you\'ll get a login (Team Manager account) once that happens.</div>'
       + '<button class="btn primary" onclick="startNewRegistration()"><i class="ti ti-plus"></i> Register another team</button></div>';
     return;
   }
+  var _pageHero2=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero2 = Hero('page', {title: 'Team Registration', subtitle: 'Join the tournament \u2014 submit your roster for review', section: 'People'}); } catch(e){}
   setTopbar('Team Registration', 'Join the tournament');
   var d = ensureRegDraft();
   var catOpts = '<option value="">Select category</option>';
   for (var c = 0; c < S.categories.length; c++) { catOpts += '<option value="' + S.categories[c].id + '"' + (d.categoryId === S.categories[c].id ? ' selected' : '') + '>' + esc(S.categories[c].name) + '</option>'; }
-  var html = '<div class="alert alert-info"><i class="ti ti-info-circle"></i><span>Fill this out to register your team. You will not be able to log in as a Team Manager until a tournament manager reviews and approves this submission.</span></div>';
+  var html = _pageHero2 + '<div class="alert alert-info"><i class="ti ti-info-circle"></i><span>Fill this out to register your team. You will not be able to log in as a Team Manager until a tournament manager reviews and approves this submission.</span></div>';
   html += '<div class="card"><div class="card-title"><i class="ti ti-layout-grid"></i> Category</div><div class="field" style="margin-bottom:0"><label>Which category are you entering?</label><select id="reg-cat" onchange="updateRegDraft()">' + catOpts + '</select></div></div>';
   html += '<div class="card"><div class="card-title"><i class="ti ti-users-group"></i> Team details</div>'
     + '<div class="g2"><div class="field"><label>Team name</label><input id="reg-teamname" value="' + esc(d.teamName) + '" oninput="updateRegDraft()" placeholder="e.g. Davao FC"></div>'
@@ -2846,21 +2985,25 @@ function renderRegistrations() {
   setTopbar('Registrations', pending + ' pending review');
   var _pageHero=''; try { if (typeof Hero !== 'undefined' && typeof Hero === 'function') _pageHero = Hero('page', {title: 'Registrations', subtitle: 'Review team entries', section: 'People'}); } catch(e){}
   
-  if (!S.registrations.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-user-plus"></i><p>No team registrations submitted yet.</p></div>'; return; }
+  if (!S.registrations.length) { el('main-content').innerHTML = _pageHero + '<div class="empty"><i class="ti ti-user-plus"></i><p>No team registrations submitted yet.</p></div>'; return; }
   var order = { pending: 0, approved: 1, rejected: 2 };
   var sorted = S.registrations.slice().sort(function (a, b) { return order[a.status] - order[b.status]; });
   var html = _pageHero + '';
+  var docDefs = [['birthCert', 'Birth cert'], ['medical', 'Medical'], ['registration', 'Reg. form']];
   for (var s = 0; s < sorted.length; s++) {
     var r = sorted[s];
     var cat = getCategoryById(r.categoryId);
     var statusBadge = r.status === 'pending' ? '<span class="badge bamb">Pending</span>' : (r.status === 'approved' ? '<span class="badge bg">Approved</span>' : '<span class="badge brd">Rejected</span>');
-    var docKeys = ['birthCert', 'medical', 'registration'];
-    var docsSubmitted = [];
-    for (var dk = 0; dk < docKeys.length; dk++) { if (r.docs[docKeys[dk]].submitted) docsSubmitted.push(docKeys[dk]); }
-    html += '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-      + '<div><div style="font-weight:600">' + esc(r.teamName) + '</div><div style="font-size:var(--fs13);color:var(--tm)">' + (cat ? esc(cat.name) : '(deleted category)') + ' \u00b7 ' + r.players.length + ' players \u00b7 Manager: ' + esc(r.managerName) + ' (' + esc(r.managerEmail) + ')</div></div>'
+    var docsHtml = '';
+    for (var dk = 0; dk < docDefs.length; dk++) {
+      var dok = r.docs[docDefs[dk][0]].submitted;
+      docsHtml += '<span class="doc-chip ' + (dok ? 'ok' : 'pending') + '"><span class="dot"></span>' + docDefs[dk][1] + '</span>';
+    }
+    html += '<div class="card"><div class="person-top" style="margin-bottom:10px">'
+      + '<div class="ava">' + ini(r.teamName) + '</div>'
+      + '<div class="person-id"><div class="person-name" style="white-space:normal">' + esc(r.teamName) + '</div><div class="person-sub" style="white-space:normal">' + (cat ? esc(cat.name) : '(deleted category)') + ' \u00b7 ' + r.players.length + ' players \u00b7 ' + esc(r.managerName) + ' (' + esc(r.managerEmail) + ')</div></div>'
       + statusBadge + '</div>'
-      + '<div style="font-size:var(--fs13);color:var(--tm);margin-bottom:8px">Documents: ' + (docsSubmitted.length ? esc(docsSubmitted.join(', ')) : 'none uploaded') + '</div>'
+      + '<div class="doc-row">' + docsHtml + '</div>'
       + '<button class="expand-btn" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> View roster</button><div class="mc-expand">' + regPlayersTable(r) + '</div>'
       + (r.status === 'pending' ? ('<div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary sm" onclick="approveRegistration(\'' + r.id + '\')"><i class="ti ti-check"></i> Approve</button><button class="btn sm danger" onclick="rejectRegistration(\'' + r.id + '\')"><i class="ti ti-x"></i> Reject</button></div>')
         : (r.status === 'rejected' && r.rejectReason ? ('<div style="font-size:var(--fs13);color:var(--red);margin-top:6px">Reason: ' + esc(r.rejectReason) + '</div>') : ''))
@@ -6779,7 +6922,7 @@ var PLATFORM_ADMIN_EMAILS = ['pharveylg@gmail.com'];
 
 /* Vetted accent swatches — contrast-checked on zinc-950 & zinc-50 */
 var TENANT_SWATCHES = [
-  { id:'lime',   label:'PLATFORM LIME', fill:'#d4ff32', hover:'#e0ff70', tx:'#d4ff32', txLight:'#4D7C0F', rgb:'212,255,50',  rgbLight:'101,163,13' },
+  { id:'lime',   label:'PLATFORM LIME', fill:'#d4ff32', hover:'#e0ff70', tx:'#d4ff32', txLight:'#166534', rgb:'212,255,50',  rgbLight:'101,163,13' },
   { id:'sky',    label:'SKY',           fill:'#7DD3FC', hover:'#BAE6FD', tx:'#7DD3FC', txLight:'#0369A1', rgb:'125,211,252', rgbLight:'3,105,161' },
   { id:'orange', label:'ORANGE',        fill:'#FB923C', hover:'#FDBA74', tx:'#FB923C', txLight:'#C2410C', rgb:'251,146,60',  rgbLight:'194,65,12' },
   { id:'violet', label:'VIOLET',        fill:'#C4B5FD', hover:'#DDD6FE', tx:'#C4B5FD', txLight:'#6D28D9', rgb:'196,181,253', rgbLight:'109,40,217' },
@@ -6855,10 +6998,15 @@ function saveAccent(hex){ try { localStorage.setItem('dulahq:accent', hex); } ca
 
 /* hook theme toggle so accent re-applies with correct light/dark variant */
 (function(){
+  function reapplyAll(){
+    window.__reapplyAccent();
+    if (typeof window.__reapplyBrandGold === 'function') window.__reapplyBrandGold();
+    if (typeof applyBrandingFromCustom === 'function') applyBrandingFromCustom();
+  }
   var tog = document.getElementById('ops-theme-tog');
-  if (tog) { var oc = tog.onclick; tog.onclick = function(){ if (oc) oc.call(tog); window.__reapplyAccent(); }; }
+  if (tog) { var oc = tog.onclick; tog.onclick = function(){ if (oc) oc.call(tog); reapplyAll(); }; }
   else { document.addEventListener('click', function(e){
-    if (e.target && e.target.id === 'ops-theme-tog') setTimeout(window.__reapplyAccent, 0);
+    if (e.target && e.target.id === 'ops-theme-tog') setTimeout(reapplyAll, 0);
   }, true); }
 })();
 
