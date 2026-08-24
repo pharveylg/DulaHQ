@@ -1,60 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dula HQ — Tournament Manager</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+    /* Tournament Ops system: Oswald / Space Grotesk / JetBrains Mono loaded in <head> */
 
     :root {
-        --acid-green: #c4ff00;
-        --dark-ink: #0a0a0a;
-        --paper-grey: #e0e0e0;
-        --card-bg: #141414;
-        /* DulaHQ legacy mapping for compat */
-        --navy: #0a0a0a;
-        --n2: #141414;
-        --n3: #1a1a1a;
-        --n4: #1a1a1a;
-        --nb: #333;
-        --nbl: #333;
-        --gold: #c4ff00;
-        --gl: rgba(196,255,0,.12);
-        --gb: rgba(196,255,0,.30);
-        --text: #e0e0e0;
-        --ts: #e0e0e0;
-        --tm: #888;
-        --navacc: #c4ff00;
-        --navaccl: rgba(196,255,0,.12);
-        --navaccb: rgba(196,255,0,.30);
-        --green: #c4ff00;
-        --grbg: rgba(196,255,0,.12);
-        --grb: rgba(196,255,0,.30);
-        --red: #ff3333;
-        --rdbg: rgba(255,51,51,.12);
-        --rdb: rgba(255,51,51,.30);
-        --amber: #c4ff00;
-        --ambg: rgba(196,255,0,.12);
-        --amb: rgba(196,255,0,.30);
-        --blue: #888;
-        --blbg: rgba(136,136,136,.12);
-        --blb: rgba(136,136,136,.30);
-        --purple: #c4ff00;
-        --purbg: rgba(196,255,0,.12);
-        --purb: rgba(196,255,0,.30);
-        --r: 0px;
-        --acid-green: #c4ff00;
-        --dark-ink: #0a0a0a;
+        /* ===== Tournament Ops Design System — platform tokens ===== */
+        --bg:#09090B; --bg2:#111113; --bg3:#18181B;
+        --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.16);
+        --fill:rgba(255,255,255,.03); --fill2:rgba(255,255,255,.05);
+        --ink:#F4F4F5; --sub:#A1A1AA; --mute:#71717A; --mute2:#52525B;
+        --lime:#CCFF00; --lime-h:#BEF264; --limeTx:#CCFF00; --red:#EF4444;
+        --tint05:rgba(204,255,0,.05); --tint10:rgba(204,255,0,.10); --tint20:rgba(204,255,0,.20); --tint30:rgba(204,255,0,.30);
+        --navbg:rgba(9,9,11,.72);
+        --disp:'Oswald',system-ui,sans-serif;
+        --body:'Space Grotesk',system-ui,sans-serif;
+        --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+        /* ===== DulaHQ legacy aliases → ops tokens ===== */
+        --acid-green:var(--lime);
+        --dark-ink:var(--bg);
+        --paper-grey:var(--ink);
+        --card-bg:var(--bg2);
+        --navy:var(--bg); --n2:var(--bg2); --n3:var(--bg3); --n4:var(--bg3);
+        --nb:var(--line); --nbl:var(--line2);
+        --gold:var(--lime); --gl:var(--tint10); --gb:var(--tint30);
+        --text:var(--ink); --ts:var(--ink); --tm:var(--sub);
+        --navacc:var(--lime); --navaccl:var(--tint10); --navaccb:var(--tint30);
+        --green:var(--lime); --grbg:var(--tint10); --grb:var(--tint30);
+        --rdbg:rgba(239,68,68,.12); --rdb:rgba(239,68,68,.30);
+        --amber:var(--lime); --ambg:var(--tint10); --amb:var(--tint30);
+        --blue:var(--sub); --blbg:rgba(161,161,170,.12); --blb:rgba(161,161,170,.30);
+        --purple:var(--lime); --purbg:var(--tint10); --purb:var(--tint30);
+        --r:8px;
     }
 
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Space Mono',monospace;background:#ffffff;color:var(--dark-ink);font-size:14px;line-height:1.5;min-height:100vh;overflow-x:hidden}
+    body{font-family:var(--body);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55;min-height:100vh;overflow-x:hidden}
 
     /* --- NAVIGATION (overhauled) --- */
     .app-header{
@@ -117,10 +106,10 @@
     .btn-primary:active{transform:translate(4px,4px);box-shadow:4px 4px 0px rgba(255,255,255,1)}
 
     /* --- ORIGINAL DULAHQ COMPONENTS — rethemed to match --- */
-    .shell{display:flex;flex-direction:column;min-height:100vh;background:#ffffff}
+    .shell{display:flex;flex-direction:column;min-height:100vh;background:var(--bg)}
     .main{flex:1;display:flex;flex-direction:column;min-height:100vh}
-    .topbar{padding:14px 40px;border-bottom:2px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;background:#ffffff;position:sticky;top:0;z-index:50;color:var(--dark-ink)}
-    .content{flex:1;padding:0;max-width:100%;background:#ffffff}
+    .topbar{padding:14px 40px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:var(--navbg);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50;color:var(--ink)}
+    .content{flex:1;padding:0;max-width:100%;background:var(--bg)}
     #main-content{padding:40px;max-width:1400px;margin:0 auto;width:100%}
     .card{background:var(--card-bg);border:2px solid #333;padding:24px;margin-bottom:16px;position:relative;clip-path:polygon(1% 0, 100% 2%, 99% 98%, 0 100%)}
     .card-title{font-family:'Anton',sans-serif;font-size:1.4rem;color:white;text-transform:uppercase;letter-spacing:.5px;border-bottom:4px solid var(--acid-green);display:inline-block;padding-bottom:5px;margin-bottom:14px}
@@ -176,6 +165,89 @@
         .g3{grid-template-columns:1fr}
         .g2{grid-template-columns:1fr}
     }
+
+    /* ============================================================
+       TOURNAMENT OPS DESIGN SYSTEM — override layer (v3.1)
+       dark zinc + #CCFF00 · Oswald / Space Grotesk / JetBrains Mono
+       light theme via [data-theme="light"] · toggle in header
+       ============================================================ */
+    html{color-scheme:dark}
+    [data-theme="light"]{
+        color-scheme:light;
+        --bg:#FAFAFA; --bg2:#FFFFFF; --bg3:#F4F4F5;
+        --line:rgba(9,9,11,.12); --line2:rgba(9,9,11,.18);
+        --fill:rgba(9,9,11,.03); --fill2:rgba(9,9,11,.05);
+        --ink:#18181B; --sub:#3F3F46; --mute:#71717A; --mute2:#A1A1AA;
+        --limeTx:#4D7C0F; --red:#DC2626;
+        --tint05:rgba(101,163,13,.06); --tint10:rgba(101,163,13,.10); --tint20:rgba(101,163,13,.20); --tint30:rgba(101,163,13,.28);
+        --navbg:rgba(250,250,250,.80);
+    }
+    ::selection{background:var(--tint30);color:var(--ink)}
+    *{scrollbar-width:thin;scrollbar-color:var(--bg3) var(--bg)}
+
+    /* type system */
+    body{font-family:var(--body)!important}
+    h1,h2,h3{font-family:var(--disp);text-transform:uppercase;letter-spacing:.5px}
+    .app-header-name,.hero-content h1,.card-title,.modal-title{font-family:var(--disp)!important;text-transform:uppercase;letter-spacing:1px}
+    .btn,.btn-primary,.badge,.cat-pill,.vt-btn,.mob-tab,.field input,.field select,.field textarea,.hdr-demo-btn,.hdr-icon-btn,.tbl th,.mc-score{font-family:var(--mono)!important}
+
+    /* surfaces: de-brutalist → thin borders + soft radius */
+    .card,.stat-tile,.mc,.modal,.view-toggle,.dashboard-hero-card,.kpi-dark{
+        clip-path:none!important;border-radius:14px!important;
+        border:1px solid var(--line)!important;background:var(--bg2)!important;box-shadow:none!important}
+    .card:hover{border-color:var(--tint30)}
+    .card-title{color:var(--ink)!important;border-bottom:2px solid var(--limeTx)!important}
+    .acid-splash{background:var(--tint10)!important;clip-path:none!important;border-radius:50%!important;filter:blur(50px)!important;opacity:.55!important}
+    .hero-content h1{color:var(--ink)!important}
+    .hero-content .slogan{background:var(--tint10)!important;color:var(--limeTx)!important;border:1px solid var(--tint30)!important;font-family:var(--mono)!important;transform:rotate(-1.5deg)!important}
+
+    /* header + nav */
+    .app-header{background:var(--navbg)!important;color:var(--ink)!important;backdrop-filter:blur(12px);border-bottom:1px solid var(--line)!important}
+    .app-header-name{color:var(--ink)!important}
+    .app-header-sub{color:var(--sub)!important}
+    .hdr-demo-btn,.hdr-icon-btn{border:1px solid var(--line2)!important;color:var(--sub)!important;background:var(--fill)!important;border-radius:9px!important;min-height:38px}
+    .hdr-demo-btn:hover,.hdr-icon-btn:hover{border-color:var(--limeTx)!important;color:var(--limeTx)!important}
+    .category-strip{background:var(--bg2)!important;border-bottom:1px solid var(--line)!important}
+    .cat-pill{background:var(--fill)!important;border:1px solid var(--line)!important;color:var(--sub)!important;border-radius:99px!important;min-height:36px}
+    .cat-pill:hover{background:var(--fill2)!important;color:var(--ink)!important}
+    .cat-pill.active{background:var(--tint10)!important;color:var(--limeTx)!important;border-color:var(--tint30)!important}
+    .nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:9px;background:transparent;border:1px solid transparent;color:var(--sub);font-family:var(--mono);font-size:12px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;text-align:left;min-height:42px}
+    .nav-item:hover{background:var(--fill);color:var(--ink)}
+    .nav-item.active{background:var(--tint10);color:var(--limeTx);border-color:var(--tint20);font-weight:700}
+    .nav-badge{margin-left:auto;background:var(--tint10);border:1px solid var(--tint20);color:var(--limeTx);border-radius:99px;font-size:10px;padding:1px 8px;font-family:var(--mono);font-weight:700}
+    .mob-tab{color:var(--mute)!important;min-height:56px}
+    .mob-tab.active{background:var(--tint10)!important;color:var(--limeTx)!important}
+    .vt-btn{color:var(--sub)!important}
+    .vt-btn.active{background:var(--lime)!important;color:#09090B!important}
+
+    /* buttons */
+    .btn{padding:9px 16px;border:1px solid var(--line2)!important;background:var(--fill)!important;color:var(--ink)!important;border-radius:10px!important;clip-path:none!important;font-weight:700;text-transform:uppercase;cursor:pointer}
+    .btn:hover{border-color:var(--limeTx)!important;color:var(--limeTx)!important}
+    .btn.danger{border-color:rgba(239,68,68,.4)!important;color:var(--red)!important}
+    .btn-primary{background:var(--lime)!important;color:#09090B!important;border:none;padding:13px 26px;font-weight:700;font-size:.95rem;margin-top:20px;cursor:pointer;text-transform:uppercase;border-radius:10px!important;box-shadow:none!important;clip-path:none!important}
+    .btn-primary:hover{background:var(--lime-h)!important;box-shadow:0 4px 24px var(--tint30)!important;transform:translateY(-1px)}
+    .btn-primary:active{transform:none!important;box-shadow:0 4px 24px var(--tint30)!important}
+
+    /* data + tables */
+    .badge{border-radius:99px!important;clip-path:none!important;border:1px solid var(--tint20)!important;background:var(--tint05)!important;color:var(--limeTx)!important;letter-spacing:.08em}
+    .tbl th{background:var(--tint10)!important;color:var(--limeTx)!important;border-bottom:1px solid var(--tint30)!important;font-size:11px;letter-spacing:1.5px}
+    .mc-score{background:var(--bg)!important;border:1px solid var(--tint30)!important;color:var(--limeTx)!important;border-radius:10px!important}
+
+    /* forms */
+    .field input,.field select,.field textarea{background:var(--fill)!important;border:1px solid var(--line)!important;color:var(--ink)!important;border-radius:10px!important;clip-path:none!important}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--limeTx)!important;outline:none!important;box-shadow:0 0 0 3px var(--tint20)!important}
+    input,select,textarea{color:var(--ink)}
+    ::placeholder{color:var(--mute2)}
+
+    /* a11y + motion (fast, crisp; reduced-motion respected) */
+    :focus-visible{outline:2px solid var(--limeTx);outline-offset:2px}
+    .btn,.btn-primary,.nav-item,.cat-pill,.mob-tab,.vt-btn,.card,input,select,textarea,.hdr-demo-btn,.hdr-icon-btn{transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out,box-shadow .18s ease-out,transform .18s ease-out}
+    @media(pointer:coarse){.btn,.btn-primary,.mob-tab,.hdr-icon-btn,.hdr-demo-btn,.cat-pill,.nav-item{min-height:44px}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+    /* theme toggle button (injected by JS) */
+    #ops-theme-tog{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--line2);background:var(--fill);color:var(--sub);cursor:pointer;font-size:15px;line-height:1;flex:none}
+    #ops-theme-tog:hover{border-color:var(--limeTx);color:var(--limeTx)}
 </style>
 </head>
 <body>
@@ -6331,5 +6403,32 @@ if (GOOGLE_CLIENT_ID) {
 }
 </script>
 <script type="module" src="/src/main.js"></script>
+
+<script>
+/* Tournament Ops — theme toggle (dark default, follows system, remembers choice) */
+(function(){
+  var root=document.documentElement,KEY='dulahq-theme';
+  var saved=null;try{saved=localStorage.getItem(KEY)}catch(e){}
+  if(!saved){saved=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark'}
+  root.setAttribute('data-theme',saved);
+  function makeBtn(){
+    var b=document.createElement('button');b.id='ops-theme-tog';b.type='button';
+    b.title='Toggle light / dark theme';b.setAttribute('aria-label','Toggle light or dark theme');
+    b.innerHTML=root.getAttribute('data-theme')==='dark'?'☀️':'🌙';
+    b.onclick=function(){
+      var t=root.getAttribute('data-theme')==='dark'?'light':'dark';
+      root.setAttribute('data-theme',t);b.innerHTML=t==='dark'?'☀️':'🌙';
+      try{localStorage.setItem(KEY,t)}catch(e){}
+    };
+    return b;
+  }
+  function place(){
+    var h=document.querySelector('.app-header-user');
+    if(h&&!document.getElementById('ops-theme-tog')){h.insertBefore(makeBtn(),h.firstChild)}
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',place)}else{place()}
+  setInterval(place,3000); /* re-place if header re-renders */
+})();
+</script>
 </body>
 </html>
