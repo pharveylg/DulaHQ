@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -171,7 +171,7 @@
        dark zinc + #CCFF00 · Oswald / Space Grotesk / JetBrains Mono
        light theme via [data-theme="light"] · toggle in header
        ============================================================ */
-    html{color-scheme:dark}
+    html{color-scheme:light}
     [data-theme="light"]{
         color-scheme:light;
         --bg:#f6f7f2; --bg2:#FFFFFF; --bg3:#eaebe4;
@@ -6457,7 +6457,7 @@ if (GOOGLE_CLIENT_ID) {
 (function(){
   var root=document.documentElement,KEY='dulahq-theme';
   var saved=null;try{saved=localStorage.getItem(KEY)}catch(e){}
-  if(!saved){saved=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark'}
+  if(!saved){saved='light'} /* always light by default */
   root.setAttribute('data-theme',saved);
   function makeBtn(){
     var b=document.createElement('button');b.id='ops-theme-tog';b.type='button';
