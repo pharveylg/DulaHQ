@@ -638,6 +638,116 @@
     #signin-wrap.lg-ready{opacity:1;transition:opacity .18s ease-out}
     @keyframes lgReveal{to{opacity:1}}
 </style>
+
+<style id="mobile-ui-css">
+/* =====================================================================
+   MOBILE UI — deliberately designed mobile experience (not squeezed desktop)
+   BREAKPOINT: mobile UI < 1024px, desktop UI >= 1024px.
+   To change it: edit the max-width below AND UI.bp in the mobile-ui script.
+   ===================================================================== */
+#mob-topbar,#mob-tabbar,#mob-sheet{display:none}
+
+@media (max-width:1023.98px){
+  /* --- desktop chrome off --- */
+  .app-header,.app-sidebar,.hdr-menu-btn,.hdr-demo-btn,#viewas-dropdown-wrap{display:none!important}
+  #app-shell{padding-top:52px;padding-bottom:calc(60px + env(safe-area-inset-bottom,0px))}
+  html,body{overflow-x:hidden!important}
+  #main-content{padding:12px 12px 22px!important}
+  #main-content img,video,svg{max-width:100%}
+  #main-content .table-wrap,#main-content .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* --- mobile top bar --- */
+  #mob-topbar{display:flex;position:fixed;top:0;left:0;right:0;height:52px;z-index:900;
+    align-items:center;gap:10px;padding:0 14px;padding-top:env(safe-area-inset-top,0px);
+    background:#121413;color:#F4F4F5;border-bottom:1px solid #26292a}
+  #mob-topbar .m-brand{font-family:var(--disp,inherit);font-size:17px;letter-spacing:-.3px;white-space:nowrap}
+  #mob-topbar .m-brand b{color:#d4ff32;font-weight:700}
+  #mob-topbar .m-title{flex:1;min-width:0;font-family:var(--mono,monospace);font-size:11px;font-weight:700;
+    text-transform:uppercase;letter-spacing:1.5px;color:#d4ff32;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #mob-topbar .m-out{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px;
+    background:rgba(255,255,255,.05);color:#F4F4F5;border:none;font-size:17px}
+
+  /* --- mobile bottom tab bar --- */
+  #mob-tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:901;
+    height:calc(60px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
+    background:#121413;border-top:1px solid #26292a}
+  .m-tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:none;border:none;color:#A1A1AA;font-family:var(--mono,monospace);font-size:9.5px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .m-tab i{font-size:19px;line-height:1}
+  .m-tab.active{color:#d4ff32}
+  .m-tab.active i{filter:drop-shadow(0 0 8px rgba(212,255,50,.45))}
+
+  /* --- mobile "More" sheet --- */
+  #mob-sheet{position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+  #mob-sheet .m-sheet-panel{position:absolute;bottom:0;left:0;right:0;max-height:80vh;overflow-y:auto;
+    background:#151817;color:#F4F4F5;border-radius:18px 18px 0 0;border-top:1px solid #26292a;
+    padding:8px 16px calc(22px + env(safe-area-inset-bottom,0px))}
+  .m-grab{width:40px;height:4px;border-radius:2px;background:#3a3d3e;margin:6px auto 12px}
+  .m-sheet-title{font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:2px;
+    text-transform:uppercase;color:#d4ff32;margin:14px 0 8px}
+  .m-item{display:flex;align-items:center;gap:12px;width:100%;min-height:50px;padding:10px 12px;margin:2px 0;
+    background:rgba(255,255,255,.035);border:1px solid #26292a;border-radius:11px;color:#F4F4F5;
+    font-family:var(--body,inherit);font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+  .m-item i{font-size:18px;color:#A1A1AA}
+  .m-item.active{border-color:#d4ff32;background:rgba(212,255,50,.08)}
+  .m-item.active i{color:#d4ff32}
+
+  /* --- mobile cards / lists --- */
+  .m-card{background:#1a1d1c;border:1px solid #26292a;border-radius:13px;padding:14px;margin-bottom:10px;color:#F4F4F5}
+  .m-card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .m-eyebrow{font-family:var(--mono,monospace);font-size:9.5px;font-weight:700;letter-spacing:1.8px;
+    text-transform:uppercase;color:#d4ff32}
+  .m-big{font-family:var(--disp,inherit);font-size:19px;font-weight:600;letter-spacing:-.2px;color:#F4F4F5}
+  .m-sub{font-size:12.5px;color:#A1A1AA;line-height:1.5}
+  .m-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .m-stat{background:#1a1d1c;border:1px solid #26292a;border-radius:13px;padding:13px}
+  .m-stat .n{font-family:var(--disp,inherit);font-size:26px;font-weight:700;color:#F4FF32;color:#d4ff32}
+  .m-stat .l{font-family:var(--mono,monospace);font-size:9px;font-weight:700;letter-spacing:1.5px;
+    text-transform:uppercase;color:#A1A1AA;margin-top:3px}
+  .m-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .m-act{display:flex;align-items:center;gap:10px;min-height:52px;padding:12px 14px;border-radius:12px;
+    background:rgba(212,255,50,.06);border:1px solid rgba(212,255,50,.25);color:#F4F4F5;
+    font-size:13px;font-weight:700;cursor:pointer;text-align:left}
+  .m-act i{color:#d4ff32;font-size:18px}
+  .m-match{display:flex;align-items:center;gap:10px;background:#1a1d1c;border:1px solid #26292a;
+    border-radius:13px;padding:12px;margin-bottom:9px;color:#F4F4F5}
+  .m-match .when{font-family:var(--mono,monospace);font-size:9.5px;color:#A1A1AA;line-height:1.5;
+    text-transform:uppercase;letter-spacing:.5px;min-width:74px}
+  .m-match .teams{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.5}
+  .m-match .score{font-family:var(--disp,inherit);font-size:17px;font-weight:700;white-space:nowrap}
+  .m-live{display:inline-block;background:#d4ff32;color:#09090B;font-family:var(--mono,monospace);
+    font-size:8.5px;font-weight:800;letter-spacing:1px;padding:2px 6px;border-radius:4px;vertical-align:middle}
+  .m-sec{font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:2px;
+    text-transform:uppercase;color:#A1A1AA;margin:18px 0 9px}
+  .m-row{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #232627;color:#F4F4F5}
+  .m-row .pos{font-family:var(--mono,monospace);font-size:11px;color:#d4ff32;width:22px}
+  .m-row .tn{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .m-row .st{font-family:var(--mono,monospace);font-size:10.5px;color:#A1A1AA;white-space:nowrap}
+
+  /* --- tables on fallback pages become card lists (mobilizeTables builds these) --- */
+  table.m-mobileized{display:none!important}
+  .m-tbl-card{background:#1a1d1c;border:1px solid #26292a;border-radius:13px;padding:13px;margin-bottom:10px;color:#F4F4F5}
+  .m-tbl-row{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #232627;font-size:13px}
+  .m-tbl-row:last-child{border-bottom:none}
+  .m-tbl-row .k{font-family:var(--mono,monospace);font-size:9.5px;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;color:#A1A1AA;min-width:92px;padding-top:2px}
+  .m-tbl-row .v{flex:1;min-width:0}
+
+  /* --- modals become bottom sheets --- */
+  .modal-overlay{align-items:flex-end!important;padding:0!important}
+  .modal{width:100%!important;max-width:100%!important;max-height:88vh;overflow-y:auto;
+    border-radius:18px 18px 0 0!important;margin:0!important}
+  .modal-body{max-height:calc(88vh - 170px);overflow-y:auto}
+
+  /* --- touch targets & inputs --- */
+  .btn,.hdr-icon-btn{min-height:44px}
+  .m-tab,.m-item,.m-act{min-height:48px}
+  input,select,textarea{font-size:16px!important}
+  .lg-input{font-size:16px!important;min-height:50px}
+}
+@media (min-width:1024px){#mob-topbar,#mob-tabbar,#mob-sheet{display:none!important}}
+</style>
 </head>
 <body>
 <div id="signin-wrap"></div>
@@ -7279,7 +7389,7 @@ window.addEventListener('load', function(){
 
 <script>
 /* flash guard v2 reveal — timers only; never depends on the load event (which can hang on slow networks) */
-window.__DULAHQ_BUILD = 'fg2';
+window.__DULAHQ_BUILD = 'ui2';
 (function(){
   function rv(){ try { var sw = document.getElementById('signin-wrap'); if (sw && sw.parentElement && sw.parentElement.id === 'app-shell') document.body.appendChild(sw); if (sw) sw.classList.add('lg-ready'); } catch(e){} }
   setTimeout(rv, 350); setTimeout(rv, 800); setTimeout(rv, 1200);
@@ -7313,6 +7423,364 @@ window.__DULAHQ_BUILD = 'fg2';
       document.body.appendChild(p);
     }, 1600);
   } catch(e){}
+})();
+</script>
+
+<!-- ================= MOBILE UI LAYER (chrome + purpose-built screens) ================= -->
+<div id="mob-topbar" aria-hidden="true"></div>
+<div id="mob-tabbar" aria-hidden="true"></div>
+<div id="mob-sheet" aria-hidden="true" onclick="if(event.target===this)UI.closeSheet()"><div class="m-sheet-panel"></div></div>
+<script>
+/* =====================================================================
+   MOBILE UI — presentation layer only. All data/business logic stays in
+   the shared app below (S, AUTH, NAV, renderers). Breakpoint lives in
+   UI.bp + the single master media query in <style id="mobile-ui-css">.
+   ===================================================================== */
+var UI = (function(){
+  var BP = 1024; /* breakpoint: mobile UI < 1024, desktop UI >= 1024 */
+  var mq = window.matchMedia('(max-width: ' + (BP - 0.02) + 'px)');
+  function el(id){ return document.getElementById(id); }
+
+  function roleHome(){
+    try {
+      if (typeof NAV === 'undefined') return 'admindashboard';
+      var role = (typeof S !== 'undefined' && S.role) || 'audience';
+      var list = NAV[role] || NAV.audience || [];
+      var first = list.length ? list[0].p : 'categoryselect';
+      return { admin:'admindashboard', team:'teamdash', audience:'categoryselect',
+               referee:'mymatches', official:first }[role] || first;
+    } catch(e){ return 'admindashboard'; }
+  }
+  function rolePages(){
+    try {
+      var role = (typeof S !== 'undefined' && S.role) || 'audience';
+      var list = NAV[role] || [];
+      var set = {}; for (var i=0;i<list.length;i++) set[list[i].p] = 1;
+      return set;
+    } catch(e){ return {}; }
+  }
+  /* tab bar: fixed 5 slots, tabs hidden when the role lacks that area */
+  function tabs(){
+    var home = roleHome(), rp = rolePages();
+    var t = [
+      { i:'ti-home', l:'Home', p:home, match:[home,'live'] },
+      { i:'ti-calendar', l:'Schedule', p:'schedule', match:['schedule','groups','livestreams'] },
+      { i:'ti-shield', p:'teams', l:'Teams', match:['teams','registrations','teamprofile','roster'] },
+      { i:'ti-tournament', l:'Bracket', p:'bracket', match:['bracket','groups'] }
+    ];
+    for (var i=0;i<t.length;i++){ t[i].match = t[i].match || []; if (t[i].p !== home) t[i].match.push(t[i].p); }
+    var out = [];
+    for (var j=0;j<t.length;j++){
+      var tj = t[j], show = tj.p === home;
+      for (var k=0;k<tj.match.length;k++){ if (rp[tj.match[k]]) show = true; }
+      if (show) out.push(tj);
+    }
+    out.push({ i:'ti-layout-grid', l:'More', sheet:true, match:[] });
+    return out;
+  }
+  function activeTab(){
+    var p = (typeof S !== 'undefined' && S.page) || '', ts = tabs();
+    for (var i=0;i<ts.length;i++){
+      if (ts[i].sheet) continue;
+      if (ts[i].p === p) return i;
+      var m = ts[i].match || [];
+      for (var j=0;j<m.length;j++) if (m[j] === p) return i;
+    }
+    return ts.length - 1; /* More */
+  }
+
+  function esc(x){ return String(x==null?'':x).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function renderChrome(){
+    try {
+      var shell = el('app-shell');
+      var signedIn = shell && shell.style.display !== 'none';
+      var tb = el('mob-topbar'), bar = el('mob-tabbar'), sh = el('mob-sheet');
+      if (!mq.matches || !signedIn){
+        if (tb) tb.innerHTML = ''; if (bar) bar.innerHTML = '';
+        if (sh) { sh.style.display = 'none'; sh.classList.remove('open'); }
+        document.body.classList.remove('ui-mobile'); document.body.classList.add('ui-desktop');
+        return;
+      }
+      document.body.classList.add('ui-mobile'); document.body.classList.remove('ui-desktop');
+      if (tb && !tb.innerHTML){
+        tb.innerHTML = '<div class="m-brand">Dul\u00e0 <b>HQ</b></div><div class="m-title" id="mob-title"></div>' +
+          '<button class="m-out" onclick="signOut()" title="Sign out" aria-label="Sign out"><i class="ti ti-logout"></i></button>';
+      }
+      if (bar){
+        var ts = tabs(), act = activeTab(), h = '';
+        for (var i=0;i<ts.length;i++){
+          var t = ts[i];
+          h += t.sheet
+            ? '<button class="m-tab' + (act===i?' active':'') + '" onclick="UI.openSheet()" aria-label="More"><i class="ti ti-layout-grid"></i>' + t.l + '</button>'
+            : '<button class="m-tab' + (act===i?' active':'') + '" onclick="navTo(\'' + t.p + '\')" aria-label="' + t.l + '"><i class="ti ' + t.i + '"></i>' + t.l + '</button>';
+        }
+        bar.innerHTML = h;
+      }
+    } catch(e){}
+  }
+
+  function openSheet(){
+    try {
+      var sh = el('mob-sheet'); if (!sh) return;
+      var role = (typeof S !== 'undefined' && S.role) || 'audience';
+      var list = (typeof NAV !== 'undefined' && NAV[role]) || [];
+      var cur = (typeof S !== 'undefined' && S.page) || '';
+      var groups = [], seen = {};
+      for (var i=0;i<list.length;i++){
+        var g = list[i].g || 'Menu';
+        if (!seen[g]){ seen[g] = 1; groups.push(g); }
+      }
+      var h = '<div class="m-grab"></div><div class="m-sheet-title">' + esc(role) + ' menu</div>';
+      for (var gi=0; gi<groups.length; gi++){
+        var gname = groups[gi];
+        h += '<div class="m-sheet-title">' + esc(gname) + '</div>';
+        for (var j=0;j<list.length;j++){
+          var it = list[j];
+          if ((it.g || 'Menu') !== gname) continue;
+          h += '<button class="m-item' + (it.p===cur?' active':'') + '" onclick="UI.closeSheet();navTo(\'' + it.p + '\')">' +
+               '<i class="ti ' + it.i + '"></i>' + esc(it.l) + '</button>';
+        }
+      }
+      var panel = sh.querySelector('.m-sheet-panel');
+      panel.innerHTML = h;
+      sh.style.display = 'block'; sh.classList.add('open');
+    } catch(e){}
+  }
+  function closeSheet(){ try { var sh = el('mob-sheet'); if (sh){ sh.style.display='none'; sh.classList.remove('open'); } } catch(e){} }
+
+  /* ---------- purpose-built mobile screens (shared data, mobile presentation) ---------- */
+  function teamName(id){
+    try { var t = (typeof getTeamById === 'function') ? getTeamById(id) : null; return t ? (t.name || '—') : '—'; }
+    catch(e){ return '—'; }
+  }
+  function fmtKickoff(k){
+    try {
+      var d = new Date(k);
+      if (!k || isNaN(d.getTime())) return { day:'', time:'' };
+      var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      return { day: days[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1),
+               time: ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2) };
+    } catch(e){ return { day:'', time:'' }; }
+  }
+  function matchCard(m){
+    var ko = fmtKickoff(m.kickoff);
+    var score = (m.inProgress || m.homeScore != null) ? (esc(m.homeScore==null?0:m.homeScore) + ' – ' + esc(m.awayScore==null?0:m.awayScore)) : '–';
+    return '<div class="m-match"><div class="when">' + esc(ko.day || 'TBD') + (m.pitchName ? '<br>' + esc(m.pitchName) : '') +
+      (m.inProgress ? '<br><span class="m-live">LIVE</span>' : '') + '</div>' +
+      '<div class="teams">' + esc(teamName(m.homeId)) + '<br>' + esc(teamName(m.awayId)) + '</div>' +
+      '<div class="score">' + score + '</div></div>';
+  }
+
+  function mobAdminHome(){
+    var teams = 0, matches = 0, live = 0, played = 0;
+    try {
+      for (var i=0;i<(S.categories||[]).length;i++){
+        var c = S.categories[i];
+        teams += (c.teams||[]).length;
+        for (var j=0;j<(c.groupMatches||[]).length;j++){
+          var m = c.groupMatches[j]; matches++;
+          if (m.inProgress) live++; else if (m.homeScore != null) played++;
+        }
+      }
+    } catch(e){}
+    var pending = 0; try { for (var r=0;r<(S.registrations||[]).length;r++) if (S.registrations[r].status==='pending') pending++; } catch(e){}
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">Tournament control</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Dashboard</div>' +
+      '<div class="m-stat-row">' +
+      '<div class="m-stat"><div class="n">' + teams + '</div><div class="l">Teams</div></div>' +
+      '<div class="m-stat"><div class="n">' + matches + '</div><div class="l">Fixtures</div></div>' +
+      '<div class="m-stat"><div class="n">' + live + '</div><div class="l">Live now</div></div>' +
+      '<div class="m-stat"><div class="n">' + pending + '</div><div class="l">Pending regs</div></div>' +
+      '</div><div class="m-sec">Quick actions</div><div class="m-actions">' +
+      '<button class="m-act" onclick="navTo(\'setup\')"><i class="ti ti-settings"></i>Setup</button>' +
+      '<button class="m-act" onclick="navTo(\'teams\')"><i class="ti ti-users-group"></i>Teams</button>' +
+      '<button class="m-act" onclick="navTo(\'registrations\')"><i class="ti ti-user-plus"></i>Registrations</button>' +
+      '<button class="m-act" onclick="navTo(\'schedule\')"><i class="ti ti-calendar"></i>Schedule</button>' +
+      '<button class="m-act" onclick="navTo(\'standings\')"><i class="ti ti-medal"></i>Standings</button>' +
+      '<button class="m-act" onclick="navTo(\'bracket\')"><i class="ti ti-tournament"></i>Bracket</button>' +
+      '</div>';
+    try {
+      var recent = (S.registrations||[]).filter(function(r){ return r.status==='pending'; }).slice(0,4);
+      if (recent.length){
+        h += '<div class="m-sec">Awaiting approval</div>';
+        for (var q=0;q<recent.length;q++){
+          h += '<div class="m-card"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(recent[q].teamName || recent[q].name || 'Team') + '</div>' +
+               '<span class="m-eyebrow">pending</span></div><div class="m-sub">' + esc(recent[q].categoryName || recent[q].category || '') + '</div></div>';
+        }
+      }
+    } catch(e){}
+    return h;
+  }
+
+  function mobTeamHome(){
+    var upcoming = [];
+    try {
+      var ms = (S.groupMatches||[]).slice().sort(function(a,b){ return (a.kickoff||0) - (b.kickoff||0); });
+      for (var i=0;i<ms.length && upcoming.length<5;i++) upcoming.push(ms[i]);
+    } catch(e){}
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">Team HQ</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Your cup at a glance</div>' +
+      '<div class="m-sec">Next up</div>';
+    if (upcoming.length){ for (var j=0;j<upcoming.length;j++) h += matchCard(upcoming[j]); }
+    else h += '<div class="m-card"><div class="m-sub">No fixtures yet — the draw hasn\u2019t been generated.</div></div>';
+    h += '<div class="m-sec">Jump to</div><div class="m-actions">' +
+      '<button class="m-act" onclick="navTo(\'schedule\')"><i class="ti ti-calendar"></i>Full schedule</button>' +
+      '<button class="m-act" onclick="navTo(\'standings\')"><i class="ti ti-medal"></i>Standings</button></div>';
+    return h;
+  }
+
+  function mobTeams(){
+    var cat = (typeof activeCategory === 'function') ? activeCategory() : null;
+    var teams = (cat && cat.teams) || [];
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">' + esc(cat ? cat.name : '') + '</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Teams <span class="m-sub">(' + teams.length + ')</span></div>';
+    if (S.role === 'admin'){
+      h += '<button class="m-act" style="width:100%;margin-bottom:14px" onclick="openAddTeam()"><i class="ti ti-plus"></i>Add a team</button>';
+    }
+    if (!teams.length) return h + '<div class="m-card"><div class="m-sub">No teams registered in this category yet.</div></div>';
+    for (var i=0;i<teams.length;i++){
+      var t = teams[i];
+      h += '<div class="m-card"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(t.name) + '</div>' +
+        '<span class="m-eyebrow">' + ((t.players&&t.players.length)||0) + ' players</span></div></div>';
+    }
+    return h;
+  }
+
+  function mobSchedule(){
+    var ms = [];
+    try { ms = (S.groupMatches||[]).slice().sort(function(a,b){ return (a.kickoff||0)-(b.kickoff||0); }); } catch(e){}
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">Fixtures</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Schedule</div>';
+    if (!ms.length) return h + '<div class="m-card"><div class="m-sub">No draw generated yet' +
+      (S.role==='admin' ? ' — generate it in Setup.' : '.') + '</div></div>';
+    var lastDay = '';
+    for (var i=0;i<ms.length;i++){
+      var d = fmtKickoff(ms[i].kickoff).day || 'Date TBC';
+      if (d !== lastDay){ h += '<div class="m-sec">' + esc(d) + '</div>'; lastDay = d; }
+      h += matchCard(ms[i]);
+    }
+    return h;
+  }
+
+  function mobStandings(){
+    var cat = (typeof activeCategory === 'function') ? activeCategory() : null;
+    var groups = (cat && cat.groups) || [];
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">' + esc(cat ? cat.name : '') + '</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Standings</div>';
+    if (!groups.length) return h + '<div class="m-card"><div class="m-sub">No draw generated yet.</div></div>';
+    for (var gi=0; gi<groups.length; gi++){
+      var st = [];
+      try { st = (typeof calcGroupStandings === 'function') ? (calcGroupStandings(gi) || []) : []; } catch(e){}
+      var label = (cat.groups[gi] && cat.groups[gi].name) || (groups[gi] && groups[gi].name) || String(gi+1);
+      h += '<div class="m-card"><div class="m-eyebrow" style="margin-bottom:6px">Group ' + esc(label) + '</div>';
+      if (!st.length){ h += '<div class="m-sub">No matches played.</div></div>'; continue; }
+      for (var i=0;i<st.length;i++){
+        var r = st[i] || {};
+        var tid = r.teamId != null ? r.teamId : r.id;
+        h += '<div class="m-row"><div class="pos">' + (i+1) + '</div><div class="tn">' + esc(teamName(tid)) + '</div>' +
+          '<div class="st">' + [r.played!=null?r.played:(r.p!=null?r.p:'–'), r.w!=null?r.w:'–', r.d!=null?r.d:'–', r.l!=null?r.l:'–'].join(' ') +
+          ' &nbsp;<b style="color:#d4ff32">' + (r.points!=null?r.points:(r.pts!=null?r.pts:'–')) + '</b></div></div>';
+      }
+      h += '</div>';
+    }
+    return h;
+  }
+
+  var MOBILE_PAGES = {
+    admindashboard: mobAdminHome, teamdash: mobTeamHome,
+    teams: mobTeams, schedule: mobSchedule, standings: mobStandings
+  };
+
+  /* ---------- fallback: cardify tables on mobile for pages w/o a purpose-built view ---------- */
+  function mobilizeTables(){
+    if (!mq.matches) return;
+    try {
+      var mc = el('main-content'); if (!mc) return;
+      var tables = mc.querySelectorAll('table:not(.m-mobileized):not(.m-skip)');
+      for (var i=0;i<tables.length;i++){
+        var t = tables[i];
+        var ths = t.querySelectorAll('thead th');
+        if (!ths.length) ths = t.querySelectorAll('tr:first-child th');
+        if (!ths.length) { t.classList.add('m-skip'); continue; }
+        var labels = []; for (var c=0;c<ths.length;c++) labels.push((ths[c].textContent||'').trim());
+        var wrap = document.createElement('div');
+        var rows = t.querySelectorAll('tbody tr');
+        for (var r=0;r<rows.length;r++){
+          var tds = rows[r].querySelectorAll('td'); if (!tds.length) continue;
+          var card = document.createElement('div'); card.className = 'm-tbl-card';
+          for (var k=0;k<tds.length && k<labels.length;k++){
+            if (!labels[k] || !tds[k].textContent.trim()) continue;
+            var row = document.createElement('div'); row.className = 'm-tbl-row';
+            var key = document.createElement('div'); key.className='k'; key.textContent = labels[k];
+            var val = document.createElement('div'); val.className='v';
+            while (tds[k].firstChild) val.appendChild(tds[k].firstChild);
+            row.appendChild(key); row.appendChild(val); card.appendChild(row);
+          }
+          wrap.appendChild(card);
+        }
+        t.classList.add('m-mobileized');
+        t.parentNode.insertBefore(wrap, t.nextSibling);
+      }
+    } catch(e){}
+  }
+
+  /* ---------- integration hooks (wrappers — no edits inside app code) ---------- */
+  var installed = false;
+  function install(){
+    if (installed) return; installed = true;
+    try {
+      var _render = window.render;
+      if (typeof _render === 'function'){
+        window.render = function(){
+          try {
+            if (mq.matches && MOBILE_PAGES[S.page]){
+              var fn = MOBILE_PAGES[S.page];
+              var htmlOut = fn();
+              var mc = el('main-content'); if (mc) mc.innerHTML = htmlOut;
+              renderChrome(); after();
+              var tb = el('mob-title'); if (tb) tb.textContent = (S.page === 'admindashboard' ? 'Dashboard' : S.page.charAt(0).toUpperCase() + S.page.slice(1));
+              return;
+            }
+          } catch(e){ /* fall through to shared renderer */ }
+          var out = _render.apply(this, arguments);
+          after();
+          return out;
+        };
+      }
+      var _st = window.setTopbar;
+      if (typeof _st === 'function'){
+        window.setTopbar = function(title, sub, actions){
+          var out = _st.apply(this, arguments);
+          try { var tb = el('mob-title'); if (tb && title) tb.textContent = title; } catch(e){}
+          return out;
+        };
+      }
+      var _nav = window.navTo;
+      if (typeof _nav === 'function'){
+        window.navTo = function(){ closeSheet(); var out = _nav.apply(this, arguments); renderChrome(); return out; };
+      }
+      function after(){ try { mobilizeTables(); } catch(e){} try { renderChrome(); } catch(e){} }
+
+      if (mq.addEventListener) mq.addEventListener('change', function(){
+        renderChrome();
+        try { if (typeof S !== 'undefined' && S.page) window.render(); } catch(e){}
+      });
+      try {
+        var shell = el('app-shell');
+        if (shell && window.MutationObserver){
+          new MutationObserver(function(){ renderChrome(); }).observe(shell, { attributes:true, attributeFilter:['style'] });
+        }
+      } catch(e){}
+      document.addEventListener('DOMContentLoaded', function(){ renderChrome(); });
+      renderChrome();
+    } catch(e){}
+  }
+  install();
+
+  return { bp: BP, isMobile: function(){ return mq.matches; }, openSheet: openSheet, closeSheet: closeSheet,
+           renderChrome: renderChrome, mobilizeTables: mobilizeTables };
 })();
 </script>
 </body>
