@@ -4,28 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-/* error net v2 — first script in the document; nothing escapes */
+/* error net v3 — names resources, keeps all errors, catches thrown strings */
 (function(){
   var seen = [];
   function show(msg){
     try {
-      seen.push(msg);
-      try { localStorage.setItem('dulahq:lastError', JSON.stringify({t:Date.now(),m:seen.slice(-3)})); } catch(_){}
+      if (seen.indexOf(msg) === -1) seen.push(msg);
+      try { localStorage.setItem('dulahq:lastError', JSON.stringify({t:Date.now(),m:seen.slice(-6)})); } catch(_){}
       var b = document.getElementById('ops-error-net');
       if (!b && document.body) {
         b = document.createElement('div'); b.id = 'ops-error-net';
-        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#EF4444;color:#fff;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5;padding:10px 14px;white-space:pre-wrap;word-break:break-all';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#EF4444;color:#fff;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5;padding:10px 14px;white-space:pre-wrap;word-break:break-all;max-height:40vh;overflow:auto';
         document.body.appendChild(b);
       }
-      if (b) b.textContent = '⚠ Dulà HQ error: ' + msg + '  (report this text to fix it)';
+      if (b) b.textContent = '⚠ Dulà HQ error(s):\n' + seen.slice(-6).map(function(m,i){return (i+1)+'. '+m;}).join('\n') + '\n(report this text to fix it)';
     } catch(_) {}
   }
   window.addEventListener('error', function(e){
-    show((e.message || 'unknown error') + (e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno : ''));
+    if (e && e.target && e.target.nodeName && (e.target.src || e.target.href) && e.target.nodeName !== 'IMG' || (e.target && e.target.nodeName === 'IMG')) {
+      var url = e.target.src || e.target.href || '';
+      if (url) { show('FAILED TO LOAD ' + e.target.nodeName + ' → ' + url.split('/').slice(-2).join('/')); return; }
+    }
+    var msg = (e && e.message) || (e && e.error && e.error.message) || (typeof (e && e.error) === 'string' ? e.error : '') || 'unknown error (no message — type: ' + (e && e.type) + ')';
+    show(msg + (e && e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno : ''));
   }, true);
   window.addEventListener('unhandledrejection', function(e){
     show('promise: ' + ((e.reason && (e.reason.message || e.reason)) || 'unknown'));
   });
+  var _ce = console.error;
+  console.error = function(){ try { show('console.error: ' + Array.prototype.slice.call(arguments).map(function(a){ return a && a.stack ? String(a.stack).split('\n')[0] : String(a); }).join(' ')); } catch(_){} _ce.apply(console, arguments); };
   window.__dulahqErrors = seen;
 })();
 </script>
