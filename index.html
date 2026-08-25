@@ -859,6 +859,24 @@ html[data-theme="light"] .m-row{color:#09090B!important;border-color:var(--sg-bo
 #plat-footer{background:var(--sg-dark)!important;color:#fff!important;border-radius:28px!important;border:1px solid var(--sg-border)!important}
 html[data-theme="light"] #plat-footer{color:#F4F4F5!important}
 </style>
+
+<style id="action-rail-css">
+/* ===== page actions: desktop right rail / mobile scroll row ===== */
+#action-rail{display:none}
+@media (min-width:1024px){
+  #action-rail{position:fixed;top:150px;right:18px;width:200px;display:flex;flex-direction:column;gap:10px;z-index:600;align-items:stretch}
+  #action-rail:empty{display:none}
+  #app-main{margin-right:220px}
+  #action-rail .btn,#action-rail button{width:100%;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #action-rail .tb-actions{display:flex;flex-direction:column;gap:10px;width:100%}
+  .topbar .tb-actions:only-child{display:none}
+}
+@media (max-width:1023.98px){
+  .topbar{flex-wrap:wrap;gap:6px 12px}
+  .tb-actions{order:3;width:100%;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 6px}
+  .tb-actions .btn{flex:0 0 auto;min-height:40px}
+}
+</style>
 </head>
 <body>
 <div id="signin-wrap"></div>
@@ -7412,6 +7430,98 @@ function provisionOrg(){
   saveOrgRegistry(orgs);
   renderPlatformConsole();
 }
+/* ===== PRE-LOADED DEMO TENANTS =====
+   3 with COMPLETED group stage (full bracket/standings data),
+   2 mid-group-stage (live matches in progress). Data is stored per-slug
+   under dulahq:demo-state:{slug}; your real (default-org) state is backed
+   up and restored when you leave a demo tenant. Backend sync is disabled
+   while inside a demo tenant so demo data never reaches the sheet. */
+var DEMO_ORGS = [
+  { slug:'usnagali', name:'Copa Gali Futbol', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Copa Gali Futbol 2026', venue:'Gali Valley Sports Complex', date:'2026-05-09' } } },
+  { slug:'copa-davao', name:'Copa Davao', accent:'#FF6B35', admin:'copa.davao@dulahq.test', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Copa Davao 2026', venue:'Davao Delta Fields', date:'2026-06-20' } } },
+  { slug:'manila-summer', name:'Manila Summer Invitational', accent:'#3B82F6', admin:'msi@dulahq.test', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Manila Summer Invitational 2026', venue:'Rizal Memorial Coliseum', date:'2026-04-11' } } },
+  { slug:'cebu-volley', name:'Cebu Volley Classic', accent:'#A855F7', admin:'volley@dulahq.test', status:'active',
+    demo:{ stage:'group', meta:{ name:'Cebu Volley Classic 2026', venue:'Cebu Coliseum', date:'2026-08-22' } } },
+  { slug:'davao-hoops', name:'Davao Hoops League', accent:'#F59E0B', admin:'hoops@dulahq.test', status:'active',
+    demo:{ stage:'group', meta:{ name:'Davao Hoops League S2', venue:'Davao City Gym', date:'2026-08-29' } } }
+];
+function isDemoOrg(org){ return !!(org && org.demo && org.demo.stage); }
+function ensureDemoOrgs(){
+  try {
+    var stored = orgRegistry(), changed = false;
+    for (var i=0;i<DEMO_ORGS.length;i++){
+      var found = false;
+      for (var j=0;j<stored.length;j++) if (stored[j].slug === DEMO_ORGS[i].slug) found = true;
+      if (!found){ stored.push(JSON.parse(JSON.stringify(DEMO_ORGS[i]))); changed = true; }
+    }
+    if (changed) saveOrgRegistry(stored);
+  } catch(e){}
+}
+var S_PROXY_KEYS = { teams:1, groups:1, groupMatches:1, knockoutRounds:1, generated:1, bracketView:1, tournament:1 };
+function swapStateInPlace_(next){
+  /* keep S's object identity AND its accessor properties (CATEGORY PROXY LAYER):
+     proxied fields (teams/groups/groupMatches/...) live INSIDE next.categories —
+     the accessors re-point at the new active category automatically. Never delete
+     or plain-assign those keys, or per-category routing silently breaks. */
+  try {
+    for (var k in S){ if (Object.prototype.hasOwnProperty.call(S, k) && k !== 'timerInterval' && !S_PROXY_KEYS[k]) delete S[k]; }
+    for (var k2 in next){ if (k2 !== 'timerInterval' && !S_PROXY_KEYS[k2]) S[k2] = next[k2]; }
+  } catch(e){}
+}
+function demoSanitize_(st){ try { var c = JSON.parse(JSON.stringify(st)); c.timerInterval = null; return c; } catch(e){ return st; } }
+var DEMO_S_TEMPLATE = (function(){ try { return JSON.parse(JSON.stringify(S)); } catch(e){ return null; } })();
+function buildDemoState_(org){
+  var st = DEMO_S_TEMPLATE ? JSON.parse(JSON.stringify(DEMO_S_TEMPLATE)) : { categories: [], users: [], referees: [] };
+  st._tournamentMeta = { name: org.demo.meta.name, venue: org.demo.meta.venue, date: org.demo.meta.date };
+  st.categories = []; st.users = []; st.referees = [];
+  st._demoOrg = org.slug;
+  swapStateInPlace_(st); /* mutate S in place — generateDraw()/proxy layer keep working */
+  var frac = org.demo.stage === 'complete' ? 1 : 0.5;
+  var c1 = defaultCategory(); c1.name = 'Open Division'; c1.ageGroup = 'Open';
+  st.categories.push(c1);
+  var unplayed = seedDemoCategory_(c1, 12, 4, frac);
+  var c2 = defaultCategory(); c2.name = 'U16'; c2.ageGroup = 'U16';
+  st.categories.push(c2);
+  seedDemoCategory_(c2, 8, 2, frac);
+  S.activeCategoryId = c1.id; /* on S itself — never the temp copy, or activeCategory() spawns a stray */
+  var admin = defaultUser(); admin.name = 'Tournament Admin'; admin.email = org.admin || 'admin@dulahq.test'; admin.role = 'admin';
+  st.users.push(admin);
+  var ref = defaultReferee(); ref.name = 'Center Referee'; st.referees.push(ref);
+  if (org.demo.stage !== 'complete' && unplayed && unplayed.length){
+    var lm = unplayed[0];
+    lm.inProgress = true; lm.homeScore = 1; lm.awayScore = 0; lm.refereeId = ref.id;
+    st.timerSeconds = 28 * 60; st.timerStarted = true; st.timerRunning = false;
+    st.timerMatchId = lm.id;
+    try { st.currentMatchByCategory = st.currentMatchByCategory || {}; st.currentMatchByCategory[c1.id] = lm.id; } catch(e){}
+  }
+  return S;
+}
+function enterDemoOrg(org){
+  try {
+    if (S && S._demoOrg){
+      try { localStorage.setItem('dulahq:demo-state:' + S._demoOrg, JSON.stringify(demoSanitize_(S))); } catch(e){}
+    } else {
+      try { if (!localStorage.getItem('dulahq:demo-backup')) localStorage.setItem('dulahq:demo-backup', JSON.stringify(demoSanitize_(S))); } catch(e){}
+    }
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('dulahq:demo-state:' + org.slug) || 'null'); } catch(e){}
+    if (saved && saved._demoOrg === org.slug){ swapStateInPlace_(saved); }
+    else { buildDemoState_(org); try { localStorage.setItem('dulahq:demo-state:' + org.slug, JSON.stringify(demoSanitize_(S))); } catch(e){} }
+  } catch(e){ /* never block boot */ }
+}
+function leaveDemoOrgIfNeeded(){
+  try {
+    if (S && S._demoOrg){ try { localStorage.setItem('dulahq:demo-state:' + S._demoOrg, JSON.stringify(demoSanitize_(S))); } catch(e){} }
+    var bk = null;
+    try { bk = JSON.parse(localStorage.getItem('dulahq:demo-backup') || 'null'); } catch(e){}
+    if (bk){ swapStateInPlace_(bk); try { localStorage.removeItem('dulahq:demo-backup'); } catch(e){} }
+  } catch(e){}
+}
+ensureDemoOrgs();
+
 function renameOrg(slug){
   var orgs = orgRegistry();
   for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) {
@@ -7466,7 +7576,10 @@ function __edHero(label, headline, subHtml){
     var m = location.pathname.match(/^\/t\/([a-z0-9-]+)/i);
     if (m) {
       var slug = m[1].toLowerCase(), orgs = orgRegistry();
-      for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) { setOrgContext(orgs[i]); break; }
+      for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) {
+        if (isDemoOrg(orgs[i]) && (!S._demoOrg || S._demoOrg !== slug)) enterDemoOrg(orgs[i]);
+        setOrgContext(orgs[i]); break;
+      }
     }
   } catch(e) {}
   try { if (typeof AUTH !== 'undefined' && AUTH && AUTH.signedIn && ['teams','groups','bracket'].indexOf(S.page) !== -1) render(); } catch(e){}
@@ -7538,6 +7651,7 @@ window.__DULAHQ_BUILD = 'ui2';
 </script>
 
 <!-- ================= MOBILE UI LAYER (chrome + purpose-built screens) ================= -->
+<div id="action-rail" aria-hidden="true"></div>
 <div id="mob-topbar" aria-hidden="true"></div>
 <div id="mob-tabbar" aria-hidden="true"></div>
 <div id="mob-sheet" aria-hidden="true" onclick="if(event.target===this)UI.closeSheet()"><div class="m-sheet-panel"></div></div>
@@ -8046,6 +8160,38 @@ var UI = (function(){
           return out;
         };
       }
+      function placeActions(){
+        try {
+          var tb = document.getElementById('tb-actions'), rail = document.getElementById('action-rail'), top = document.getElementById('topbar');
+          if (!tb || !rail || !top) return;
+          if (mq.matches){ if (tb.parentElement === rail) top.appendChild(tb); }
+          else if (tb.parentElement !== rail) rail.appendChild(tb);
+          while (rail.firstChild && rail.firstChild !== tb) rail.removeChild(rail.firstChild);
+          rail.style.display = (!mq.matches && tb.children.length) ? 'flex' : 'none';
+        } catch(e){}
+      }
+      var _st2 = window.setTopbar;
+      if (typeof _st2 === 'function'){
+        window.setTopbar = function(){ var o = _st2.apply(this, arguments); try { placeActions(); } catch(e){} return o; };
+      }
+      var _soc = window.setOrgContext;
+      if (typeof _soc === 'function'){
+        window.setOrgContext = function(org){
+          try {
+            if (isDemoOrg(org)) enterDemoOrg(org);
+            else leaveDemoOrgIfNeeded();
+          } catch(e){}
+          return _soc.apply(this, arguments);
+        };
+      }
+      var _as = window.autoSave;
+      if (typeof _as === 'function'){
+        window.autoSave = function(){ if (S && S._demoOrg) return; return _as.apply(this, arguments); };
+      }
+      var _psq = window.pushToSheetsQuiet;
+      if (typeof _psq === 'function'){
+        window.pushToSheetsQuiet = function(){ if (S && S._demoOrg) return; return _psq.apply(this, arguments); };
+      }
       var _nav = window.navTo;
       if (typeof _nav === 'function'){
         window.navTo = function(){ closeSheet();
@@ -8058,6 +8204,7 @@ var UI = (function(){
         try { mobilizeTables(); } catch(e){}
         try { renderChrome(); } catch(e){}
         try { settingsFrame(); } catch(e){}
+        try { placeActions(); } catch(e){}
       }
       document.addEventListener('click', function(ev){
         try {
@@ -8090,7 +8237,11 @@ var UI = (function(){
         mc.insertBefore(row, mc.firstChild);
       }
 
+      try {
+        if (!location.pathname.match(/^\/t\//)) leaveDemoOrgIfNeeded();
+      } catch(e){}
       if (mq.addEventListener) mq.addEventListener('change', function(){
+        try { placeActions(); } catch(e){}
         renderChrome();
         try { if (typeof S !== 'undefined' && S.page) window.render(); } catch(e){}
       });
