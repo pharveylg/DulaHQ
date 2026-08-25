@@ -734,6 +734,33 @@
     text-transform:uppercase;color:#A1A1AA;min-width:92px;padding-top:2px}
   .m-tbl-row .v{flex:1;min-width:0}
 
+  /* keep interactive elements clear of the fixed tab bar when scrolled into view */
+  .m-full,.m-linkbtn,.m-act,button.m-item,.m-card,#main-content button{scroll-margin-bottom:78px;scroll-margin-top:64px}
+
+  /* --- mobile admin components --- */
+  .m-search{width:100%;min-height:44px;margin-bottom:12px;padding:10px 14px;border-radius:11px;
+    background:#0f1110;border:1px solid #26292a;color:#F4F4F5;font-size:16px;font-family:var(--mono,monospace);box-sizing:border-box}
+  .m-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .m-chip{font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:#A1A1AA;background:rgba(255,255,255,.05);border:1px solid #26292a;border-radius:999px;padding:5px 11px}
+  .m-badge{font-family:var(--mono,monospace);font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+    padding:3px 8px;border-radius:5px;background:rgba(255,255,255,.08);color:#A1A1AA;white-space:nowrap}
+  .m-badge.pend{background:rgba(212,255,50,.14);color:#d4ff32}
+  .m-badge.ok{background:rgba(63,185,80,.16);color:#7ee27f}
+  .m-full{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin:14px 0 4px;
+    background:rgba(255,255,255,.04);border:1px dashed #3a3d3e;border-radius:12px;color:#A1A1AA;
+    font-family:var(--mono,monospace);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+  .m-linkbtn{margin-top:9px;background:none;border:none;color:#d4ff32;font-family:var(--mono,monospace);
+    font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;padding:6px 0;min-height:38px}
+  .m-pill{position:fixed;right:14px;bottom:calc(74px + env(safe-area-inset-bottom,0px));z-index:890;
+    display:flex;align-items:center;gap:7px;padding:11px 15px;border-radius:999px;border:1px solid rgba(212,255,50,.4);
+    background:#181f1e;color:#d4ff32;font-family:var(--mono,monospace);font-size:10px;font-weight:800;
+    letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.5)}
+  .m-jump-row{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch}
+  .m-jump{flex:0 0 auto;font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;color:#F4F4F5;background:rgba(212,255,50,.07);border:1px solid rgba(212,255,50,.3);
+    border-radius:999px;padding:9px 14px;text-decoration:none;min-height:38px;display:flex;align-items:center}
+
   /* --- modals become bottom sheets --- */
   .modal-overlay{align-items:flex-end!important;padding:0!important}
   .modal{width:100%!important;max-width:100%!important;max-height:88vh;overflow-y:auto;
@@ -7513,8 +7540,8 @@ var UI = (function(){
         for (var i=0;i<ts.length;i++){
           var t = ts[i];
           h += t.sheet
-            ? '<button class="m-tab' + (act===i?' active':'') + '" onclick="UI.openSheet()" aria-label="More"><i class="ti ti-layout-grid"></i>' + t.l + '</button>'
-            : '<button class="m-tab' + (act===i?' active':'') + '" onclick="navTo(\'' + t.p + '\')" aria-label="' + t.l + '"><i class="ti ' + t.i + '"></i>' + t.l + '</button>';
+            ? '<button class="m-tab' + (act===i?' active':'') + '" data-sheet="1" aria-label="More"><i class="ti ti-layout-grid"></i>' + t.l + '</button>'
+            : '<button class="m-tab' + (act===i?' active':'') + '" data-nav="' + t.p + '" aria-label="' + t.l + '"><i class="ti ' + t.i + '"></i>' + t.l + '</button>';
         }
         bar.innerHTML = h;
       }
@@ -7527,6 +7554,16 @@ var UI = (function(){
       var role = (typeof S !== 'undefined' && S.role) || 'audience';
       var list = (typeof NAV !== 'undefined' && NAV[role]) || [];
       var cur = (typeof S !== 'undefined' && S.page) || '';
+      var covered = {};
+      try {
+        var ts = tabs();
+        for (var ci=0; ci<ts.length; ci++){
+          if (ts[ci].sheet) continue;
+          covered[ts[ci].p] = 1;
+          var cm = ts[ci].match || [];
+          for (var cj=0; cj<cm.length; cj++) covered[cm[cj]] = 1;
+        }
+      } catch(e){}
       var groups = [], seen = {};
       for (var i=0;i<list.length;i++){
         var g = list[i].g || 'Menu';
@@ -7539,7 +7576,8 @@ var UI = (function(){
         for (var j=0;j<list.length;j++){
           var it = list[j];
           if ((it.g || 'Menu') !== gname) continue;
-          h += '<button class="m-item' + (it.p===cur?' active':'') + '" onclick="UI.closeSheet();navTo(\'' + it.p + '\')">' +
+          if (covered[it.p]) continue;
+          h += '<button class="m-item' + (it.p===cur?' active':'') + '" data-nav="' + it.p + '"><i class="ti ' + it.i + '"></i>' + esc(it.l) + '</button>';
                '<i class="ti ' + it.i + '"></i>' + esc(it.l) + '</button>';
         }
       }
@@ -7594,12 +7632,10 @@ var UI = (function(){
       '<div class="m-stat"><div class="n">' + live + '</div><div class="l">Live now</div></div>' +
       '<div class="m-stat"><div class="n">' + pending + '</div><div class="l">Pending regs</div></div>' +
       '</div><div class="m-sec">Quick actions</div><div class="m-actions">' +
-      '<button class="m-act" onclick="navTo(\'setup\')"><i class="ti ti-settings"></i>Setup</button>' +
-      '<button class="m-act" onclick="navTo(\'teams\')"><i class="ti ti-users-group"></i>Teams</button>' +
-      '<button class="m-act" onclick="navTo(\'registrations\')"><i class="ti ti-user-plus"></i>Registrations</button>' +
-      '<button class="m-act" onclick="navTo(\'schedule\')"><i class="ti ti-calendar"></i>Schedule</button>' +
-      '<button class="m-act" onclick="navTo(\'standings\')"><i class="ti ti-medal"></i>Standings</button>' +
-      '<button class="m-act" onclick="navTo(\'bracket\')"><i class="ti ti-tournament"></i>Bracket</button>' +
+      '<button class="m-act" data-nav="setup"><i class="ti ti-settings"></i>Setup</button>' +
+      '<button class="m-act" data-nav="registrations"><i class="ti ti-user-plus"></i>Registrations</button>' +
+      '<button class="m-act" data-nav="standings"><i class="ti ti-medal"></i>Standings</button>' +
+      '<button class="m-act" data-nav="users"><i class="ti ti-user"></i>Users</button>' +
       '</div>';
     try {
       var recent = (S.registrations||[]).filter(function(r){ return r.status==='pending'; }).slice(0,4);
@@ -7625,9 +7661,7 @@ var UI = (function(){
       '<div class="m-sec">Next up</div>';
     if (upcoming.length){ for (var j=0;j<upcoming.length;j++) h += matchCard(upcoming[j]); }
     else h += '<div class="m-card"><div class="m-sub">No fixtures yet — the draw hasn\u2019t been generated.</div></div>';
-    h += '<div class="m-sec">Jump to</div><div class="m-actions">' +
-      '<button class="m-act" onclick="navTo(\'schedule\')"><i class="ti ti-calendar"></i>Full schedule</button>' +
-      '<button class="m-act" onclick="navTo(\'standings\')"><i class="ti ti-medal"></i>Standings</button></div>';
+    
     return h;
   }
 
@@ -7688,10 +7722,168 @@ var UI = (function(){
     return h;
   }
 
+
+  /* ---------- generic builders + purpose-built admin screens (presentation only) ---------- */
+  function statusBadge(st){
+    var x = String(st || '').toLowerCase();
+    var cls = (x === 'pending' || x === 'submitted') ? ' pend' : (x === 'approved' || x === 'active' || x === 'on' || x === 'live') ? ' ok' : '';
+    return '<span class="m-badge' + cls + '">' + esc(st || '—') + '</span>';
+  }
+  function pageHead(eyebrow, title, count, extra){
+    return '<div class="m-eyebrow" style="margin:4px 0 8px">' + esc(eyebrow) + '</div>' +
+      '<div class="m-big" style="margin-bottom:12px">' + esc(title) +
+      (count != null ? ' <span class="m-sub">(' + count + ')</span>' : '') + '</div>' + (extra || '');
+  }
+  function searchBox(){
+    return '<input class="m-search" type="search" placeholder="Search" oninput="UI.mfilter(this)" aria-label="Search">';
+  }
+  function fullBtn(){
+    return '<button class="m-full" data-full="1"><i class="ti ti-arrow-right"></i> Open full editor</button>';
+  }
+  function emptyCard(msg){ return '<div class="m-card"><div class="m-sub">' + esc(msg) + '</div></div>'; }
+
+  function mobRegistrations(){
+    var list = S.registrations || [];
+    var pend = 0; for (var i=0;i<list.length;i++) if (list[i].status === 'pending') pend++;
+    var h = pageHead('People', 'Registrations', list.length,
+      '<div class="m-chips"><span class="m-chip">' + pend + ' pending</span><span class="m-chip">' + (list.length - pend) + ' reviewed</span></div>' + searchBox());
+    if (!list.length) return h + emptyCard('No team registrations yet.');
+    for (var j=0;j<list.length;j++){
+      var r = list[j];
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(r.teamName || r.name || 'Team') + '</div>' + statusBadge(r.status) + '</div>' +
+        '<div class="m-sub">' + esc(r.managerName || '') + (r.managerEmail ? ' · ' + esc(r.managerEmail) : '') + '</div>' +
+        '<div class="m-sub">' + ((r.players && r.players.length) || 0) + ' players · ' + ((r.docs && r.docs.length) || 0) + ' docs</div></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobAccessRequests(){
+    var list = S.accessRequests || [];
+    var h = pageHead('People', 'Access requests', list.length, searchBox());
+    if (!list.length) return h + emptyCard('No access requests.');
+    for (var i=0;i<list.length;i++){
+      var a = list[i];
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(a.name || a.email || 'Request') + '</div>' + statusBadge(a.status) + '</div>' +
+        '<div class="m-sub">' + esc(a.role || '') + (a.phone ? ' · ' + esc(a.phone) : '') + '</div>' +
+        (a.email ? '<div class="m-sub">' + esc(a.email) + '</div>' : '') +
+        (a.notes ? '<div class="m-sub" style="margin-top:4px">"' + esc(a.notes) + '"</div>' : '') + '</div>';
+    }
+    return h + fullBtn();
+  }
+  function mobDocReviews(){
+    var regs = (S.registrations || []).filter(function(r){ return r.docs && r.docs.length; });
+    var total = 0; for (var i=0;i<regs.length;i++) total += (regs[i].docs || []).length;
+    var h = pageHead('People', 'Document reviews', total);
+    if (!regs.length) return h + emptyCard('No documents submitted for review.');
+    for (var j=0;j<regs.length;j++){
+      var r = regs[j], docs = r.docs || [];
+      var inner = '';
+      for (var k=0;k<docs.length;k++){
+        var d = docs[k] || {};
+        var dn = d.name || d.type || d.label || 'Document';
+        inner += '<div class="m-row"><div class="tn">' + esc(dn) + '</div><div class="st">' + statusBadge(d.status || 'submitted') + '</div></div>';
+      }
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(r.teamName || r.name || 'Team') + '</div><span class="m-eyebrow">' + docs.length + ' docs</span></div>' + inner + '</div>';
+    }
+    return h + fullBtn();
+  }
+  function mobUsers(){
+    var list = S.users || [];
+    var h = pageHead('People', 'Users', list.length, searchBox());
+    if (!list.length) return h + emptyCard('No users yet.');
+    for (var i=0;i<list.length;i++){
+      var u = list[i];
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(u.name || 'User') + '</div>' + statusBadge(u.role) + '</div>' +
+        '<div class="m-sub">' + esc(u.email || '') + '</div>' +
+        (u.assignedTeams && u.assignedTeams.length ? '<div class="m-sub">' + u.assignedTeams.length + ' team links</div>' : '') + '</div>';
+    }
+    return h + fullBtn();
+  }
+  function mobReferees(){
+    var list = S.referees || [];
+    var h = pageHead('People', 'Referees', list.length, searchBox());
+    if (!list.length) return h + emptyCard('No referees registered.');
+    for (var i=0;i<list.length;i++){
+      var r = list[i];
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(r.name || 'Referee') + '</div>' + statusBadge(r.availability || '') + '</div>' +
+        '<div class="m-sub">' + esc(r.phone || '') + '</div></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobOfficiatingTeam(){
+    var list = S.officiatingTeam || [];
+    var h = pageHead('People', 'Officiating team', list.length);
+    if (!list.length) return h + emptyCard('No officiating crew assigned yet.');
+    for (var i=0;i<list.length;i++){
+      var o = list[i] || {};
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(o.name || o.designation || 'Crew') + '</div>' + statusBadge(o.designation || '') + '</div>' +
+        '<div class="m-sub">' + esc(o.orgLevel || '') + '</div></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobCategories(){
+    var list = S.categories || [];
+    var h = pageHead('Setup', 'Categories', list.length);
+    if (!list.length) return h + emptyCard('No categories — create them in Setup.');
+    for (var i=0;i<list.length;i++){
+      var c = list[i];
+      h += '<div class="m-card"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(c.name || 'Category') + '</div>' +
+        '<span class="m-eyebrow">' + esc(c.ageGroup || '') + '</span></div>' +
+        '<div class="m-sub">' + ((c.teams && c.teams.length) || 0) + ' teams · ' + esc((c.structure) || (S.tournament && S.tournament.structure) || '') + '</div>' +
+        '<button class="m-linkbtn" data-cat="' + esc(c.id != null ? c.id : i) + '">View teams</button></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobGroups(){
+    var gs = S.groups || [];
+    var h = pageHead('Competition', 'Groups & draw', gs.length);
+    if (!gs.length) return h + emptyCard('No draw generated yet.') +
+      (S.role === 'admin' ? '<button class="m-full" data-nav="setup"><i class="ti ti-settings"></i> Go to Setup</button>' : '');
+    for (var i=0;i<gs.length;i++){
+      var g = gs[i] || {};
+      var cnt = 0;
+      try { for (var k=0;k<(S.groupMatches||[]).length;k++) if (S.groupMatches[k].group === g.name) cnt++; } catch(e){}
+      h += '<div class="m-card"><div class="m-card-h"><div class="m-big" style="font-size:15px">Group ' + esc(g.name || (i+1)) + '</div>' +
+        '<span class="m-eyebrow">' + cnt + ' matches</span></div>' +
+        '<button class="m-linkbtn" data-nav="standings">Standings</button></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobAudit(){
+    var log = S.auditLog || [];
+    var h = pageHead('Admin', 'Audit log', log.length, searchBox());
+    if (!log.length) return h + emptyCard('No activity recorded yet.');
+    for (var i=log.length-1; i>=0 && i>log.length-60; i--){
+      var e = log[i], txt = '', when = '';
+      if (typeof e === 'string') txt = e;
+      else { txt = e.text || e.msg || e.action || e.message || JSON.stringify(e).slice(0,90); when = e.time || e.at || e.ts || ''; }
+      h += '<div class="m-card" data-msearch="1" style="padding:11px 13px"><div class="m-sub" style="color:#F4F4F5">' + esc(txt) + '</div>' +
+        (when ? '<div class="m-sub" style="margin-top:3px;font-size:11px">' + esc(when) + '</div>' : '') + '</div>';
+    }
+    return h + fullBtn();
+  }
+  function mobLiveStreams(){
+    var em = S.liveEmbeds || [];
+    var live = 0;
+    try { for (var k=0;k<(S.groupMatches||[]).length;k++) if (S.groupMatches[k].inProgress) live++; } catch(e){}
+    var h = pageHead('Competition', 'Live streams', em.length, '<div class="m-chips"><span class="m-chip">' + live + ' matches live now</span></div>');
+    if (!em.length) return h + emptyCard('No stream embeds configured.');
+    for (var i=0;i<em.length;i++){
+      var x = em[i] || {};
+      var label = x.title || x.name || x.id || ('Embed ' + (i+1));
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(label) + '</div>' + statusBadge(x.status || (x.inProgress ? 'live' : '')) + '</div></div>';
+    }
+    return h + fullBtn();
+  }
+
   var MOBILE_PAGES = {
     admindashboard: mobAdminHome, teamdash: mobTeamHome,
-    teams: mobTeams, schedule: mobSchedule, standings: mobStandings
+    teams: mobTeams, schedule: mobSchedule, standings: mobStandings,
+    registrations: mobRegistrations, accessrequests: mobAccessRequests, documentreviews: mobDocReviews,
+    users: mobUsers, referees: mobReferees, officiatingteam: mobOfficiatingTeam,
+    categories: mobCategories, groups: mobGroups, audit: mobAudit, livestreams: mobLiveStreams
   };
+  var SETTINGS_PAGES = { setup:1, branding:1, platform:1, officials:1 };
+  var fullMode = null;
 
   /* ---------- fallback: cardify tables on mobile for pages w/o a purpose-built view ---------- */
   function mobilizeTables(){
@@ -7735,16 +7927,29 @@ var UI = (function(){
       if (typeof _render === 'function'){
         window.render = function(){
           try {
-            if (mq.matches && MOBILE_PAGES[S.page]){
+            if (mq.matches && S.page !== fullMode && MOBILE_PAGES[S.page]){
               var fn = MOBILE_PAGES[S.page];
               var htmlOut = fn();
               var mc = el('main-content'); if (mc) mc.innerHTML = htmlOut;
+              var pill0 = document.getElementById('mob-summary-pill'); if (pill0) pill0.parentNode.removeChild(pill0);
               renderChrome(); after();
               var tb = el('mob-title'); if (tb) tb.textContent = (S.page === 'admindashboard' ? 'Dashboard' : S.page.charAt(0).toUpperCase() + S.page.slice(1));
               return;
             }
           } catch(e){ /* fall through to shared renderer */ }
           var out = _render.apply(this, arguments);
+          try {
+            if (mq.matches && MOBILE_PAGES[S.page]){
+              var mc0 = el('main-content');
+              if (mc0 && !document.getElementById('mob-summary-pill')){
+                var pill = document.createElement('button');
+                pill.id = 'mob-summary-pill'; pill.className = 'm-pill';
+                pill.setAttribute('data-back','1');
+                pill.innerHTML = '<i class="ti ti-list"></i> Summary view';
+                mc0.parentNode.insertBefore(pill, mc0);
+              }
+            }
+          } catch(e){}
           after();
           return out;
         };
@@ -7759,9 +7964,47 @@ var UI = (function(){
       }
       var _nav = window.navTo;
       if (typeof _nav === 'function'){
-        window.navTo = function(){ closeSheet(); var out = _nav.apply(this, arguments); renderChrome(); return out; };
+        window.navTo = function(){ closeSheet();
+          var prev = (typeof S !== 'undefined' && S.page) || null;
+          var out = _nav.apply(this, arguments);
+          try { if (typeof S !== 'undefined' && S.page !== prev) fullMode = null; } catch(e){}
+          renderChrome(); return out; };
       }
-      function after(){ try { mobilizeTables(); } catch(e){} try { renderChrome(); } catch(e){} }
+      function after(){
+        try { mobilizeTables(); } catch(e){}
+        try { renderChrome(); } catch(e){}
+        try { settingsFrame(); } catch(e){}
+      }
+      document.addEventListener('click', function(ev){
+        try {
+          var t = ev.target.closest ? ev.target.closest('[data-nav],[data-sheet],[data-full],[data-back],[data-cat]') : null;
+          if (!t) return;
+          if (t.hasAttribute('data-nav')) { closeSheet(); navTo(t.getAttribute('data-nav')); }
+          else if (t.hasAttribute('data-sheet')) openSheet();
+          else if (t.hasAttribute('data-full')) { fullMode = S.page; window.render(); window.scrollTo(0,0); }
+          else if (t.hasAttribute('data-back')) { fullMode = null; window.render(); window.scrollTo(0,0); }
+          else if (t.hasAttribute('data-cat')) {
+            try { S.activeCategoryId = t.getAttribute('data-cat'); } catch(e){}
+            closeSheet(); navTo('teams');
+          }
+        } catch(e){}
+      });
+      function settingsFrame(){
+        if (!mq.matches || !SETTINGS_PAGES[S.page]) return;
+        var mc = el('main-content'); if (!mc || document.getElementById('m-jump-row')) return;
+        var hs = mc.querySelectorAll('h2, h3, .card-title, .sec-title, .dash-sec-title');
+        if (!hs.length) return;
+        var row = document.createElement('div'); row.id = 'm-jump-row'; row.className = 'm-jump-row';
+        var html = '';
+        for (var i=0;i<hs.length && i<12;i++){
+          if (!hs[i].textContent.trim()) continue;
+          var idm = 'mj-' + i;
+          hs[i].id = idm;
+          html += '<a class="m-jump" href="#' + idm + '">' + esc(hs[i].textContent.trim().slice(0,22)) + '</a>';
+        }
+        row.innerHTML = html;
+        mc.insertBefore(row, mc.firstChild);
+      }
 
       if (mq.addEventListener) mq.addEventListener('change', function(){
         renderChrome();
@@ -7779,8 +8022,16 @@ var UI = (function(){
   }
   install();
 
+  function mfilter(input){
+    try {
+      var q = (input.value || '').toLowerCase();
+      var cards = document.querySelectorAll('#main-content [data-msearch]');
+      for (var i=0;i<cards.length;i++) cards[i].style.display = (!q || (cards[i].textContent||'').toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+    } catch(e){}
+  }
   return { bp: BP, isMobile: function(){ return mq.matches; }, openSheet: openSheet, closeSheet: closeSheet,
-           renderChrome: renderChrome, mobilizeTables: mobilizeTables };
+           renderChrome: renderChrome, mobilizeTables: mobilizeTables, mfilter: mfilter,
+           fullEditor: function(){ fullMode = (typeof S !== 'undefined' && S.page) || null; try { window.render(); } catch(e){} } };
 })();
 </script>
 </body>
