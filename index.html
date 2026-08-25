@@ -633,9 +633,10 @@
        later in source, would otherwise win over that earlier @media block on mobile */
     @media(max-width:768px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}}
 
-    /* flash guard — no intermediate boot paint */
-    #signin-wrap{opacity:0}
+    /* flash guard v2 — pure-CSS reveal: visible by 1.2s NO MATTER WHAT (even if JS never runs) */
+    #signin-wrap{opacity:0;animation:lgReveal .18s ease-out 1.2s forwards}
     #signin-wrap.lg-ready{opacity:1;transition:opacity .18s ease-out}
+    @keyframes lgReveal{to{opacity:1}}
 </style>
 </head>
 <body>
@@ -7276,12 +7277,42 @@ window.addEventListener('load', function(){
 </script>
 
 <script>
-/* flash guard reveal — show the sign-in area once boot has settled */
-window.addEventListener('load', function(){
-  setTimeout(function(){
-    try { var sw = document.getElementById('signin-wrap'); if (sw) sw.classList.add('lg-ready'); } catch(e){}
-  }, 250);
-});
+/* flash guard v2 reveal — timers only; never depends on the load event (which can hang on slow networks) */
+window.__DULAHQ_BUILD = 'fg2';
+(function(){
+  function rv(){ try { var sw = document.getElementById('signin-wrap'); if (sw) sw.classList.add('lg-ready'); } catch(e){} }
+  setTimeout(rv, 350); setTimeout(rv, 800); setTimeout(rv, 1200);
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(rv, 50); });
+  window.addEventListener('load', function(){ setTimeout(rv, 50); });
+})();
+</script>
+
+<script>
+/* ?debug=1 — self-service diagnostics overlay (inline-styled, runs last) */
+(function(){
+  try {
+    var q = new URLSearchParams(location.search);
+    if (q.get('debug') !== '1') return;
+    setTimeout(function(){
+      var sw = document.getElementById('signin-wrap'), sh = document.getElementById('app-shell');
+      var lastErr = [];
+      try { lastErr = JSON.parse(localStorage.getItem('dulahq:lastError') || '[]'); } catch(e){}
+      var rows = [
+        ['build', (window.__DULAHQ_BUILD || 'unknown')],
+        ['ua', navigator.userAgent.slice(0, 90)],
+        ['viewport', window.innerWidth + 'x' + window.innerHeight + ' dpr' + (window.devicePixelRatio || '?')],
+        ['signin-wrap', sw ? ('present, class="' + sw.className + '", children=' + sw.children.length) : 'MISSING'],
+        ['signin text', sw ? (sw.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80) || '(empty)' : '-'],
+        ['app-shell', sh ? ('display=' + (sh.style.display || '(css-default)')) : 'MISSING'],
+        ['lastError', lastErr.length ? JSON.stringify(lastErr) : '(none)']
+      ];
+      var p = document.createElement('pre');
+      p.style.cssText = 'position:fixed;z-index:2147483647;left:4px;right:4px;bottom:4px;max-height:45vh;overflow:auto;background:#000;color:#d4ff32;font:11px/1.45 monospace;padding:10px;border-radius:8px;white-space:pre-wrap;margin:0';
+      p.textContent = 'DulaHQ debug\n' + rows.map(function(r){ return r[0] + ': ' + r[1]; }).join('\n');
+      document.body.appendChild(p);
+    }, 1600);
+  } catch(e){}
+})();
 </script>
 </body>
 </html>
