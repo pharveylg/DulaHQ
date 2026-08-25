@@ -3,6 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* error net v2 — first script in the document; nothing escapes */
+(function(){
+  var seen = [];
+  function show(msg){
+    try {
+      seen.push(msg);
+      try { localStorage.setItem('dulahq:lastError', JSON.stringify({t:Date.now(),m:seen.slice(-3)})); } catch(_){}
+      var b = document.getElementById('ops-error-net');
+      if (!b && document.body) {
+        b = document.createElement('div'); b.id = 'ops-error-net';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#EF4444;color:#fff;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5;padding:10px 14px;white-space:pre-wrap;word-break:break-all';
+        document.body.appendChild(b);
+      }
+      if (b) b.textContent = '⚠ Dulà HQ error: ' + msg + '  (report this text to fix it)';
+    } catch(_) {}
+  }
+  window.addEventListener('error', function(e){
+    show((e.message || 'unknown error') + (e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno : ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function(e){
+    show('promise: ' + ((e.reason && (e.reason.message || e.reason)) || 'unknown'));
+  });
+  window.__dulahqErrors = seen;
+})();
+</script>
+
 <title>Dulà HQ — Tournament Manager</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -7215,17 +7242,24 @@ function __edHero(label, headline, subHtml){
 })();
 </script>
 
+
+
 <script>
-/* error net — never show a blank page; surface the failure */
-window.addEventListener('error', function(e){
-  try {
-    var b = document.getElementById('ops-error-net');
-    if (!b) { b = document.createElement('div'); b.id = 'ops-error-net';
-      b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#EF4444;color:#fff;font-family:monospace;font-size:12px;padding:10px 14px;white-space:pre-wrap';
-      document.body && document.body.appendChild(b); }
-    b.textContent = 'Error: ' + (e.message || 'unknown') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : '');
-  } catch(_) {}
-}, true);
+/* self-heal — never leave the user on an empty screen */
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    try {
+      var shell = document.getElementById('app-shell');
+      var sw = document.getElementById('signin-wrap');
+      var shellHidden = !shell || shell.style.display === 'none';
+      var signinEmpty = !sw || !sw.innerHTML || sw.innerHTML.length < 40;
+      if (shellHidden && signinEmpty) {
+        if (sw && typeof renderSignInPage === 'function') { sw.innerHTML = renderSignInPage(); }
+        else { document.body && (document.body.style.color = '#F4F4F5'); }
+      }
+    } catch(e) {}
+  }, 1500);
+});
 </script>
 </body>
 </html>
