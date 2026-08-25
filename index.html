@@ -632,6 +632,10 @@
        .g2/.g3/.g4 grid-template-columns rules above are unconditional and, appearing
        later in source, would otherwise win over that earlier @media block on mobile */
     @media(max-width:768px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}}
+
+    /* flash guard — no intermediate boot paint */
+    #signin-wrap{opacity:0}
+    #signin-wrap.lg-ready{opacity:1;transition:opacity .18s ease-out}
 </style>
 </head>
 <body>
@@ -7214,6 +7218,8 @@ function injectSelfServeNote(){
 
 /* ---- editorial heroes (reference layouts) ----
 function __edHero(label, headline, subHtml){
+  try { if (typeof AUTH === 'undefined' || !AUTH || !AUTH.signedIn) return '';
+        var _sh = document.getElementById('app-shell'); if (_sh && _sh.style.display === 'none') return ''; } catch(e){}
   var mc = document.getElementById('main-content');
   if (!mc || document.getElementById('ed-hero-mount')) return '';
   var d = document.createElement('div'); d.id = 'ed-hero-mount'; d.className = 'ed-hero';
@@ -7266,6 +7272,15 @@ window.addEventListener('load', function(){
       }
     } catch(e) {}
   }, 1500);
+});
+</script>
+
+<script>
+/* flash guard reveal — show the sign-in area once boot has settled */
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    try { var sw = document.getElementById('signin-wrap'); if (sw) sw.classList.add('lg-ready'); } catch(e){}
+  }, 250);
 });
 </script>
 </body>
