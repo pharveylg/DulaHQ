@@ -4,11 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dulà HQ — Tournament Manager</title>
+<meta name="description" content="Dulà HQ is a tournament management platform for running brackets, groups, live scoring, referee tools, and team registration — all in one place.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://www.dulahq.com/">
+<link rel="icon" href="/branding/logo.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Dulà HQ">
+<meta property="og:title" content="Dulà HQ — Tournament Manager">
+<meta property="og:description" content="Run brackets, groups, live scoring, referee tools, and team registration — all in one place.">
+<meta property="og:url" content="https://www.dulahq.com/">
+<meta property="og:image" content="https://www.dulahq.com/branding/logo.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Dulà HQ — Tournament Manager">
+<meta name="twitter:description" content="Run brackets, groups, live scoring, referee tools, and team registration — all in one place.">
+<meta name="twitter:image" content="https://www.dulahq.com/branding/logo.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&family=Anton&family=Permanent+Marker&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <style>
     /* Tournament Ops system: Oswald / Space Grotesk / JetBrains Mono loaded in <head> */
 
@@ -17,7 +31,7 @@
         --bg:#09090B; --bg2:#111113; --bg3:#18181B;
         --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.16);
         --fill:rgba(255,255,255,.03); --fill2:rgba(255,255,255,.05);
-        --ink:#F4F4F5; --sub:#A1A1AA; --mute:#71717A; --mute2:#52525B;
+        --ink:#F4F4F5; --sub:#A1A1AA; --mute:#87878C; --mute2:#52525B;
         --lime:#d4ff32; --lime-h:#e0ff70; --limeTx:#d4ff32; --red:#EF4444;
         --tint05:rgba(212,255,50,.05); --tint10:rgba(212,255,50,.10); --tint20:rgba(212,255,50,.20); --tint30:rgba(212,255,50,.30);
         --navbg:rgba(9,9,11,.72);
@@ -40,6 +54,14 @@
         --blue:var(--sub); --blbg:rgba(161,161,170,.12); --blb:rgba(161,161,170,.30);
         --purple:var(--lime); --purbg:var(--tint10); --purb:var(--tint30);
         --r:8px;
+        /* Type scale — token name is the pixel size (--fs13 = 13px). Used
+           throughout dynamically-rendered views via font-size:var(--fsNN);
+           were previously undefined, so every one of those silently fell
+           back to the inherited size instead of its intended size. */
+        --fs11:11px; --fs12:12px; --fs13:13px; --fs14:14px; --fs15:15px;
+        --fs18:18px; --fs20:20px; --fs22:22px; --fs24:24px; --fs26:26px;
+        --fs29:29px; --fs34:34px; --fs41:41px; --fs44:44px; --fs46:46px;
+        --fs48:48px; --fs53:53px; --fs58:58px;
     }
 
     *{box-sizing:border-box;margin:0;padding:0}
@@ -140,8 +162,17 @@
     .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--acid-green);outline:none}
     .btn{padding:8px 14px;border-radius:0;border:2px solid #333;background:#1a1a1a;color:var(--paper-grey);font-family:'Space Mono',monospace;font-weight:700;text-transform:uppercase;clip-path:polygon(2% 0, 100% 2%, 98% 100%, 0 98%)}
     .btn:hover{background:#222;color:var(--paper-grey)}
-    .btn.primary{background:var(--acid-green);color:var(--dark-ink);border-color:var(--acid-green)}
-    .btn.primary:hover{background:#b8e600}
+    /* !important + fixed dark text: the v3.1 override layer below gave .btn
+       itself !important background/color but never uplifted .btn.primary to
+       match, so this rule was fully dead (non-!important always loses to
+       !important regardless of specificity) — every "primary" action button
+       in the app rendered identically to a plain secondary button. Also uses
+       a fixed dark text color rather than var(--dark-ink): that token follows
+       --bg, which goes near-white in light theme — same bug already fixed on
+       .modal-hd above, same fix applies here since this background is lime
+       in both themes too. */
+    .btn.primary{background:var(--acid-green)!important;color:#09090B!important;border-color:var(--acid-green)!important}
+    .btn.primary:hover{background:var(--lime-h)!important}
     .btn.danger{background:transparent;color:#ff3333;border-color:#ff3333}
     .badge{border-radius:0;font-family:'Space Mono',monospace;font-weight:700;text-transform:uppercase;letter-spacing:.04em;clip-path:polygon(2% 0, 100% 2%, 98% 100%, 0 98%)}
     .bg{background:var(--acid-green);color:var(--dark-ink);border:1px solid var(--acid-green)}
@@ -163,14 +194,18 @@
     .mc-score{background:#000;border:2px solid var(--acid-green);color:var(--acid-green);font-family:'Anton',sans-serif;border-radius:0}
     .modal-overlay{background:rgba(0,0,0,.85)}
     .modal{background:var(--card-bg);border:2px solid #333;clip-path:polygon(1% 0, 100% 2%, 99% 98%, 0 100%);border-radius:0}
-    .modal-hd{border-bottom:2px solid #333;background:var(--acid-green);color:var(--dark-ink)}
+    /* Fixed dark text, not var(--dark-ink): this header's background is
+       always the bright lime accent regardless of theme, but --dark-ink
+       follows --bg (near-white in light theme) — was rendering at 1.07:1
+       contrast, effectively invisible, on every modal in light theme. */
+    .modal-hd{border-bottom:2px solid #333;background:var(--acid-green);color:#09090B}
     .modal-title{font-family:'Anton',sans-serif;text-transform:uppercase}
     /* Mobile bottom tab bar — the markup + item logic already existed (built fresh
        on every render) but had no CSS to ever actually show it; it was permanently
        display:none with no responsive rule to override that. Fixed below, scoped to
        the mobile media query so desktop is unaffected. */
     .mob-nav{background:var(--acid-green);border-top:4px solid white}
-    .mob-tab{color:var(--dark-ink);font-family:'Space Mono',monospace;font-weight:700;text-transform:uppercase;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9.5px;padding:6px 2px;letter-spacing:.02em}
+    .mob-tab{color:var(--dark-ink);background:transparent;border:none;font-family:'Space Mono',monospace;font-weight:700;text-transform:uppercase;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9.5px;padding:6px 2px;letter-spacing:.02em;cursor:pointer}
     .mob-tab i{font-size:18px}
     .mob-tab .nav-badge{position:absolute;top:2px;right:14%;margin-left:0}
     .mob-tab.active{color:var(--dark-ink);background:var(--dark-ink);color:var(--acid-green)}
@@ -215,7 +250,7 @@
         --bg:#f6f7f2; --bg2:#FFFFFF; --bg3:#eaebe4;
         --line:rgba(9,9,11,.12); --line2:rgba(9,9,11,.18);
         --fill:rgba(9,9,11,.03); --fill2:rgba(9,9,11,.05);
-        --ink:#18181B; --sub:#3F3F46; --mute:#71717A; --mute2:#A1A1AA;
+        --ink:#18181B; --sub:#3F3F46; --mute:#6B6B6F; --mute2:#A1A1AA;
         --limeTx:#166534; --red:#DC2626;
         --tint05:rgba(101,163,13,.06); --tint10:rgba(101,163,13,.10); --tint20:rgba(101,163,13,.20); --tint30:rgba(101,163,13,.28);
         --navbg:rgba(250,250,250,.80);
@@ -271,7 +306,12 @@
     .nav-item:hover{background:var(--fill);color:var(--ink)}
     .nav-item.active{background:var(--tint10);color:var(--limeTx);border-color:var(--tint20);font-weight:700}
     .nav-badge{margin-left:auto;background:var(--tint10);border:1px solid var(--tint20);color:var(--limeTx);border-radius:99px;font-size:10px;padding:1px 8px;font-family:var(--mono);font-weight:700}
-    .mob-tab{color:var(--mute)!important;min-height:56px}
+    /* Fixed dark gray, not a theme-following token: .mob-nav's background is
+       always the bright lime accent regardless of theme (same reason
+       .hero-content's text is pinned to a fixed dark color above) — a
+       theme-varying muted gray reads fine in light mode but fails contrast
+       in dark mode against that always-bright bar. */
+    .mob-tab{color:#52525B!important;min-height:56px}
     .mob-tab.active{background:var(--tint10)!important;color:var(--limeTx)!important}
     .vt-btn{color:var(--sub)!important}
     .vt-btn.active{background:var(--lime)!important;color:#09090B!important}
@@ -308,6 +348,8 @@
 
     /* a11y + motion (fast, crisp; reduced-motion respected) */
     :focus-visible{outline:2px solid var(--limeTx);outline-offset:2px}
+    .skip-link{position:fixed;top:-100px;left:8px;z-index:9999;background:var(--bg2);color:var(--ink);border:1px solid var(--line2);border-radius:8px;padding:10px 16px;font-family:var(--mono);font-size:12px;text-decoration:none;transition:top .15s ease-out}
+    .skip-link:focus{top:8px}
     .btn,.btn-primary,.nav-item,.cat-pill,.mob-tab,.vt-btn,.card,input,select,textarea,.hdr-demo-btn,.hdr-icon-btn{transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out,box-shadow .18s ease-out,transform .18s ease-out}
     @media(pointer:coarse){.btn,.btn-primary,.mob-tab,.hdr-icon-btn,.hdr-demo-btn,.cat-pill,.nav-item{min-height:44px}}
     @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -601,9 +643,11 @@
 </style>
 </head>
 <body>
-<div class="shell" id="app-shell" style="display:none">
-<div class="app-header" id="app-header"><button class="hdr-icon-btn hdr-menu-btn" id="hdr-menu-btn" onclick="toggleMobileSidebar()" title="Menu" aria-label="Open navigation menu"><i class="ti ti-menu-2"></i></button><div class="app-header-brand"><div class="app-header-name" style="font-size:22px;letter-spacing:-0.8px">Dulà <span style="color:var(--gold)">HQ</span></div><div class="app-header-sub" id="sb-trn-name">Tournament Manager</div></div><div class="hdr-dropdown-wrap" id="viewas-dropdown-wrap"></div><button onclick="seedDemo()" class="hdr-demo-btn"><i class="ti ti-wand"></i> Demo</button><div class="app-header-user"><span id="user-badge" style="font-size:var(--fs13);color:var(--tm);white-space:nowrap">Not signed in</span><div id="sync-actions-wrap" style="display:flex;gap:6px"></div><button onclick="signOut()" class="hdr-icon-btn" title="Sign out"><i class="ti ti-logout"></i></button></div></div><div class="category-strip" id="category-strip"></div>
-<!-- HERO COLLAGE (new theme) — shown on sign-in and dashboard via JS -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<!-- HERO COLLAGE (new theme) — shown on sign-in and dashboard via JS.
+     Lives OUTSIDE #app-shell on purpose: #app-shell defaults to
+     display:none until sign-in, and this banner must be visible on the
+     signed-out sign-in screen too (see #signin-wrap below, same reason). -->
 <div id="hero-collage" class="hero-collage" style="display:none">
     <div class="acid-splash splash-1"></div>
     <div class="acid-splash splash-2"></div>
@@ -618,42 +662,22 @@
         <button class="btn-primary" onclick="if(window.S && S.role==='admin') navTo('setup'); else navTo('live')">Start a Tournament</button>
     </div>
 </div>
-<script>
-// Hero collage visibility — show on sign-in and dashboard, hide elsewhere
-(function(){
-  function updateHero(){
-    var hero = document.getElementById('hero-collage');
-    if (!hero) return;
-    var isSignIn = !window.AUTH || !window.AUTH.signedIn;
-    var isDashboard = window.S && (window.S.page === 'admindashboard' || window.S.page === 'setup');
-    if (isSignIn || isDashboard) {
-      hero.style.display = 'flex';
-    } else {
-      hero.style.display = 'none';
-    }
-  }
-  var origRender = window.render;
-  if (typeof origRender === 'function') {
-    window.render = function(){
-      var r = origRender.apply(this, arguments);
-      setTimeout(updateHero, 50);
-      return r;
-    }
-  }
-  document.addEventListener('DOMContentLoaded', updateHero);
-  setInterval(updateHero, 1000);
-  window.updateHeroCollage = updateHero;
-})();
-</script><div class="sb-overlay" id="sb-overlay" onclick="closeDropdowns()"></div><span id="sb-trn-meta" style="display:none"></span>
+<!-- Sign-in / role-picker page. Also lives OUTSIDE #app-shell — see note
+     above. renderSignInPage() fills this in at boot and on sign-out;
+     every sign-in path empties it again once #app-shell is shown. -->
+<div id="signin-wrap"></div>
+<div class="shell" id="app-shell" style="display:none">
+<header class="app-header" id="app-header"><button class="hdr-icon-btn hdr-menu-btn" id="hdr-menu-btn" onclick="toggleMobileSidebar()" title="Menu" aria-label="Open navigation menu"><i class="ti ti-menu-2"></i></button><div class="app-header-brand"><div class="app-header-name" style="font-size:22px;letter-spacing:-0.8px">Dulà <span style="color:var(--gold)">HQ</span></div><div class="app-header-sub" id="sb-trn-name">Tournament Manager</div></div><div class="hdr-dropdown-wrap" id="viewas-dropdown-wrap"></div><button onclick="seedDemo()" class="hdr-demo-btn"><i class="ti ti-wand"></i> Demo</button><div class="app-header-user"><span id="user-badge" style="font-size:var(--fs13);color:var(--tm);white-space:nowrap">Not signed in</span><div id="sync-actions-wrap" style="display:flex;gap:6px"></div><button onclick="signOut()" class="hdr-icon-btn" title="Sign out"><i class="ti ti-logout"></i></button></div></header><div class="category-strip" id="category-strip"></div>
+<div class="sb-overlay" id="sb-overlay" onclick="closeDropdowns()"></div><span id="sb-trn-meta" style="display:none"></span>
 <div class="app-body" id="app-body">
-  <nav class="app-sidebar" id="app-sidebar"><div id="app-sidebar-inner"></div></nav>
-  <div class="main" id="app-main">
+  <nav class="app-sidebar" id="app-sidebar" aria-label="Primary"><div id="app-sidebar-inner"></div></nav>
+  <main class="main" id="app-main">
     <div class="topbar" id="topbar">
       <div><div class="tb-title" id="tb-title">Setup</div><div class="tb-sub" id="tb-sub"></div></div>
       <div class="tb-actions" id="tb-actions"></div>
     </div>
     <div class="content" id="main-content"></div>
-  </div>
+  </main>
 </div>
 <div class="mob-nav" id="mob-nav" style="display:none"><div class="mob-nav-inner" id="mob-nav-inner"></div></div>
 <div class="modal-overlay hidden" id="modal-overlay">
@@ -6918,6 +6942,40 @@ if (GOOGLE_CLIENT_ID) {
 <script type="module" src="/src/main.js"></script>
 
 <script>
+/* Hero collage visibility — show on sign-in and dashboard, hide elsewhere.
+   Runs down here (not next to the #hero-collage markup above) because
+   window.render isn't defined yet at that point in the document — hooking
+   it there silently never attached and the visibility only ever updated via
+   a once-a-second setInterval poll. Down here window.render already exists
+   (proven by the theme-toggle re-place hook below, which relies on the same
+   thing), so this hooks the real render cycle instead of polling. */
+(function(){
+  function updateHero(){
+    var hero = document.getElementById('hero-collage');
+    if (!hero) return;
+    var isSignIn = !window.AUTH || !window.AUTH.signedIn;
+    var isDashboard = window.S && (window.S.page === 'admindashboard' || window.S.page === 'setup');
+    if (isSignIn || isDashboard) {
+      hero.style.display = 'flex';
+    } else {
+      hero.style.display = 'none';
+    }
+  }
+  var origRenderForHero = window.render;
+  if (typeof origRenderForHero === 'function') {
+    window.render = function(){
+      var r = origRenderForHero.apply(this, arguments);
+      updateHero();
+      return r;
+    }
+  }
+  document.addEventListener('DOMContentLoaded', updateHero);
+  updateHero();
+  window.updateHeroCollage = updateHero;
+})();
+</script>
+
+<script>
 /* Tournament Ops — theme toggle (dark default, follows system, remembers choice) */
 (function(){
   var root=document.documentElement,KEY='dulahq-theme';
@@ -6940,7 +6998,16 @@ if (GOOGLE_CLIENT_ID) {
     if(h&&!document.getElementById('ops-theme-tog')){h.insertBefore(makeBtn(),h.firstChild)}
   }
   if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',place)}else{place()}
-  setInterval(place,3000); /* re-place if header re-renders */
+  /* Re-place on every render (covers the header being rebuilt) instead of
+     polling on a timer — same fix as the hero-collage visibility hook above. */
+  var origRenderForTheme=window.render;
+  if(typeof origRenderForTheme==='function'){
+    window.render=function(){
+      var r=origRenderForTheme.apply(this,arguments);
+      place();
+      return r;
+    }
+  }
 })();
 </script>
 
@@ -6991,7 +7058,7 @@ function updateHeaderBrand(){
 function ensurePlatformFooter(){
   if (document.getElementById('plat-footer')) return;
   var shell = document.getElementById('app-shell') || document.body;
-  var f = document.createElement('div'); f.id = 'plat-footer';
+  var f = document.createElement('footer'); f.id = 'plat-footer';
   var ctx = getOrgContext();
   var left = '© ' + new Date().getFullYear() + ' ' + (ctx ? ctx.name.toUpperCase() : 'DULÀ HQ');
   f.innerHTML = '<span>' + left + '</span><span>POWERED BY DULÀ HQ</span>';

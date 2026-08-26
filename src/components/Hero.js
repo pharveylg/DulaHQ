@@ -167,6 +167,10 @@ export function Hero(variant, opts = {}) {
 export function applyBrandingToDocument() {
   try {
     if (BRANDING.appName) document.title = `${BRANDING.appName} — ${BRANDING.tagline}`
+    // No-op when no custom favicon is configured — index.html already ships a
+    // default <link rel="icon">, and setting href to '' here would overwrite
+    // it with the empty string, which resolves to the current page URL.
+    if (!BRANDING.favicon) return
     let link = document.querySelector("link[rel*='icon']")
     if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link) }
     link.href = BRANDING.favicon
