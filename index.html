@@ -267,6 +267,31 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);color:var(-
   .app-header-sub{display:none}
   .hdr-demo-btn span{display:none}
 }
+
+/* ===== demo tenant banner (ported) ===== */
+#org-banner{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9998;display:flex;align-items:center;gap:12px;background:var(--n2,#FFFDF6);color:var(--ts,#221D15);border:1px solid var(--navaccb,#C9B37E);border-radius:12px;padding:10px 16px;font-size:var(--fs13);letter-spacing:.08em;font-weight:700;text-transform:uppercase;box-shadow:0 10px 40px rgba(28,22,8,.18)}
+#org-banner button{background:var(--ts,#221D15);color:var(--n2,#FFFDF6);border:none;border-radius:8px;padding:6px 12px;font-size:var(--fs11);letter-spacing:.12em;font-weight:700;text-transform:uppercase;cursor:pointer}
+
+/* ===== system actions rail (desktop) — View As / Refresh-Save-Reset / Demo / Sign out ===== */
+#action-rail{display:none}
+@media(min-width:1025px){
+  #action-rail{position:fixed;top:150px;right:18px;width:200px;display:flex;flex-direction:column;gap:10px;z-index:600;align-items:stretch;max-height:calc(100vh - 170px);overflow-y:auto}
+  #action-rail:empty{display:none}
+  #app-main{margin-right:220px}
+  #action-rail #tb-actions:empty,#action-rail #viewas-dropdown-wrap:empty,#action-rail #sync-actions-wrap:empty{display:none!important}
+  #action-rail .tb-actions{display:flex;flex-direction:column;gap:10px;width:100%}
+  #action-rail .btn,#action-rail button{width:100%;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #action-rail > * + *{border-top:1px solid var(--nbl,#E5DFCE);padding-top:10px}
+  #action-rail #viewas-dropdown-wrap{display:flex;flex-direction:column;gap:6px}
+  #action-rail .hdr-dropdown-btn{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%}
+  #action-rail .hdr-dropdown-panel{position:static!important;width:100%;min-width:0;z-index:auto;margin-top:2px;box-shadow:none;border-radius:14px;background:var(--n2,#FFFDF6);border:1px solid var(--nb,#E5DFCE)}
+  #action-rail .hdr-dropdown-panel .role-pill{border-bottom-color:var(--nbl,#E5DFCE);min-height:38px}
+  #action-rail #sync-actions-wrap{display:flex!important;flex-direction:column;gap:6px}
+  #action-rail #sync-actions-wrap > div{display:flex!important;flex-direction:column;gap:6px}
+  #action-rail #sync-actions-wrap button{width:100%!important}
+  #action-rail .hdr-demo-btn{min-height:40px;justify-content:center}
+  #action-rail button.hdr-icon-btn[onclick="signOut()"]{min-height:40px}
+}
 </style>
 </head>
 <body>
@@ -288,6 +313,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);color:var(-
      visible at any width until this was removed. -->
 <nav class="mob-nav" id="mob-nav" aria-label="Primary"><div class="mob-nav-inner" id="mob-nav-inner"></div></nav>
 <div class="mob-more-sheet" id="mob-more-sheet"></div>
+<div id="action-rail" aria-hidden="true"></div>
 <div class="modal-overlay hidden" id="modal-overlay">
   <div class="modal">
     <div class="modal-hd"><span class="modal-title" id="modal-title"></span><button class="btn sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
@@ -1223,7 +1249,7 @@ function renderNav() {
     mh += '<button class="mob-tab mob-more-btn" onclick="toggleMobMoreSheet()" style="position:relative"><i class="ti ti-dots"></i>More</button>';
     if (moreSheetEl) {
       moreSheetEl.innerHTML = UI_DROPDOWN.mobMore
-        ? '<div class="mob-more-backdrop" onclick="closeMobMoreSheet()"></div><div class="mob-more-panel">' + buildGroupedNavListHtml(items, cat, liveNowDrawer) + '</div>'
+        ? '<div class="mob-more-backdrop" onclick="closeMobMoreSheet()"></div><div class="mob-more-panel">' + buildGroupedNavListHtml(items, cat, liveNowDrawer) + demoSystemGroupHtml_() + '</div>'
         : '';
       moreSheetEl.className = 'mob-more-sheet' + (UI_DROPDOWN.mobMore ? ' show' : '');
       hydrateIcons(moreSheetEl);
@@ -1251,7 +1277,7 @@ function setTopbar(title, sub, actions) {
   }
   el('tb-actions').innerHTML = actions || '';
   var t = S.tournament;
-  el('sb-trn-name').textContent = t.name || 'Dula HQ Tournament';
+  el('sb-trn-name').textContent = (S._tournamentMeta && S._tournamentMeta.name) || t.name || 'Dula HQ Tournament';
   var meta = 'Not configured';
   if (t.format) { meta = S.categories.length + ' categor' + (S.categories.length === 1 ? 'y' : 'ies') + ' \u00b7 ' + t.venue; }
   el('sb-trn-meta').textContent = meta;
@@ -5893,6 +5919,218 @@ if (GOOGLE_CLIENT_ID) {
     }
   });
 }
+</script>
+<script>
+/* =====================================================================
+   PRE-LOADED DEMO TENANTS + SYSTEM RAIL (ported onto the cream base)
+   — /t/{slug} boots a self-contained demo tenant; your real state is
+   backed up and restored when you leave; backend sync is disabled while
+   inside a demo tenant so demo data never reaches the sheet.
+   ===================================================================== */
+var DEMO_ORGS = [
+  { slug:'usnagali', name:'Copa Gali Futbol', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Copa Gali Futbol 2026', venue:'Gali Valley Sports Complex', date:'2026-05-09' } } },
+  { slug:'copa-davao', name:'Copa Davao', accent:'#FF6B35', admin:'copa.davao@dulahq.test', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Copa Davao 2026', venue:'Davao Delta Fields', date:'2026-06-20' } } },
+  { slug:'manila-summer', name:'Manila Summer Invitational', accent:'#3B82F6', admin:'msi@dulahq.test', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Manila Summer Invitational 2026', venue:'Rizal Memorial Coliseum', date:'2026-04-11' } } },
+  { slug:'cebu-volley', name:'Cebu Volley Classic', accent:'#A855F7', admin:'volley@dulahq.test', status:'active',
+    demo:{ stage:'group', meta:{ name:'Cebu Volley Classic 2026', venue:'Cebu Coliseum', date:'2026-08-22' } } },
+  { slug:'davao-hoops', name:'Davao Hoops League', accent:'#F59E0B', admin:'hoops@dulahq.test', status:'active',
+    demo:{ stage:'group', meta:{ name:'Davao Hoops League S2', venue:'Davao City Gym', date:'2026-08-29' } } }
+];
+
+/* In-place S swap that PRESERVES the category accessor proxies.
+   Proxied fields (teams/groups/groupMatches/knockoutRounds/generated/
+   bracketView/tournament) live inside next.categories — never delete or
+   plain-assign those keys or per-category routing silently breaks. */
+var S_PROXY_KEYS = { teams:1, groups:1, groupMatches:1, knockoutRounds:1, generated:1, bracketView:1, tournament:1 };
+function swapStateInPlace_(next){
+  try {
+    for (var k in S){ if (Object.prototype.hasOwnProperty.call(S, k) && k !== 'timerInterval' && !S_PROXY_KEYS[k]) delete S[k]; }
+    for (var k2 in next){ if (k2 !== 'timerInterval' && !S_PROXY_KEYS[k2]) S[k2] = next[k2]; }
+  } catch(e){}
+}
+function demoSanitize_(st){ try { var c = JSON.parse(JSON.stringify(st)); c.timerInterval = null; return c; } catch(e){ return st; } }
+var DEMO_S_TEMPLATE = (function(){ try { return JSON.parse(JSON.stringify(S)); } catch(e){ return null; } })();
+
+function buildDemoState_(org){
+  var st = DEMO_S_TEMPLATE ? JSON.parse(JSON.stringify(DEMO_S_TEMPLATE)) : { categories: [], users: [], referees: [] };
+  st._tournamentMeta = { name: org.demo.meta.name, venue: org.demo.meta.venue, date: org.demo.meta.date, pitches: [], guestAccessEnabled: false };
+  st.categories = []; st.users = []; st.referees = [];
+  st._demoOrg = org.slug;
+  swapStateInPlace_(st); /* mutate S in place — generateDraw()/proxy layer keep working */
+  var frac = org.demo.stage === 'complete' ? 1 : 0.5;
+  var c1 = defaultCategory(); c1.name = 'Open Division'; c1.ageGroup = 'Open';
+  st.categories.push(c1);
+  var unplayed = seedDemoCategory_(c1, 12, 4, frac);
+  var c2 = defaultCategory(); c2.name = 'U16'; c2.ageGroup = 'U16';
+  st.categories.push(c2);
+  seedDemoCategory_(c2, 8, 2, frac);
+  S.activeCategoryId = c1.id; /* on S itself — never the temp copy, or activeCategory() spawns a stray */
+  var admin = defaultUser(); admin.name = 'Tournament Admin'; admin.email = org.admin || 'admin@dulahq.test'; admin.role = 'admin';
+  st.users.push(admin);
+  var ref = defaultReferee(); ref.name = 'Center Referee'; st.referees.push(ref);
+  if (org.demo.stage !== 'complete' && unplayed && unplayed.length){
+    var lm = unplayed[0];
+    lm.inProgress = true; lm.homeScore = 1; lm.awayScore = 0; lm.refereeId = ref.id;
+    st.timerSeconds = 28 * 60; st.timerStarted = true; st.timerRunning = false;
+    st.timerMatchId = lm.id;
+    try { st.currentMatchByCategory = st.currentMatchByCategory || {}; st.currentMatchByCategory[c1.id] = lm.id; } catch(e){}
+  }
+  return S;
+}
+
+function enterDemoOrg(org){
+  try {
+    if (S && S._demoOrg){
+      try { localStorage.setItem('dulahq:demo-state:' + S._demoOrg, JSON.stringify(demoSanitize_(S))); } catch(e){}
+    } else {
+      try { if (!localStorage.getItem('dulahq:demo-backup')) localStorage.setItem('dulahq:demo-backup', JSON.stringify(demoSanitize_(S))); } catch(e){}
+    }
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('dulahq:demo-state:' + org.slug) || 'null'); } catch(e){}
+    if (saved && saved._demoOrg === org.slug){ swapStateInPlace_(saved); }
+    else { buildDemoState_(org); try { localStorage.setItem('dulahq:demo-state:' + org.slug, JSON.stringify(demoSanitize_(S))); } catch(e){} }
+  } catch(e){ /* never block boot */ }
+}
+function leaveDemoOrgIfNeeded(){
+  try {
+    if (S && S._demoOrg){ try { localStorage.setItem('dulahq:demo-state:' + S._demoOrg, JSON.stringify(demoSanitize_(S))); } catch(e){} }
+    var bk = null;
+    try { bk = JSON.parse(localStorage.getItem('dulahq:demo-backup') || 'null'); } catch(e){}
+    if (bk){ swapStateInPlace_(bk); try { localStorage.removeItem('dulahq:demo-backup'); } catch(e){} }
+    try { var sn = el('sb-trn-name'); if (sn) sn.textContent = (S._tournamentMeta && S._tournamentMeta.name) || 'Dula HQ Tournament'; } catch(e){}
+  } catch(e){}
+}
+function renderDemoBanner_(){
+  try {
+    var old = document.getElementById('org-banner'); if (old) old.remove();
+    if (!S || !S._demoOrg) return;
+    var org = null;
+    for (var i=0;i<DEMO_ORGS.length;i++) if (DEMO_ORGS[i].slug === S._demoOrg) org = DEMO_ORGS[i];
+    if (!org) return;
+    var b = document.createElement('div'); b.id = 'org-banner';
+    b.innerHTML = 'Viewing · ' + esc(org.name) + ' <button id="org-return">Return</button>';
+    document.body.appendChild(b);
+    document.getElementById('org-return').onclick = function(){
+      try { leaveDemoOrgIfNeeded(); } catch(e){}
+      location.href = location.origin + '/';
+    };
+  } catch(e){}
+}
+
+/* Backend fence: while inside a demo tenant, every sync path no-ops.
+   (autoSave/pushToSheetsQuiet fire implicitly; the other three are the
+   header/rail/sheet buttons — all guarded here in one place.) */
+(function(){
+  function fence(name){
+    var orig = window[name];
+    if (typeof orig !== 'function') return;
+    window[name] = function(){
+      if (S && S._demoOrg){ try { showToast('Demo tenant — backend sync is disabled'); } catch(e){} return; }
+      return orig.apply(this, arguments);
+    };
+  }
+  fence('autoSave'); fence('pushToSheetsQuiet'); fence('pushToSheets'); fence('seedFromSheets'); fence('loadFromSheets');
+})();
+
+/* Mobile More sheet: System group (same functions the desktop rail buttons call) */
+function demoSystemGroupHtml_(){
+  try {
+    if (typeof AUTH === 'undefined' || !AUTH || !AUTH.signedIn) return '';
+    var h = '<div class="dropdown-group-label" style="margin-top:6px">System</div>';
+    h += '<button class="nav-item" onclick="closeMobMoreSheet();seedDemo()"><i class="ti ti-wand"></i>Demo data</button>';
+    h += '<button class="nav-item" onclick="closeMobMoreSheet();loadFromSheets()"><i class="ti ti-cloud-download"></i>Refresh from backend</button>';
+    if (AUTH.role === 'admin'){
+      h += '<button class="nav-item" onclick="closeMobMoreSheet();pushToSheets()"><i class="ti ti-cloud-upload"></i>Save to backend</button>';
+      h += '<button class="nav-item" onclick="closeMobMoreSheet();seedFromSheets()"><i class="ti ti-rotate"></i>Reset</button>';
+    }
+    return h;
+  } catch(e){ return ''; }
+}
+
+/* Desktop rail: relocate View As / Refresh-Save-Reset / Demo / Sign out.
+   Mobile keeps them in the header (status quo) + the More-sheet System group. */
+var PORT_MQ = window.matchMedia('(max-width: 1024px)');
+var CTRL_HOME = [], TB_HOME = null;
+function railControls(){
+  var out = [], nd;
+  nd = document.getElementById('viewas-dropdown-wrap'); if (nd) out.push(nd);
+  nd = document.getElementById('sync-actions-wrap'); if (nd) out.push(nd);
+  nd = document.querySelector('.hdr-demo-btn'); if (nd) out.push(nd);
+  nd = document.querySelector('button.hdr-icon-btn[onclick="signOut()"]'); if (nd) out.push(nd);
+  return out;
+}
+function grabHomes(controls){
+  try { var tb = document.getElementById('tb-actions'); if (tb && !TB_HOME) TB_HOME = { node: tb, parent: tb.parentNode, next: tb.nextSibling }; } catch(e){}
+  for (var i=0;i<controls.length;i++){
+    var nd = controls[i], known = false;
+    for (var j=0;j<CTRL_HOME.length;j++){ if (CTRL_HOME[j].node === nd){ known = true; break; } }
+    if (!known && nd.closest('.app-header')) CTRL_HOME.push({ node: nd, parent: nd.parentNode, next: nd.nextSibling });
+  }
+  for (var k=CTRL_HOME.length-1;k>=0;k--){ if (!CTRL_HOME[k].node.isConnected) CTRL_HOME.splice(k,1); }
+}
+function placeActions(){
+  try {
+    var tb = document.getElementById('tb-actions'), rail = document.getElementById('action-rail');
+    if (!tb || !rail) return;
+    var controls = railControls();
+    grabHomes(controls);
+    var shell = document.getElementById('app-shell');
+    var signedIn = !(shell && shell.style.display === 'none');
+    if (PORT_MQ.matches || !signedIn){
+      if (TB_HOME && TB_HOME.parent && TB_HOME.parent.isConnected && tb.parentNode === rail)
+        (TB_HOME.next && TB_HOME.next.parentNode === TB_HOME.parent) ? TB_HOME.parent.insertBefore(tb, TB_HOME.next) : TB_HOME.parent.appendChild(tb);
+      for (var i=0;i<CTRL_HOME.length;i++){
+        var h0 = CTRL_HOME[i];
+        try {
+          if (h0.parent && h0.parent.isConnected && h0.node.parentNode !== h0.parent)
+            (h0.next && h0.next.parentNode === h0.parent) ? h0.parent.insertBefore(h0.node, h0.next) : h0.parent.appendChild(h0.node);
+        } catch(e){}
+      }
+      rail.style.display = 'none';
+    } else {
+      if (tb.parentElement !== rail) rail.appendChild(tb);
+      for (var j=0;j<controls.length;j++){ if (controls[j].parentNode !== rail) rail.appendChild(controls[j]); }
+      rail.style.display = 'flex';
+    }
+  } catch(e){}
+}
+(function(){
+  var _pst = window.setTopbar;
+  if (typeof _pst === 'function'){
+    window.setTopbar = function(){ var o = _pst.apply(this, arguments); try { placeActions(); } catch(e){} return o; };
+  }
+  document.addEventListener('DOMContentLoaded', function(){ try { placeActions(); renderDemoBanner_(); } catch(e){} });
+  try { placeActions(); } catch(e){}
+  if (PORT_MQ.addEventListener) PORT_MQ.addEventListener('change', function(){ try { placeActions(); } catch(e){} });
+  try {
+    var sh = document.getElementById('app-shell');
+    if (sh && window.MutationObserver) new MutationObserver(function(){ try { placeActions(); } catch(e){} }).observe(sh, { attributes:true, attributeFilter:['style'] });
+  } catch(e){}
+})();
+
+/* boot — /t/{slug} enters a demo tenant; any other path restores your real state */
+(function(){
+  try {
+    var m = location.pathname.match(/^\/t\/([a-z0-9-]+)/i);
+    if (m) {
+      var slug = m[1].toLowerCase();
+      for (var i=0;i<DEMO_ORGS.length;i++) if (DEMO_ORGS[i].slug === slug) {
+        if (!S._demoOrg || S._demoOrg !== slug) enterDemoOrg(DEMO_ORGS[i]);
+        break;
+      }
+    } else {
+      leaveDemoOrgIfNeeded();
+    }
+  } catch(e){}
+  try { if (typeof AUTH !== 'undefined' && AUTH && AUTH.signedIn && ['teams','groups','bracket'].indexOf(S.page) !== -1) render(); } catch(e){}
+  try { var sn = el('sb-trn-name'); if (sn && S._tournamentMeta && S._tournamentMeta.name) sn.textContent = S._tournamentMeta.name; } catch(e){}
+  renderDemoBanner_();
+  try { renderNav(); } catch(e){}
+  try { placeActions(); } catch(e){}
+})();
 </script>
 </body>
 </html>
