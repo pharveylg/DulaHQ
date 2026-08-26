@@ -3,6 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* error net v3 — names resources, keeps all errors, catches thrown strings */
+(function(){
+  var seen = [];
+  function show(msg){
+    try {
+      if (seen.indexOf(msg) === -1) seen.push(msg);
+      try { localStorage.setItem('dulahq:lastError', JSON.stringify({t:Date.now(),m:seen.slice(-6)})); } catch(_){}
+      var b = document.getElementById('ops-error-net');
+      if (!b && document.body) {
+        b = document.createElement('div'); b.id = 'ops-error-net';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#EF4444;color:#fff;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5;padding:10px 14px;white-space:pre-wrap;word-break:break-all;max-height:40vh;overflow:auto';
+        document.body.appendChild(b);
+      }
+      if (b) b.textContent = '⚠ Dulà HQ error(s):\n' + seen.slice(-6).map(function(m,i){return (i+1)+'. '+m;}).join('\n') + '\n(report this text to fix it)';
+    } catch(_) {}
+  }
+  window.addEventListener('error', function(e){
+    if (e && e.target && e.target.nodeName && (e.target.src || e.target.href) && e.target.nodeName !== 'IMG' || (e.target && e.target.nodeName === 'IMG')) {
+      var url = e.target.src || e.target.href || '';
+      var attrSrc = (e.target.getAttribute && e.target.getAttribute('src')) || '';
+      if (!attrSrc) return; /* src="" resolves to the page URL — not a real load failure */
+      if (url) { show('FAILED TO LOAD ' + e.target.nodeName + ' → ' + url.split('/').slice(-2).join('/')); return; }
+    }
+    var msg = (e && e.message) || (e && e.error && e.error.message) || (typeof (e && e.error) === 'string' ? e.error : '') || 'unknown error (no message — type: ' + (e && e.type) + ')';
+    show(msg + (e && e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno : ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function(e){
+    show('promise: ' + ((e.reason && (e.reason.message || e.reason)) || 'unknown'));
+  });
+  var _ce = console.error;
+  console.error = function(){ try { show('console.error: ' + Array.prototype.slice.call(arguments).map(function(a){ return a && a.stack ? String(a.stack).split('\n')[0] : String(a); }).join(' ')); } catch(_){} _ce.apply(console, arguments); };
+  window.__dulahqErrors = seen;
+})();
+</script>
+
 <title>Dulà HQ — Tournament Manager</title>
 <meta name="description" content="Dulà HQ is a tournament management platform for running brackets, groups, live scoring, referee tools, and team registration — all in one place.">
 <meta name="robots" content="index, follow">
@@ -18,8 +54,13 @@
 <meta name="twitter:title" content="Dulà HQ — Tournament Manager">
 <meta name="twitter:description" content="Run brackets, groups, live scoring, referee tools, and team registration — all in one place.">
 <meta name="twitter:image" content="https://www.dulahq.com/branding/logo.png">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&family=Anton&family=Permanent+Marker&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/tabler-icons.min.css">
+<link href="/vendor/fonts.css" rel="stylesheet">
+<!-- /vendor/fonts.css self-hosts Oswald/Space Grotesk/JetBrains Mono, but not
+     these 3 — they're used throughout the CSS (.app-header-name, .slogan,
+     button/nav mono text) but were never loaded at all before this fix, so
+     they silently fell back to system fonts everywhere they're referenced. -->
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -146,7 +187,7 @@
        without opening anything. See .app-sidebar / .sidebar-group-label below. */
     .app-body{display:flex;flex:1;align-items:stretch;min-width:0}
     .app-sidebar{flex:0 0 216px;width:216px;background:var(--bg2);border-right:1px solid var(--line);padding:14px 10px 24px;box-sizing:border-box;overflow-y:auto}
-    .sidebar-group-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--mute2);padding:12px 12px 6px;white-space:nowrap}
+    .sidebar-group-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--mute);padding:12px 12px 6px;white-space:nowrap}
     .hdr-menu-btn{display:none}
     .main{flex:1;display:flex;flex-direction:column;min-width:0}
     .topbar{padding:14px 40px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:var(--navbg);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50;color:var(--ink)}
@@ -287,7 +328,7 @@
        unaffected and stays var(--limeTx). */
     .hero-content h1{color:#09090B!important}
     .hero-content p{color:#09090B!important}
-    .hero-content .slogan{background:var(--tint10)!important;color:var(--limeTx)!important;border:1px solid var(--tint30)!important;font-family:var(--mono)!important;transform:rotate(-1.5deg)!important}
+    .hero-content .slogan{background:var(--tint10)!important;color:#09090B!important;border:1px solid rgba(9,9,11,.30)!important;font-family:var(--mono)!important;transform:rotate(-1.5deg)!important}
 
     /* header + nav */
     .app-header{background:var(--navbg)!important;color:var(--ink)!important;backdrop-filter:blur(12px);border-bottom:1px solid var(--line)!important}
@@ -334,7 +375,7 @@
     [data-theme="light"] .brd{color:#B91C1C!important}
     .bamb{background:rgba(251,146,60,.14)!important;color:#FB923C!important;border-color:rgba(251,146,60,.34)!important}
     [data-theme="light"] .bamb{background:rgba(194,65,12,.10)!important;color:#9A3412!important;border-color:rgba(194,65,12,.32)!important}
-    .bgy{background:var(--fill)!important;color:var(--mute)!important;border-color:var(--line2)!important}
+    .bgy{background:var(--fill)!important;color:var(--sub)!important;border-color:var(--line2)!important}
     .bpur{background:var(--tint05)!important;color:var(--sub)!important;border-color:var(--line2)!important}
     .tbl th{background:var(--tint10)!important;color:var(--limeTx)!important;border-bottom:1px solid var(--tint30)!important;font-size:11px;letter-spacing:1.5px}
     .tbl tr:hover td{color:var(--limeTx)!important}
@@ -515,10 +556,10 @@
     /* the login screen is deliberately dark regardless of site theme, so its text below uses
        fixed light-on-dark colors rather than the theme-following --ink/--sub/--limeTx vars
        (those flip to dark values in light theme and would go near-invisible on this dark box) */
-    .lg-split{flex:1;display:flex;min-height:calc(100vh - 50px)}
+    .lg-split{flex:1;display:flex;min-height:calc(100vh - 50px);color:#F4F4F5}
     .lg-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:8%}
     .lg-box{background:#1a1d1c;padding:40px;border-radius:10px;max-width:400px;width:100%;border:1px solid var(--line);color:#F4F4F5}
-    .lg-label{color:var(--limeTx);font-family:var(--mono);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
+    .lg-label{color:#d4ff32;font-family:var(--mono);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
     .lg-box .lg-label,.lg-overlay-badge .lg-label{color:var(--lime)}
     .lg-h2{margin:0 0 20px;font-size:1.8rem;font-family:var(--disp);font-weight:600;letter-spacing:.5px;color:#F4F4F5}
     .lg-sub{color:rgba(244,244,245,.68);font-size:.85rem;line-height:1.6;margin:0 0 24px}
@@ -532,12 +573,12 @@
     .lg-secondary-row{display:flex;gap:10px;margin-top:22px}
     .lg-btn-outline{flex:1;padding:12px 14px;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:rgba(255,255,255,.03);color:#F4F4F5;font-family:var(--body);font-weight:600;font-size:12.5px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;text-align:center}
     .lg-btn-outline:hover{border-color:var(--lime);color:var(--lime)}
-    .lg-links{margin-top:18px;font-size:.8rem;line-height:1.8;color:var(--mute);text-align:center}
+    .lg-links{margin-top:18px;font-size:.8rem;line-height:1.8;color:#A1A1AA;text-align:center}
     .lg-links a{color:rgba(244,244,245,.72);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
     .lg-links a:hover{color:var(--lime)}
     .lg-links .sep{margin:0 6px;opacity:.5}
     .lg-right{flex:1;position:relative;background:#181f1e url('/login-hero.jpg') center/cover;min-height:320px}
-    .lg-overlay-badge{position:absolute;bottom:30px;left:30px;right:30px;padding:18px 20px;background:rgba(10,17,17,.72);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;color:#fff}
+    .lg-overlay-badge{position:absolute;bottom:30px;left:30px;right:30px;color:#ffffff;padding:18px 20px;background:rgba(10,17,17,.72);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;color:#fff}
     .lg-ticker{background:var(--lime);color:#09090B;min-height:50px;display:flex;align-items:center;gap:10px;padding:12px 20px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;font-family:var(--mono);flex-wrap:wrap}
     @media(max-width:860px){.lg-split{flex-direction:column}.lg-right{min-height:220px;order:-1}.lg-left{padding:24px}.lg-box{padding:26px}.lg-overlay-badge{bottom:16px;left:16px;right:16px}}
     /* ---- editorial page heroes (teams / groups / bracket) ---- */
@@ -596,7 +637,7 @@
     .fmt-opt:hover{border-color:var(--tint30)}
     .fmt-opt.sel{border-color:var(--lime);background:var(--tint10)}
     .fmt-label{font-weight:700;font-size:13.5px;margin-top:8px;color:var(--ink)}
-    .fmt-sub{font-size:11.5px;color:var(--mute);margin-top:2px}
+    .fmt-sub{font-size:11.5px;color:var(--sub);margin-top:2px}
     .struct-opt{border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;background:var(--fill)}
     .struct-opt:hover{border-color:var(--tint30)}
     .struct-opt.sel{border-color:var(--lime);background:var(--tint10)}
@@ -640,6 +681,290 @@
        .g2/.g3/.g4 grid-template-columns rules above are unconditional and, appearing
        later in source, would otherwise win over that earlier @media block on mobile */
     @media(max-width:768px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}}
+
+    /* flash guard v2 — pure-CSS reveal: visible by 1.2s NO MATTER WHAT (even if JS never runs) */
+    #signin-wrap{opacity:0;animation:lgReveal .18s ease-out 1.2s forwards}
+    #signin-wrap.lg-ready{opacity:1;transition:opacity .18s ease-out}
+    @keyframes lgReveal{to{opacity:1}}
+</style>
+
+<style id="mobile-ui-css">
+/* =====================================================================
+   MOBILE UI — deliberately designed mobile experience (not squeezed desktop)
+   BREAKPOINT: mobile UI < 1024px, desktop UI >= 1024px.
+   To change it: edit the max-width below AND UI.bp in the mobile-ui script.
+   ===================================================================== */
+#mob-topbar,#mob-tabbar,#mob-sheet{display:none}
+
+@media (max-width:1023.98px){
+  /* --- desktop chrome off --- */
+  .app-header,.app-sidebar,.hdr-menu-btn,.hdr-demo-btn,#viewas-dropdown-wrap{display:none!important}
+  /* legacy bottom nav (pre-dual-UI) — replaced by #mob-tabbar */
+  #mob-nav,.mob-nav{display:none!important}
+  #app-shell{padding-top:52px;padding-bottom:calc(60px + env(safe-area-inset-bottom,0px))}
+  html,body{overflow-x:hidden!important}
+  #main-content{padding:12px 12px 22px!important}
+  #main-content img,video,svg{max-width:100%}
+  #main-content .table-wrap,#main-content .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* --- mobile top bar --- */
+  #mob-topbar{display:flex;position:fixed;top:0;left:0;right:0;height:52px;z-index:900;
+    align-items:center;gap:10px;padding:0 14px;padding-top:env(safe-area-inset-top,0px);
+    background:#121413;color:#F4F4F5;border-bottom:1px solid #26292a}
+  #mob-topbar .m-brand{font-family:var(--disp,inherit);font-size:17px;letter-spacing:-.3px;white-space:nowrap}
+  #mob-topbar .m-brand b{color:#d4ff32;font-weight:700}
+  #mob-topbar .m-title{flex:1;min-width:0;font-family:var(--mono,monospace);font-size:11px;font-weight:700;
+    text-transform:uppercase;letter-spacing:1.5px;color:#d4ff32;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #mob-topbar .m-out{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px;
+    background:rgba(255,255,255,.05);color:#F4F4F5;border:none;font-size:17px}
+
+  /* --- mobile bottom tab bar --- */
+  #mob-tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:901;
+    height:calc(60px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
+    background:#121413;border-top:1px solid #26292a}
+  .m-tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:none;border:none;color:#A1A1AA;font-family:var(--mono,monospace);font-size:9.5px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .m-tab i{font-size:19px;line-height:1}
+  .m-tab.active{color:#d4ff32}
+  .m-tab.active i{filter:drop-shadow(0 0 8px rgba(212,255,50,.45))}
+
+  /* --- mobile "More" sheet --- */
+  #mob-sheet{position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+  #mob-sheet .m-sheet-panel{position:absolute;bottom:0;left:0;right:0;max-height:80vh;overflow-y:auto;
+    background:#151817;color:#F4F4F5;border-radius:18px 18px 0 0;border-top:1px solid #26292a;
+    padding:8px 16px calc(22px + env(safe-area-inset-bottom,0px))}
+  .m-grab{width:40px;height:4px;border-radius:2px;background:#3a3d3e;margin:6px auto 12px}
+  .m-sheet-title{font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:2px;
+    text-transform:uppercase;color:#d4ff32;margin:14px 0 8px}
+  .m-item{display:flex;align-items:center;gap:12px;width:100%;min-height:50px;padding:10px 12px;margin:2px 0;
+    background:rgba(255,255,255,.035);border:1px solid #26292a;border-radius:11px;color:#F4F4F5;
+    font-family:var(--body,inherit);font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+  .m-item i{font-size:18px;color:#A1A1AA}
+  .m-item.active{border-color:#d4ff32;background:rgba(212,255,50,.08)}
+  .m-item.active i{color:#d4ff32}
+
+  /* --- mobile cards / lists --- */
+  .m-card{background:#1a1d1c;border:1px solid #26292a;border-radius:13px;padding:14px;margin-bottom:10px;color:#F4F4F5}
+  .m-card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .m-eyebrow{font-family:var(--mono,monospace);font-size:9.5px;font-weight:700;letter-spacing:1.8px;
+    text-transform:uppercase;color:#d4ff32}
+  .m-big{font-family:var(--disp,inherit);font-size:19px;font-weight:600;letter-spacing:-.2px;color:#F4F4F5}
+  .m-sub{font-size:12.5px;color:#A1A1AA;line-height:1.5}
+  .m-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .m-stat{background:#1a1d1c;border:1px solid #26292a;border-radius:13px;padding:13px}
+  .m-stat .n{font-family:var(--disp,inherit);font-size:26px;font-weight:700;color:#F4FF32;color:#d4ff32}
+  .m-stat .l{font-family:var(--mono,monospace);font-size:9px;font-weight:700;letter-spacing:1.5px;
+    text-transform:uppercase;color:#A1A1AA;margin-top:3px}
+  .m-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .m-act{display:flex;align-items:center;gap:10px;min-height:52px;padding:12px 14px;border-radius:12px;
+    background:rgba(212,255,50,.06);border:1px solid rgba(212,255,50,.25);color:#F4F4F5;
+    font-size:13px;font-weight:700;cursor:pointer;text-align:left}
+  .m-act i{color:#d4ff32;font-size:18px}
+  .m-match{display:flex;align-items:center;gap:10px;background:#1a1d1c;border:1px solid #26292a;
+    border-radius:13px;padding:12px;margin-bottom:9px;color:#F4F4F5}
+  .m-match .when{font-family:var(--mono,monospace);font-size:9.5px;color:#A1A1AA;line-height:1.5;
+    text-transform:uppercase;letter-spacing:.5px;min-width:74px}
+  .m-match .teams{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.5}
+  .m-match .score{font-family:var(--disp,inherit);font-size:17px;font-weight:700;white-space:nowrap}
+  .m-live{display:inline-block;background:#d4ff32;color:#09090B;font-family:var(--mono,monospace);
+    font-size:8.5px;font-weight:800;letter-spacing:1px;padding:2px 6px;border-radius:4px;vertical-align:middle}
+  .m-sec{font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:2px;
+    text-transform:uppercase;color:#A1A1AA;margin:18px 0 9px}
+  .m-row{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #232627;color:#F4F4F5}
+  .m-row .pos{font-family:var(--mono,monospace);font-size:11px;color:#d4ff32;width:22px}
+  .m-row .tn{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .m-row .st{font-family:var(--mono,monospace);font-size:10.5px;color:#A1A1AA;white-space:nowrap}
+
+  /* --- tables on fallback pages become card lists (mobilizeTables builds these) --- */
+  table.m-mobileized{display:none!important}
+  .m-tbl-card{background:#1a1d1c;border:1px solid #26292a;border-radius:13px;padding:13px;margin-bottom:10px;color:#F4F4F5}
+  .m-tbl-row{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #232627;font-size:13px}
+  .m-tbl-row:last-child{border-bottom:none}
+  .m-tbl-row .k{font-family:var(--mono,monospace);font-size:9.5px;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;color:#A1A1AA;min-width:92px;padding-top:2px}
+  .m-tbl-row .v{flex:1;min-width:0}
+
+  /* keep interactive elements clear of the fixed tab bar when scrolled into view */
+  .m-full,.m-linkbtn,.m-act,button.m-item,.m-card,#main-content button{scroll-margin-bottom:78px;scroll-margin-top:64px}
+
+  /* --- mobile admin components --- */
+  .m-search{width:100%;min-height:44px;margin-bottom:12px;padding:10px 14px;border-radius:11px;
+    background:#0f1110;border:1px solid #26292a;color:#F4F4F5;font-size:16px;font-family:var(--mono,monospace);box-sizing:border-box}
+  .m-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .m-chip{font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:#A1A1AA;background:rgba(255,255,255,.05);border:1px solid #26292a;border-radius:999px;padding:5px 11px}
+  .m-badge{font-family:var(--mono,monospace);font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+    padding:3px 8px;border-radius:5px;background:rgba(255,255,255,.08);color:#A1A1AA;white-space:nowrap}
+  .m-badge.pend{background:rgba(212,255,50,.14);color:#d4ff32}
+  .m-badge.ok{background:rgba(63,185,80,.16);color:#7ee27f}
+  .m-full{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin:14px 0 4px;
+    background:rgba(255,255,255,.04);border:1px dashed #3a3d3e;border-radius:12px;color:#A1A1AA;
+    font-family:var(--mono,monospace);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+  .m-linkbtn{margin-top:9px;background:none;border:none;color:#d4ff32;font-family:var(--mono,monospace);
+    font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;padding:6px 0;min-height:38px}
+  .m-pill{position:fixed;right:14px;bottom:calc(74px + env(safe-area-inset-bottom,0px));z-index:890;
+    display:flex;align-items:center;gap:7px;padding:11px 15px;border-radius:999px;border:1px solid rgba(212,255,50,.4);
+    background:#181f1e;color:#d4ff32;font-family:var(--mono,monospace);font-size:10px;font-weight:800;
+    letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.5)}
+  .m-jump-row{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch}
+  .m-jump{flex:0 0 auto;font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;color:#F4F4F5;background:rgba(212,255,50,.07);border:1px solid rgba(212,255,50,.3);
+    border-radius:999px;padding:9px 14px;text-decoration:none;min-height:38px;display:flex;align-items:center}
+
+  /* --- modals become bottom sheets --- */
+  .modal-overlay{align-items:flex-end!important;padding:0!important}
+  .modal{width:100%!important;max-width:100%!important;max-height:88vh;overflow-y:auto;
+    border-radius:18px 18px 0 0!important;margin:0!important}
+  .modal-body{max-height:calc(88vh - 170px);overflow-y:auto}
+
+  /* --- touch targets & inputs --- */
+  .btn,.hdr-icon-btn{min-height:44px}
+  .m-tab,.m-item,.m-act{min-height:48px}
+  input,select,textarea{font-size:16px!important}
+  .lg-input{font-size:16px!important;min-height:50px}
+}
+@media (min-width:1024px){#mob-topbar,#mob-tabbar,#mob-sheet{display:none!important}}
+</style>
+
+<style id="sg-layer">
+/* =====================================================================
+   STYLE GUIDE LAYER (uploads/style-guide.html) — applied as the final
+   cascade layer. Tokens + component specs; structure & logic untouched.
+   ===================================================================== */
+:root{
+  --sg-primary:#D4FF32; --sg-dark:#09090B;
+  --sg-bg:#09090B; --sg-surface:#18181B;
+  --sg-border:rgba(255,255,255,.14); --sg-border-soft:rgba(255,255,255,.08);
+  --sg-pending-bg:rgba(254,215,170,.16); --sg-pending-bd:rgba(254,215,170,.4); --sg-pending-tx:#FDBA74;
+  --sg-reject-bg:rgba(254,226,226,.16);  --sg-reject-bd:rgba(254,202,202,.42); --sg-reject-tx:#FCA5A5;
+  --sg-live-bg:rgba(216,208,255,.16);    --sg-live-bd:rgba(216,208,255,.42);   --sg-live-tx:#C4B5FD;
+  --sg-ok-bg:rgba(191,227,203,.16);      --sg-ok-bd:rgba(191,227,203,.42);     --sg-ok-tx:#86EFAC;
+}
+html[data-theme="light"]{
+  --sg-bg:#F6F7F2; --sg-surface:#FFFFFF;
+  --sg-border:rgba(9,9,11,.14); --sg-border-soft:rgba(9,9,11,.08);
+  --sg-pending-bg:#FDEBD3; --sg-pending-bd:#FED7AA; --sg-pending-tx:#9A3412;
+  --sg-reject-bg:#FEE2E2;  --sg-reject-bd:#FECACA;  --sg-reject-tx:#B91C1C;
+  --sg-live-bg:#EDE8FF;    --sg-live-bd:#D8D0FF;    --sg-live-tx:#3B2A9E;
+  --sg-ok-bg:#E7F5EA;      --sg-ok-bd:#BFE3CB;      --sg-ok-tx:#166534;
+}
+
+/* ---- buttons: pills ---- */
+.btn,.btn-primary,.lg-btn,.lg-btn-outline,.m-act,.m-full,.m-linkbtn,.m-jump,.m-pill,.hdr-icon-btn,.hdr-demo-btn{
+  border-radius:999px!important;clip-path:none!important}
+.btn{min-height:40px;padding:8px 20px!important;font-weight:700}
+.view-toggle{background:var(--sg-surface,var(--bg2))!important;border:1px solid var(--sg-border,var(--nb))!important}
+.vt-btn{color:var(--sub)!important;background:transparent!important}
+.btn.primary{background:var(--sg-primary)!important;color:var(--sg-dark)!important;border:1px solid var(--sg-dark)!important;min-height:44px}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{background:var(--sg-reject-bg)!important;color:var(--sg-reject-tx)!important;border:1px solid var(--sg-reject-bd)!important}
+.btn-primary{background:var(--sg-dark)!important;color:var(--sg-primary)!important}
+.lg-btn{background:var(--sg-primary)!important;color:var(--sg-dark)!important;min-height:48px}
+.lg-btn-outline{background:transparent!important;color:#F4F4F5!important}
+.m-act{background:var(--sg-primary)!important;color:var(--sg-dark)!important;border:none!important;font-weight:800}
+
+/* ---- cards ---- */
+.card{border-radius:24px!important;border:1px solid var(--sg-border)!important;clip-path:none!important}
+html[data-theme="light"] .card{background:var(--sg-surface)!important}
+html:not([data-theme="light"]) .card{background:var(--sg-surface)!important}
+.modal{border-radius:28px!important;border:1px solid var(--sg-border)!important;clip-path:none!important;background:var(--sg-surface)!important}
+/* color added: this layer made the background transparent (revealing the
+   theme-aware modal surface instead of a fixed lime bar), but the older
+   .modal-hd rule further up still pins color to a fixed dark #09090B —
+   correct for that old fixed-lime bar, invisible (1.12:1) on this dark
+   surface in dark theme. */
+.modal-hd{background:transparent!important;border-bottom:1px solid var(--sg-border-soft)!important;color:var(--ink)!important}
+.modal-title{font-family:var(--disp);text-transform:uppercase;letter-spacing:-.01em}
+
+/* ---- forms ---- */
+input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea,.m-search{
+  border-radius:12px!important;border:1px solid var(--sg-border)!important;background:var(--sg-bg)!important;min-height:44px}
+label,.field label,.frm label{font-family:var(--mono)!important;font-size:11px!important;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.lg-input{border-radius:12px!important}
+
+/* ---- toggles ---- */
+.tgl{width:44px!important;height:24px!important;border-radius:999px!important;background:var(--sg-border)!important;border:none!important}
+.tgl.on{background:var(--sg-primary)!important}
+
+/* ---- badges & chips: mono pill, semantic palette ---- */
+.cat-pill,.chip,.badge,.dash-kpi-pill,.m-badge,.m-chip{
+  border-radius:999px!important;font-family:var(--mono)!important;font-weight:700!important;
+  text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--sg-border)}
+.m-badge.pend{background:var(--sg-pending-bg)!important;color:var(--sg-pending-tx)!important;border-color:var(--sg-pending-bd)!important}
+.m-badge.ok{background:var(--sg-ok-bg)!important;color:var(--sg-ok-tx)!important;border-color:var(--sg-ok-bd)!important}
+.m-badge.rej{background:var(--sg-reject-bg)!important;color:var(--sg-reject-tx)!important;border-color:var(--sg-reject-bd)!important}
+.m-badge.live{background:var(--sg-live-bg)!important;color:var(--sg-live-tx)!important;border-color:var(--sg-live-bd)!important}
+.m-live{background:var(--sg-primary)!important;color:var(--sg-dark)!important}
+
+/* ---- mobile cards follow surface/border system (chrome stays dark) ---- */
+.m-card,.m-tbl-card,.m-match{border-radius:20px!important;border:1px solid var(--sg-border)!important}
+.m-match{background:var(--sg-surface)!important}
+html[data-theme="light"] .m-card,html[data-theme="light"] .m-tbl-card{background:var(--sg-surface)!important}
+html:not([data-theme="light"]) .m-card,html:not([data-theme="light"]) .m-tbl-card{background:#18181B!important}
+html[data-theme="light"] .m-card .m-big,html[data-theme="light"] .m-tbl-card,html[data-theme="light"] .m-card .m-sub{color:inherit}
+html[data-theme="light"] .m-card .m-big{color:#09090B!important}
+html[data-theme="light"] .m-card .m-sub,html[data-theme="light"] .m-tbl-card .m-sub{color:#52525B!important}
+html[data-theme="light"] .m-row{color:#09090B!important;border-color:var(--sg-border-soft)!important}
+
+/* ---- topbar / section titles: display type ---- */
+.tb-title{font-family:var(--disp)!important;text-transform:uppercase!important;letter-spacing:-.01em!important}
+.m-eyebrow,.m-sheet-title{letter-spacing:.22em}
+
+/* ---- light theme: dark ink for the mobile UI layer (its text colors are
+   hardcoded for dark surfaces: #F4F4F5 / #A1A1AA / #d4ff32) ---- */
+html[data-theme="light"] .m-eyebrow{color:#3F6212!important}
+html[data-theme="light"] .m-big{color:#09090B!important}
+html[data-theme="light"] .m-sub{color:#52525B!important}
+html[data-theme="light"] .m-sec{color:#52525B!important}
+html[data-theme="light"] .m-match{color:#09090B!important;border-color:var(--sg-border)!important}
+html[data-theme="light"] .m-match .when{color:#52525B!important}
+html[data-theme="light"] .m-row .pos{color:#3F6212!important}
+html[data-theme="light"] .m-row .st{color:#52525B!important}
+html[data-theme="light"] .m-tbl-row .k{color:#52525B!important}
+html[data-theme="light"] .m-tbl-row{border-bottom-color:var(--sg-border-soft)!important}
+html[data-theme="light"] .m-search{color:#09090B!important;border-color:var(--sg-border)!important}
+html[data-theme="light"] .m-search::placeholder{color:#71717A}
+html[data-theme="light"] .m-chip{color:#3F3F46!important;background:rgba(9,9,11,.04);border-color:var(--sg-border)!important}
+html[data-theme="light"] .m-badge{background:rgba(9,9,11,.06);color:#3F3F46}
+html[data-theme="light"] .m-full{color:#52525B!important;border-color:rgba(9,9,11,.25)!important;background:rgba(9,9,11,.03)}
+html[data-theme="light"] .m-linkbtn{color:#3F6212!important}
+html[data-theme="light"] .m-jump{color:#18181B!important;background:rgba(63,98,18,.07);border-color:rgba(63,98,18,.3)}
+html[data-theme="light"] #plat-footer span:last-child{color:#d4ff32!important}
+html[data-theme="light"] .mc-hd .badge.bgr,html[data-theme="light"] .mc-hd .badge.bg{color:#d4ff32!important;background:rgba(212,255,50,.10)!important;border-color:rgba(212,255,50,.30)!important}
+html[data-theme="light"] .mc-hd .badge.bgy{color:#F4F4F5!important;background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.16)!important}
+
+/* ---- footer: dark card ---- */
+#plat-footer{background:var(--sg-dark)!important;color:#fff!important;border-radius:28px!important;border:1px solid var(--sg-border)!important}
+html[data-theme="light"] #plat-footer{color:#F4F4F5!important}
+</style>
+
+<style id="action-rail-css">
+/* ===== page actions: desktop right rail / mobile scroll row ===== */
+#action-rail{display:none}
+@media (min-width:1024px){
+  #action-rail{position:fixed;top:150px;right:18px;width:200px;display:flex;flex-direction:column;gap:10px;z-index:600;align-items:stretch;max-height:calc(100vh - 170px);overflow-y:auto;overscroll-behavior:contain}
+  #action-rail:empty{display:none}
+  #app-main{margin-right:220px}
+  #action-rail .btn,#action-rail button{width:100%;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #action-rail .tb-actions{display:flex;flex-direction:column;gap:10px;width:100%}
+  #action-rail #tb-actions:empty,#action-rail #viewas-dropdown-wrap:empty,#action-rail #sync-actions-wrap:empty{display:none!important}
+  .topbar .tb-actions:only-child{display:none}
+  #action-rail > * + *{border-top:1px solid var(--sg-border-soft,rgba(255,255,255,.08));padding-top:10px}
+  #action-rail #viewas-dropdown-wrap{display:flex;flex-direction:column;gap:6px}
+  #action-rail .hdr-dropdown-btn{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  #action-rail .hdr-dropdown-panel{position:static!important;width:100%;min-width:0;z-index:auto;margin-top:2px;box-shadow:none;border-radius:14px;background:var(--sg-surface,#141414);border:1px solid var(--sg-border,#2a2a2a)}
+  #action-rail .hdr-dropdown-panel .role-pill{border-bottom-color:var(--sg-border-soft,rgba(255,255,255,.08));min-height:38px}
+  #action-rail #sync-actions-wrap{display:flex!important;flex-direction:column;gap:6px}
+  #action-rail #sync-actions-wrap > div{display:flex!important;flex-direction:column;gap:6px}
+  #action-rail .hdr-demo-btn,#action-rail #ops-theme-tog{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  #action-rail button.hdr-icon-btn[onclick="signOut()"]{min-height:40px}
+}
+@media (max-width:1023.98px){
+  .topbar{flex-wrap:wrap;gap:6px 12px}
+  .tb-actions{order:3;width:100%;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 6px}
+  .tb-actions .btn{flex:0 0 auto;min-height:40px}
+}
 </style>
 </head>
 <body>
@@ -651,10 +976,10 @@
 <div id="hero-collage" class="hero-collage" style="display:none">
     <div class="acid-splash splash-1"></div>
     <div class="acid-splash splash-2"></div>
-    <img class="collage-img img-soccer" src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=600" alt="Soccer Action">
-    <img class="collage-img img-tennis" src="https://images.unsplash.com/photo-1622279457486-640ca4a4cf6a?q=80&w=600" alt="Tennis Serve">
-    <img class="collage-img img-volleyball" src="https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?q=80&w=600" alt="Volleyball Spike">
-    <img class="collage-img img-pickleball" src="https://images.unsplash.com/photo-1674426577823-38374fbcc1e5?q=80&w=600" alt="Pickleball Player">
+    <img class="collage-img img-soccer" src="/images/collage-soccer.jpg" alt="Soccer Action">
+    <img class="collage-img img-tennis" src="/images/collage-tennis.jpg" alt="Tennis Serve">
+    <img class="collage-img img-volleyball" src="/images/collage-volleyball.jpg" alt="Volleyball Spike">
+    <img class="collage-img img-pickleball" src="/images/collage-pickleball.jpg" alt="Pickleball Player">
     <div class="hero-content">
         <h1>Dulà HQ</h1>
         <div class="slogan">Manage the Chaos.</div>
@@ -687,7 +1012,7 @@
     <div class="modal-footer" id="modal-footer"></div>
   </div>
 </div>
-<div id="signin-wrap"></div>
+
 
 <script>
 'use strict';
@@ -3447,7 +3772,7 @@ function generateDraw() {
   }
   var labels = { groups_knockout: 'Groups + Knockout', knockout: 'Knockout', round_robin: 'Round Robin', double_round_robin: 'Double Round Robin', custom: 'Custom' };
   var lt = labels[k] || k;
-  showToast('Draw generated \u2014 ' + lt + ' format');
+  if (typeof AUTH !== 'undefined' && AUTH && AUTH.signedIn) showToast('Draw generated \u2014 ' + lt + ' format');
 }
 /* Manual draw. For groups_knockout and knockout, team order actually
    changes the outcome (which group / which bracket seed), so those get a
@@ -7008,6 +7333,15 @@ if (GOOGLE_CLIENT_ID) {
       return r;
     }
   }
+  /* Brand/accent tokens are baked as inline root styles per theme (gold,
+     limeTx, tints). Re-apply them whenever the theme flips so a light-mode
+     value never leaks into dark (or vice versa). */
+  function reapplyThemeTokens(){
+    try{ if (typeof window.__reapplyAccent==='function') window.__reapplyAccent(); }catch(e){}
+    try{ if (typeof window.__reapplyBrandGold==='function') window.__reapplyBrandGold(); }catch(e){}
+    try{ if (typeof applyBrandingFromCustom==='function') applyBrandingFromCustom(); }catch(e){}
+  }
+  try{ new MutationObserver(reapplyThemeTokens).observe(root,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
 })();
 </script>
 
@@ -7218,6 +7552,98 @@ function provisionOrg(){
   saveOrgRegistry(orgs);
   renderPlatformConsole();
 }
+/* ===== PRE-LOADED DEMO TENANTS =====
+   3 with COMPLETED group stage (full bracket/standings data),
+   2 mid-group-stage (live matches in progress). Data is stored per-slug
+   under dulahq:demo-state:{slug}; your real (default-org) state is backed
+   up and restored when you leave a demo tenant. Backend sync is disabled
+   while inside a demo tenant so demo data never reaches the sheet. */
+var DEMO_ORGS = [
+  { slug:'usnagali', name:'Copa Gali Futbol', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Copa Gali Futbol 2026', venue:'Gali Valley Sports Complex', date:'2026-05-09' } } },
+  { slug:'copa-davao', name:'Copa Davao', accent:'#FF6B35', admin:'copa.davao@dulahq.test', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Copa Davao 2026', venue:'Davao Delta Fields', date:'2026-06-20' } } },
+  { slug:'manila-summer', name:'Manila Summer Invitational', accent:'#3B82F6', admin:'msi@dulahq.test', status:'active',
+    demo:{ stage:'complete', meta:{ name:'Manila Summer Invitational 2026', venue:'Rizal Memorial Coliseum', date:'2026-04-11' } } },
+  { slug:'cebu-volley', name:'Cebu Volley Classic', accent:'#A855F7', admin:'volley@dulahq.test', status:'active',
+    demo:{ stage:'group', meta:{ name:'Cebu Volley Classic 2026', venue:'Cebu Coliseum', date:'2026-08-22' } } },
+  { slug:'davao-hoops', name:'Davao Hoops League', accent:'#F59E0B', admin:'hoops@dulahq.test', status:'active',
+    demo:{ stage:'group', meta:{ name:'Davao Hoops League S2', venue:'Davao City Gym', date:'2026-08-29' } } }
+];
+function isDemoOrg(org){ return !!(org && org.demo && org.demo.stage); }
+function ensureDemoOrgs(){
+  try {
+    var stored = orgRegistry(), changed = false;
+    for (var i=0;i<DEMO_ORGS.length;i++){
+      var found = false;
+      for (var j=0;j<stored.length;j++) if (stored[j].slug === DEMO_ORGS[i].slug) found = true;
+      if (!found){ stored.push(JSON.parse(JSON.stringify(DEMO_ORGS[i]))); changed = true; }
+    }
+    if (changed) saveOrgRegistry(stored);
+  } catch(e){}
+}
+var S_PROXY_KEYS = { teams:1, groups:1, groupMatches:1, knockoutRounds:1, generated:1, bracketView:1, tournament:1 };
+function swapStateInPlace_(next){
+  /* keep S's object identity AND its accessor properties (CATEGORY PROXY LAYER):
+     proxied fields (teams/groups/groupMatches/...) live INSIDE next.categories —
+     the accessors re-point at the new active category automatically. Never delete
+     or plain-assign those keys, or per-category routing silently breaks. */
+  try {
+    for (var k in S){ if (Object.prototype.hasOwnProperty.call(S, k) && k !== 'timerInterval' && !S_PROXY_KEYS[k]) delete S[k]; }
+    for (var k2 in next){ if (k2 !== 'timerInterval' && !S_PROXY_KEYS[k2]) S[k2] = next[k2]; }
+  } catch(e){}
+}
+function demoSanitize_(st){ try { var c = JSON.parse(JSON.stringify(st)); c.timerInterval = null; return c; } catch(e){ return st; } }
+var DEMO_S_TEMPLATE = (function(){ try { return JSON.parse(JSON.stringify(S)); } catch(e){ return null; } })();
+function buildDemoState_(org){
+  var st = DEMO_S_TEMPLATE ? JSON.parse(JSON.stringify(DEMO_S_TEMPLATE)) : { categories: [], users: [], referees: [] };
+  st._tournamentMeta = { name: org.demo.meta.name, venue: org.demo.meta.venue, date: org.demo.meta.date };
+  st.categories = []; st.users = []; st.referees = [];
+  st._demoOrg = org.slug;
+  swapStateInPlace_(st); /* mutate S in place — generateDraw()/proxy layer keep working */
+  var frac = org.demo.stage === 'complete' ? 1 : 0.5;
+  var c1 = defaultCategory(); c1.name = 'Open Division'; c1.ageGroup = 'Open';
+  st.categories.push(c1);
+  var unplayed = seedDemoCategory_(c1, 12, 4, frac);
+  var c2 = defaultCategory(); c2.name = 'U16'; c2.ageGroup = 'U16';
+  st.categories.push(c2);
+  seedDemoCategory_(c2, 8, 2, frac);
+  S.activeCategoryId = c1.id; /* on S itself — never the temp copy, or activeCategory() spawns a stray */
+  var admin = defaultUser(); admin.name = 'Tournament Admin'; admin.email = org.admin || 'admin@dulahq.test'; admin.role = 'admin';
+  st.users.push(admin);
+  var ref = defaultReferee(); ref.name = 'Center Referee'; st.referees.push(ref);
+  if (org.demo.stage !== 'complete' && unplayed && unplayed.length){
+    var lm = unplayed[0];
+    lm.inProgress = true; lm.homeScore = 1; lm.awayScore = 0; lm.refereeId = ref.id;
+    st.timerSeconds = 28 * 60; st.timerStarted = true; st.timerRunning = false;
+    st.timerMatchId = lm.id;
+    try { st.currentMatchByCategory = st.currentMatchByCategory || {}; st.currentMatchByCategory[c1.id] = lm.id; } catch(e){}
+  }
+  return S;
+}
+function enterDemoOrg(org){
+  try {
+    if (S && S._demoOrg){
+      try { localStorage.setItem('dulahq:demo-state:' + S._demoOrg, JSON.stringify(demoSanitize_(S))); } catch(e){}
+    } else {
+      try { if (!localStorage.getItem('dulahq:demo-backup')) localStorage.setItem('dulahq:demo-backup', JSON.stringify(demoSanitize_(S))); } catch(e){}
+    }
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('dulahq:demo-state:' + org.slug) || 'null'); } catch(e){}
+    if (saved && saved._demoOrg === org.slug){ swapStateInPlace_(saved); }
+    else { buildDemoState_(org); try { localStorage.setItem('dulahq:demo-state:' + org.slug, JSON.stringify(demoSanitize_(S))); } catch(e){} }
+  } catch(e){ /* never block boot */ }
+}
+function leaveDemoOrgIfNeeded(){
+  try {
+    if (S && S._demoOrg){ try { localStorage.setItem('dulahq:demo-state:' + S._demoOrg, JSON.stringify(demoSanitize_(S))); } catch(e){} }
+    var bk = null;
+    try { bk = JSON.parse(localStorage.getItem('dulahq:demo-backup') || 'null'); } catch(e){}
+    if (bk){ swapStateInPlace_(bk); try { localStorage.removeItem('dulahq:demo-backup'); } catch(e){} }
+  } catch(e){}
+}
+ensureDemoOrgs();
+
 function renameOrg(slug){
   var orgs = orgRegistry();
   for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) {
@@ -7247,6 +7673,8 @@ function injectSelfServeNote(){
 
 /* ---- editorial heroes (reference layouts) ----
 function __edHero(label, headline, subHtml){
+  try { if (typeof AUTH === 'undefined' || !AUTH || !AUTH.signedIn) return '';
+        var _sh = document.getElementById('app-shell'); if (_sh && _sh.style.display === 'none') return ''; } catch(e){}
   var mc = document.getElementById('main-content');
   if (!mc || document.getElementById('ed-hero-mount')) return '';
   var d = document.createElement('div'); d.id = 'ed-hero-mount'; d.className = 'ed-hero';
@@ -7270,7 +7698,10 @@ function __edHero(label, headline, subHtml){
     var m = location.pathname.match(/^\/t\/([a-z0-9-]+)/i);
     if (m) {
       var slug = m[1].toLowerCase(), orgs = orgRegistry();
-      for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) { setOrgContext(orgs[i]); break; }
+      for (var i=0;i<orgs.length;i++) if (orgs[i].slug === slug) {
+        if (isDemoOrg(orgs[i]) && (!S._demoOrg || S._demoOrg !== slug)) enterDemoOrg(orgs[i]);
+        setOrgContext(orgs[i]); break;
+      }
     }
   } catch(e) {}
   try { if (typeof AUTH !== 'undefined' && AUTH && AUTH.signedIn && ['teams','groups','bracket'].indexOf(S.page) !== -1) render(); } catch(e){}
@@ -7279,6 +7710,747 @@ function __edHero(label, headline, subHtml){
   renderOrgBanner();
   ensurePlatformFooter();
   try { renderNav(); } catch(e){}
+})();
+</script>
+
+
+
+<script>
+/* self-heal — never leave the user on an empty screen */
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    try {
+      var shell = document.getElementById('app-shell');
+      var sw = document.getElementById('signin-wrap');
+      var shellHidden = !shell || shell.style.display === 'none';
+      var signinEmpty = !sw || !sw.innerHTML || sw.innerHTML.length < 40;
+      if (shellHidden && signinEmpty) {
+        if (sw && typeof renderSignInPage === 'function') { sw.innerHTML = renderSignInPage(); }
+        else { document.body && (document.body.style.color = '#F4F4F5'); }
+      }
+    } catch(e) {}
+  }, 1500);
+});
+</script>
+
+<script>
+/* flash guard v2 reveal — timers only; never depends on the load event (which can hang on slow networks) */
+window.__DULAHQ_BUILD = 'ui2';
+(function(){
+  function rv(){ try { var sw = document.getElementById('signin-wrap'); if (sw && sw.parentElement && sw.parentElement.id === 'app-shell') document.body.appendChild(sw); if (sw) sw.classList.add('lg-ready'); } catch(e){} }
+  setTimeout(rv, 350); setTimeout(rv, 800); setTimeout(rv, 1200);
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(rv, 50); });
+  window.addEventListener('load', function(){ setTimeout(rv, 50); });
+})();
+</script>
+
+<script>
+/* ?debug=1 — self-service diagnostics overlay (inline-styled, runs last) */
+(function(){
+  try {
+    var q = new URLSearchParams(location.search);
+    if (q.get('debug') !== '1') return;
+    setTimeout(function(){
+      var sw = document.getElementById('signin-wrap'), sh = document.getElementById('app-shell');
+      var lastErr = [];
+      try { lastErr = JSON.parse(localStorage.getItem('dulahq:lastError') || '[]'); } catch(e){}
+      var rows = [
+        ['build', (window.__DULAHQ_BUILD || 'unknown')],
+        ['ua', navigator.userAgent.slice(0, 90)],
+        ['viewport', window.innerWidth + 'x' + window.innerHeight + ' dpr' + (window.devicePixelRatio || '?')],
+        ['signin-wrap', sw ? ('present, class="' + sw.className + '", children=' + sw.children.length) : 'MISSING'],
+        ['signin text', sw ? (sw.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80) || '(empty)' : '-'],
+        ['app-shell', sh ? ('display=' + (sh.style.display || '(css-default)')) : 'MISSING'],
+        ['lastError', lastErr.length ? JSON.stringify(lastErr) : '(none)']
+      ];
+      var p = document.createElement('pre');
+      p.style.cssText = 'position:fixed;z-index:2147483647;left:4px;right:4px;bottom:4px;max-height:45vh;overflow:auto;background:#000;color:#d4ff32;font:11px/1.45 monospace;padding:10px;border-radius:8px;white-space:pre-wrap;margin:0';
+      p.textContent = 'DulaHQ debug\n' + rows.map(function(r){ return r[0] + ': ' + r[1]; }).join('\n');
+      document.body.appendChild(p);
+    }, 1600);
+  } catch(e){}
+})();
+</script>
+
+<!-- ================= MOBILE UI LAYER (chrome + purpose-built screens) ================= -->
+<div id="action-rail" aria-hidden="true"></div>
+<div id="mob-topbar" aria-hidden="true"></div>
+<div id="mob-tabbar" aria-hidden="true"></div>
+<div id="mob-sheet" aria-hidden="true" onclick="if(event.target===this)UI.closeSheet()"><div class="m-sheet-panel"></div></div>
+<script>
+/* =====================================================================
+   MOBILE UI — presentation layer only. All data/business logic stays in
+   the shared app below (S, AUTH, NAV, renderers). Breakpoint lives in
+   UI.bp + the single master media query in <style id="mobile-ui-css">.
+   ===================================================================== */
+var UI = (function(){
+  var BP = 1024; /* breakpoint: mobile UI < 1024, desktop UI >= 1024 */
+  var mq = window.matchMedia('(max-width: ' + (BP - 0.02) + 'px)');
+  function el(id){ return document.getElementById(id); }
+
+  function roleHome(){
+    try {
+      if (typeof NAV === 'undefined') return 'admindashboard';
+      var role = (typeof S !== 'undefined' && S.role) || 'audience';
+      var list = NAV[role] || NAV.audience || [];
+      var first = list.length ? list[0].p : 'categoryselect';
+      return { admin:'admindashboard', team:'teamdash', audience:'categoryselect',
+               referee:'mymatches', official:first }[role] || first;
+    } catch(e){ return 'admindashboard'; }
+  }
+  function rolePages(){
+    try {
+      var role = (typeof S !== 'undefined' && S.role) || 'audience';
+      var list = NAV[role] || [];
+      var set = {}; for (var i=0;i<list.length;i++) set[list[i].p] = 1;
+      return set;
+    } catch(e){ return {}; }
+  }
+  /* tab bar: fixed 5 slots, tabs hidden when the role lacks that area */
+  function tabs(){
+    var home = roleHome(), rp = rolePages();
+    var t = [
+      { i:'ti-home', l:'Home', p:home, match:[home,'live'] },
+      { i:'ti-calendar', l:'Schedule', p:'schedule', match:['schedule','groups','livestreams'] },
+      { i:'ti-shield', p:'teams', l:'Teams', match:['teams','registrations','teamprofile','roster'] },
+      { i:'ti-tournament', l:'Bracket', p:'bracket', match:['bracket','groups'] }
+    ];
+    for (var i=0;i<t.length;i++){ t[i].match = t[i].match || []; if (t[i].p !== home) t[i].match.push(t[i].p); }
+    var out = [];
+    for (var j=0;j<t.length;j++){
+      var tj = t[j], show = tj.p === home;
+      for (var k=0;k<tj.match.length;k++){ if (rp[tj.match[k]]) show = true; }
+      if (show) out.push(tj);
+    }
+    out.push({ i:'ti-layout-grid', l:'More', sheet:true, match:[] });
+    return out;
+  }
+  function activeTab(){
+    var p = (typeof S !== 'undefined' && S.page) || '', ts = tabs();
+    for (var i=0;i<ts.length;i++){
+      if (ts[i].sheet) continue;
+      if (ts[i].p === p) return i;
+      var m = ts[i].match || [];
+      for (var j=0;j<m.length;j++) if (m[j] === p) return i;
+    }
+    return ts.length - 1; /* More */
+  }
+
+  function esc(x){ return String(x==null?'':x).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function renderChrome(){
+    try {
+      var shell = el('app-shell');
+      var signedIn = shell && shell.style.display !== 'none';
+      var tb = el('mob-topbar'), bar = el('mob-tabbar'), sh = el('mob-sheet');
+      if (!mq.matches || !signedIn){
+        if (tb) tb.innerHTML = ''; if (bar) bar.innerHTML = '';
+        if (sh) { sh.style.display = 'none'; sh.classList.remove('open'); }
+        document.body.classList.remove('ui-mobile'); document.body.classList.add('ui-desktop');
+        return;
+      }
+      document.body.classList.add('ui-mobile'); document.body.classList.remove('ui-desktop');
+      if (tb && !tb.innerHTML){
+        tb.innerHTML = '<div class="m-brand">Dul\u00e0 <b>HQ</b></div><div class="m-title" id="mob-title"></div>' +
+          '<button class="m-out" onclick="signOut()" title="Sign out" aria-label="Sign out"><i class="ti ti-logout"></i></button>';
+      }
+      if (bar){
+        var ts = tabs(), act = activeTab(), h = '';
+        for (var i=0;i<ts.length;i++){
+          var t = ts[i];
+          h += t.sheet
+            ? '<button class="m-tab' + (act===i?' active':'') + '" data-sheet="1" aria-label="More"><i class="ti ti-layout-grid"></i>' + t.l + '</button>'
+            : '<button class="m-tab' + (act===i?' active':'') + '" data-nav="' + t.p + '" aria-label="' + t.l + '"><i class="ti ' + t.i + '"></i>' + t.l + '</button>';
+        }
+        bar.innerHTML = h;
+      }
+    } catch(e){}
+  }
+
+  function openSheet(){
+    try {
+      var sh = el('mob-sheet'); if (!sh) return;
+      var role = (typeof S !== 'undefined' && S.role) || 'audience';
+      var list = (typeof NAV !== 'undefined' && NAV[role]) || [];
+      var cur = (typeof S !== 'undefined' && S.page) || '';
+      var covered = {};
+      try {
+        var ts = tabs();
+        for (var ci=0; ci<ts.length; ci++){
+          if (ts[ci].sheet) continue;
+          covered[ts[ci].p] = 1;
+          var cm = ts[ci].match || [];
+          for (var cj=0; cj<cm.length; cj++) covered[cm[cj]] = 1;
+        }
+      } catch(e){}
+      var groups = [], seen = {};
+      for (var i=0;i<list.length;i++){
+        var g = list[i].g || 'Menu';
+        if (!seen[g]){ seen[g] = 1; groups.push(g); }
+      }
+      var h = '<div class="m-grab"></div><div class="m-sheet-title">' + esc(role) + ' menu</div>';
+      for (var gi=0; gi<groups.length; gi++){
+        var gname = groups[gi];
+        h += '<div class="m-sheet-title">' + esc(gname) + '</div>';
+        for (var j=0;j<list.length;j++){
+          var it = list[j];
+          if ((it.g || 'Menu') !== gname) continue;
+          if (covered[it.p]) continue;
+          h += '<button class="m-item' + (it.p===cur?' active':'') + '" data-nav="' + it.p + '"><i class="ti ' + it.i + '"></i>' + esc(it.l) + '</button>';
+               '<i class="ti ' + it.i + '"></i>' + esc(it.l) + '</button>';
+        }
+      }
+      try {
+        if (typeof AUTH !== 'undefined' && AUTH && AUTH.signedIn){
+          var sys = '<div class="m-sheet-title">System</div>';
+          sys += '<button class="m-item" data-fn="theme"><i class="ti ti-sun-high"></i>Toggle light / dark</button>';
+          sys += '<button class="m-item" data-fn="demo"><i class="ti ti-wand"></i>Demo data</button>';
+          sys += '<button class="m-item" data-fn="refresh"><i class="ti ti-cloud-download"></i>Refresh from backend</button>';
+          if (AUTH.role === 'admin'){
+            sys += '<button class="m-item" data-fn="save"><i class="ti ti-cloud-upload"></i>Save to backend</button>';
+            sys += '<button class="m-item" data-fn="reset"><i class="ti ti-rotate"></i>Reset</button>';
+          }
+          h += sys;
+        }
+      } catch(e){}
+      var panel = sh.querySelector('.m-sheet-panel');
+      panel.innerHTML = h;
+      sh.style.display = 'block'; sh.classList.add('open');
+    } catch(e){}
+  }
+  function closeSheet(){ try { var sh = el('mob-sheet'); if (sh){ sh.style.display='none'; sh.classList.remove('open'); } } catch(e){} }
+
+  /* ---------- purpose-built mobile screens (shared data, mobile presentation) ---------- */
+  function teamName(id){
+    try { var t = (typeof getTeamById === 'function') ? getTeamById(id) : null; return t ? (t.name || '—') : '—'; }
+    catch(e){ return '—'; }
+  }
+  function fmtKickoff(k){
+    try {
+      var d = new Date(k);
+      if (!k || isNaN(d.getTime())) return { day:'', time:'' };
+      var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      return { day: days[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1),
+               time: ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2) };
+    } catch(e){ return { day:'', time:'' }; }
+  }
+  function matchCard(m){
+    var ko = fmtKickoff(m.kickoff);
+    var score = (m.inProgress || m.homeScore != null) ? (esc(m.homeScore==null?0:m.homeScore) + ' – ' + esc(m.awayScore==null?0:m.awayScore)) : '–';
+    return '<div class="m-match"><div class="when">' + esc(ko.day || 'TBD') + (m.pitchName ? '<br>' + esc(m.pitchName) : '') +
+      (m.inProgress ? '<br><span class="m-live">LIVE</span>' : '') + '</div>' +
+      '<div class="teams">' + esc(teamName(m.homeId)) + '<br>' + esc(teamName(m.awayId)) + '</div>' +
+      '<div class="score">' + score + '</div></div>';
+  }
+
+  function mobAdminHome(){
+    var teams = 0, matches = 0, live = 0, played = 0;
+    try {
+      for (var i=0;i<(S.categories||[]).length;i++){
+        var c = S.categories[i];
+        teams += (c.teams||[]).length;
+        for (var j=0;j<(c.groupMatches||[]).length;j++){
+          var m = c.groupMatches[j]; matches++;
+          if (m.inProgress) live++; else if (m.homeScore != null) played++;
+        }
+      }
+    } catch(e){}
+    var pending = 0; try { for (var r=0;r<(S.registrations||[]).length;r++) if (S.registrations[r].status==='pending') pending++; } catch(e){}
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">Tournament control</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Dashboard</div>' +
+      '<div class="m-stat-row">' +
+      '<div class="m-stat"><div class="n">' + teams + '</div><div class="l">Teams</div></div>' +
+      '<div class="m-stat"><div class="n">' + matches + '</div><div class="l">Fixtures</div></div>' +
+      '<div class="m-stat"><div class="n">' + live + '</div><div class="l">Live now</div></div>' +
+      '<div class="m-stat"><div class="n">' + pending + '</div><div class="l">Pending regs</div></div>' +
+      '</div><div class="m-sec">Quick actions</div><div class="m-actions">' +
+      '<button class="m-act" data-nav="setup"><i class="ti ti-settings"></i>Setup</button>' +
+      '<button class="m-act" data-nav="registrations"><i class="ti ti-user-plus"></i>Registrations</button>' +
+      '<button class="m-act" data-nav="standings"><i class="ti ti-medal"></i>Standings</button>' +
+      '<button class="m-act" data-nav="users"><i class="ti ti-user"></i>Users</button>' +
+      '</div>';
+    try {
+      var recent = (S.registrations||[]).filter(function(r){ return r.status==='pending'; }).slice(0,4);
+      if (recent.length){
+        h += '<div class="m-sec">Awaiting approval</div>';
+        for (var q=0;q<recent.length;q++){
+          h += '<div class="m-card"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(recent[q].teamName || recent[q].name || 'Team') + '</div>' +
+               '<span class="m-eyebrow">pending</span></div><div class="m-sub">' + esc(recent[q].categoryName || recent[q].category || '') + '</div></div>';
+        }
+      }
+    } catch(e){}
+    return h;
+  }
+
+  function mobTeamHome(){
+    var upcoming = [];
+    try {
+      var ms = (S.groupMatches||[]).slice().sort(function(a,b){ return (a.kickoff||0) - (b.kickoff||0); });
+      for (var i=0;i<ms.length && upcoming.length<5;i++) upcoming.push(ms[i]);
+    } catch(e){}
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">Team HQ</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Your cup at a glance</div>' +
+      '<div class="m-sec">Next up</div>';
+    if (upcoming.length){ for (var j=0;j<upcoming.length;j++) h += matchCard(upcoming[j]); }
+    else h += '<div class="m-card"><div class="m-sub">No fixtures yet — the draw hasn\u2019t been generated.</div></div>';
+    
+    return h;
+  }
+
+  function mobTeams(){
+    var cat = (typeof activeCategory === 'function') ? activeCategory() : null;
+    var teams = (cat && cat.teams) || [];
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">' + esc(cat ? cat.name : '') + '</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Teams <span class="m-sub">(' + teams.length + ')</span></div>';
+    if (S.role === 'admin'){
+      h += '<button class="m-act" style="width:100%;margin-bottom:14px" onclick="openAddTeam()"><i class="ti ti-plus"></i>Add a team</button>';
+    }
+    if (!teams.length) return h + '<div class="m-card"><div class="m-sub">No teams registered in this category yet.</div></div>';
+    for (var i=0;i<teams.length;i++){
+      var t = teams[i];
+      h += '<div class="m-card"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(t.name) + '</div>' +
+        '<span class="m-eyebrow">' + ((t.players&&t.players.length)||0) + ' players</span></div></div>';
+    }
+    return h;
+  }
+
+  function mobSchedule(){
+    var ms = [];
+    try { ms = (S.groupMatches||[]).slice().sort(function(a,b){ return (a.kickoff||0)-(b.kickoff||0); }); } catch(e){}
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">Fixtures</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Schedule</div>';
+    if (!ms.length) return h + '<div class="m-card"><div class="m-sub">No draw generated yet' +
+      (S.role==='admin' ? ' — generate it in Setup.' : '.') + '</div></div>';
+    var lastDay = '';
+    for (var i=0;i<ms.length;i++){
+      var d = fmtKickoff(ms[i].kickoff).day || 'Date TBC';
+      if (d !== lastDay){ h += '<div class="m-sec">' + esc(d) + '</div>'; lastDay = d; }
+      h += matchCard(ms[i]);
+    }
+    return h;
+  }
+
+  function mobStandings(){
+    var cat = (typeof activeCategory === 'function') ? activeCategory() : null;
+    var groups = (cat && cat.groups) || [];
+    var h = '<div class="m-eyebrow" style="margin:4px 0 8px">' + esc(cat ? cat.name : '') + '</div>' +
+      '<div class="m-big" style="margin-bottom:14px">Standings</div>';
+    if (!groups.length) return h + '<div class="m-card"><div class="m-sub">No draw generated yet.</div></div>';
+    for (var gi=0; gi<groups.length; gi++){
+      var st = [];
+      try { st = (typeof calcGroupStandings === 'function') ? (calcGroupStandings(gi) || []) : []; } catch(e){}
+      var label = (cat.groups[gi] && cat.groups[gi].name) || (groups[gi] && groups[gi].name) || String(gi+1);
+      h += '<div class="m-card"><div class="m-eyebrow" style="margin-bottom:6px">Group ' + esc(label) + '</div>';
+      if (!st.length){ h += '<div class="m-sub">No matches played.</div></div>'; continue; }
+      for (var i=0;i<st.length;i++){
+        var r = st[i] || {};
+        var tid = r.teamId != null ? r.teamId : r.id;
+        h += '<div class="m-row"><div class="pos">' + (i+1) + '</div><div class="tn">' + esc(teamName(tid)) + '</div>' +
+          '<div class="st">' + [r.played!=null?r.played:(r.p!=null?r.p:'–'), r.w!=null?r.w:'–', r.d!=null?r.d:'–', r.l!=null?r.l:'–'].join(' ') +
+          ' &nbsp;<b style="color:var(--limeTx)">' + (r.points!=null?r.points:(r.pts!=null?r.pts:'–')) + '</b></div></div>';
+      }
+      h += '</div>';
+    }
+    return h;
+  }
+
+
+  /* ---------- generic builders + purpose-built admin screens (presentation only) ---------- */
+  function statusBadge(st){
+    var x = String(st || '').toLowerCase();
+    var cls = (x === 'pending' || x === 'submitted') ? ' pend' : (x === 'approved' || x === 'active' || x === 'on' || x === 'live') ? ' ok' : '';
+    return '<span class="m-badge' + cls + '">' + esc(st || '—') + '</span>';
+  }
+  function pageHead(eyebrow, title, count, extra){
+    return '<div class="m-eyebrow" style="margin:4px 0 8px">' + esc(eyebrow) + '</div>' +
+      '<div class="m-big" style="margin-bottom:12px">' + esc(title) +
+      (count != null ? ' <span class="m-sub">(' + count + ')</span>' : '') + '</div>' + (extra || '');
+  }
+  function searchBox(){
+    return '<input class="m-search" type="search" placeholder="Search" oninput="UI.mfilter(this)" aria-label="Search">';
+  }
+  function fullBtn(){
+    return '<button class="m-full" data-full="1"><i class="ti ti-arrow-right"></i> Open full editor</button>';
+  }
+  function emptyCard(msg){ return '<div class="m-card"><div class="m-sub">' + esc(msg) + '</div></div>'; }
+
+  function mobRegistrations(){
+    var list = S.registrations || [];
+    var pend = 0; for (var i=0;i<list.length;i++) if (list[i].status === 'pending') pend++;
+    var h = pageHead('People', 'Registrations', list.length,
+      '<div class="m-chips"><span class="m-chip">' + pend + ' pending</span><span class="m-chip">' + (list.length - pend) + ' reviewed</span></div>' + searchBox());
+    if (!list.length) return h + emptyCard('No team registrations yet.');
+    for (var j=0;j<list.length;j++){
+      var r = list[j];
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(r.teamName || r.name || 'Team') + '</div>' + statusBadge(r.status) + '</div>' +
+        '<div class="m-sub">' + esc(r.managerName || '') + (r.managerEmail ? ' · ' + esc(r.managerEmail) : '') + '</div>' +
+        '<div class="m-sub">' + ((r.players && r.players.length) || 0) + ' players · ' + ((r.docs && r.docs.length) || 0) + ' docs</div></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobAccessRequests(){
+    var list = S.accessRequests || [];
+    var h = pageHead('People', 'Access requests', list.length, searchBox());
+    if (!list.length) return h + emptyCard('No access requests.');
+    for (var i=0;i<list.length;i++){
+      var a = list[i];
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(a.name || a.email || 'Request') + '</div>' + statusBadge(a.status) + '</div>' +
+        '<div class="m-sub">' + esc(a.role || '') + (a.phone ? ' · ' + esc(a.phone) : '') + '</div>' +
+        (a.email ? '<div class="m-sub">' + esc(a.email) + '</div>' : '') +
+        (a.notes ? '<div class="m-sub" style="margin-top:4px">"' + esc(a.notes) + '"</div>' : '') + '</div>';
+    }
+    return h + fullBtn();
+  }
+  function mobDocReviews(){
+    var regs = (S.registrations || []).filter(function(r){ return r.docs && r.docs.length; });
+    var total = 0; for (var i=0;i<regs.length;i++) total += (regs[i].docs || []).length;
+    var h = pageHead('People', 'Document reviews', total);
+    if (!regs.length) return h + emptyCard('No documents submitted for review.');
+    for (var j=0;j<regs.length;j++){
+      var r = regs[j], docs = r.docs || [];
+      var inner = '';
+      for (var k=0;k<docs.length;k++){
+        var d = docs[k] || {};
+        var dn = d.name || d.type || d.label || 'Document';
+        inner += '<div class="m-row"><div class="tn">' + esc(dn) + '</div><div class="st">' + statusBadge(d.status || 'submitted') + '</div></div>';
+      }
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(r.teamName || r.name || 'Team') + '</div><span class="m-eyebrow">' + docs.length + ' docs</span></div>' + inner + '</div>';
+    }
+    return h + fullBtn();
+  }
+  function mobUsers(){
+    var list = S.users || [];
+    var h = pageHead('People', 'Users', list.length, searchBox());
+    if (!list.length) return h + emptyCard('No users yet.');
+    for (var i=0;i<list.length;i++){
+      var u = list[i];
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(u.name || 'User') + '</div>' + statusBadge(u.role) + '</div>' +
+        '<div class="m-sub">' + esc(u.email || '') + '</div>' +
+        (u.assignedTeams && u.assignedTeams.length ? '<div class="m-sub">' + u.assignedTeams.length + ' team links</div>' : '') + '</div>';
+    }
+    return h + fullBtn();
+  }
+  function mobReferees(){
+    var list = S.referees || [];
+    var h = pageHead('People', 'Referees', list.length, searchBox());
+    if (!list.length) return h + emptyCard('No referees registered.');
+    for (var i=0;i<list.length;i++){
+      var r = list[i];
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(r.name || 'Referee') + '</div>' + statusBadge(r.availability || '') + '</div>' +
+        '<div class="m-sub">' + esc(r.phone || '') + '</div></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobOfficiatingTeam(){
+    var list = S.officiatingTeam || [];
+    var h = pageHead('People', 'Officiating team', list.length);
+    if (!list.length) return h + emptyCard('No officiating crew assigned yet.');
+    for (var i=0;i<list.length;i++){
+      var o = list[i] || {};
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(o.name || o.designation || 'Crew') + '</div>' + statusBadge(o.designation || '') + '</div>' +
+        '<div class="m-sub">' + esc(o.orgLevel || '') + '</div></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobCategories(){
+    var list = S.categories || [];
+    var h = pageHead('Setup', 'Categories', list.length);
+    if (!list.length) return h + emptyCard('No categories — create them in Setup.');
+    for (var i=0;i<list.length;i++){
+      var c = list[i];
+      h += '<div class="m-card"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(c.name || 'Category') + '</div>' +
+        '<span class="m-eyebrow">' + esc(c.ageGroup || '') + '</span></div>' +
+        '<div class="m-sub">' + ((c.teams && c.teams.length) || 0) + ' teams · ' + esc((c.structure) || (S.tournament && S.tournament.structure) || '') + '</div>' +
+        '<button class="m-linkbtn" data-cat="' + esc(c.id != null ? c.id : i) + '">View teams</button></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobGroups(){
+    var gs = S.groups || [];
+    var h = pageHead('Competition', 'Groups & draw', gs.length);
+    if (!gs.length) return h + emptyCard('No draw generated yet.') +
+      (S.role === 'admin' ? '<button class="m-full" data-nav="setup"><i class="ti ti-settings"></i> Go to Setup</button>' : '');
+    for (var i=0;i<gs.length;i++){
+      var g = gs[i] || {};
+      var cnt = 0;
+      try { for (var k=0;k<(S.groupMatches||[]).length;k++) if (S.groupMatches[k].group === g.name) cnt++; } catch(e){}
+      h += '<div class="m-card"><div class="m-card-h"><div class="m-big" style="font-size:15px">Group ' + esc(g.name || (i+1)) + '</div>' +
+        '<span class="m-eyebrow">' + cnt + ' matches</span></div>' +
+        '<button class="m-linkbtn" data-nav="standings">Standings</button></div>';
+    }
+    return h + fullBtn();
+  }
+  function mobAudit(){
+    var log = S.auditLog || [];
+    var h = pageHead('Admin', 'Audit log', log.length, searchBox());
+    if (!log.length) return h + emptyCard('No activity recorded yet.');
+    for (var i=log.length-1; i>=0 && i>log.length-60; i--){
+      var e = log[i], txt = '', when = '';
+      if (typeof e === 'string') txt = e;
+      else { txt = e.text || e.msg || e.action || e.message || JSON.stringify(e).slice(0,90); when = e.time || e.at || e.ts || ''; }
+      h += '<div class="m-card" data-msearch="1" style="padding:11px 13px"><div class="m-sub" style="color:#F4F4F5">' + esc(txt) + '</div>' +
+        (when ? '<div class="m-sub" style="margin-top:3px;font-size:11px">' + esc(when) + '</div>' : '') + '</div>';
+    }
+    return h + fullBtn();
+  }
+  function mobLiveStreams(){
+    var em = S.liveEmbeds || [];
+    var live = 0;
+    try { for (var k=0;k<(S.groupMatches||[]).length;k++) if (S.groupMatches[k].inProgress) live++; } catch(e){}
+    var h = pageHead('Competition', 'Live streams', em.length, '<div class="m-chips"><span class="m-chip">' + live + ' matches live now</span></div>');
+    if (!em.length) return h + emptyCard('No stream embeds configured.');
+    for (var i=0;i<em.length;i++){
+      var x = em[i] || {};
+      var label = x.title || x.name || x.id || ('Embed ' + (i+1));
+      h += '<div class="m-card" data-msearch="1"><div class="m-card-h"><div class="m-big" style="font-size:15px">' + esc(label) + '</div>' + statusBadge(x.status || (x.inProgress ? 'live' : '')) + '</div></div>';
+    }
+    return h + fullBtn();
+  }
+
+  var MOBILE_PAGES = {
+    admindashboard: mobAdminHome, teamdash: mobTeamHome,
+    teams: mobTeams, schedule: mobSchedule, standings: mobStandings,
+    registrations: mobRegistrations, accessrequests: mobAccessRequests, documentreviews: mobDocReviews,
+    users: mobUsers, referees: mobReferees, officiatingteam: mobOfficiatingTeam,
+    categories: mobCategories, groups: mobGroups, audit: mobAudit, livestreams: mobLiveStreams
+  };
+  var SETTINGS_PAGES = { setup:1, branding:1, platform:1, officials:1 };
+  var fullMode = null;
+
+  /* ---------- fallback: cardify tables on mobile for pages w/o a purpose-built view ---------- */
+  function mobilizeTables(){
+    if (!mq.matches) return;
+    try {
+      var mc = el('main-content'); if (!mc) return;
+      var tables = mc.querySelectorAll('table:not(.m-mobileized):not(.m-skip)');
+      for (var i=0;i<tables.length;i++){
+        var t = tables[i];
+        var ths = t.querySelectorAll('thead th');
+        if (!ths.length) ths = t.querySelectorAll('tr:first-child th');
+        if (!ths.length) { t.classList.add('m-skip'); continue; }
+        var labels = []; for (var c=0;c<ths.length;c++) labels.push((ths[c].textContent||'').trim());
+        var wrap = document.createElement('div');
+        var rows = t.querySelectorAll('tbody tr');
+        for (var r=0;r<rows.length;r++){
+          var tds = rows[r].querySelectorAll('td'); if (!tds.length) continue;
+          var card = document.createElement('div'); card.className = 'm-tbl-card';
+          for (var k=0;k<tds.length && k<labels.length;k++){
+            if (!labels[k] || !tds[k].textContent.trim()) continue;
+            var row = document.createElement('div'); row.className = 'm-tbl-row';
+            var key = document.createElement('div'); key.className='k'; key.textContent = labels[k];
+            var val = document.createElement('div'); val.className='v';
+            while (tds[k].firstChild) val.appendChild(tds[k].firstChild);
+            row.appendChild(key); row.appendChild(val); card.appendChild(row);
+          }
+          wrap.appendChild(card);
+        }
+        t.classList.add('m-mobileized');
+        t.parentNode.insertBefore(wrap, t.nextSibling);
+      }
+    } catch(e){}
+  }
+
+  /* ---------- integration hooks (wrappers — no edits inside app code) ---------- */
+  var installed = false;
+  function install(){
+    if (installed) return; installed = true;
+    try {
+      var _render = window.render;
+      if (typeof _render === 'function'){
+        window.render = function(){
+          try {
+            if (mq.matches && S.page !== fullMode && MOBILE_PAGES[S.page]){
+              var fn = MOBILE_PAGES[S.page];
+              var htmlOut = fn();
+              var mc = el('main-content'); if (mc) mc.innerHTML = htmlOut;
+              var pill0 = document.getElementById('mob-summary-pill'); if (pill0) pill0.parentNode.removeChild(pill0);
+              renderChrome(); after();
+              var tb = el('mob-title'); if (tb) tb.textContent = (S.page === 'admindashboard' ? 'Dashboard' : S.page.charAt(0).toUpperCase() + S.page.slice(1));
+              return;
+            }
+          } catch(e){ /* fall through to shared renderer */ }
+          var out = _render.apply(this, arguments);
+          try {
+            if (mq.matches && MOBILE_PAGES[S.page]){
+              var mc0 = el('main-content');
+              if (mc0 && !document.getElementById('mob-summary-pill')){
+                var pill = document.createElement('button');
+                pill.id = 'mob-summary-pill'; pill.className = 'm-pill';
+                pill.setAttribute('data-back','1');
+                pill.innerHTML = '<i class="ti ti-list"></i> Summary view';
+                mc0.parentNode.insertBefore(pill, mc0);
+              }
+            }
+          } catch(e){}
+          after();
+          return out;
+        };
+      }
+      var _st = window.setTopbar;
+      if (typeof _st === 'function'){
+        window.setTopbar = function(title, sub, actions){
+          var out = _st.apply(this, arguments);
+          try { var tb = el('mob-title'); if (tb && title) tb.textContent = title; } catch(e){}
+          return out;
+        };
+      }
+      /* System controls (View As, Refresh/Save/Reset, Demo, theme, Sign out)
+         relocate into #action-rail on desktop. On mobile the header is hidden
+         entirely, so they live in the More sheet (data-fn items below) — but
+         every node still returns to its captured header slot when the rail
+         is off, keeping the DOM ready for a resize back. */
+      var CTRL_HOME = [];
+      function railControls(){
+        var out = [], n;
+        n = document.getElementById('viewas-dropdown-wrap'); if (n) out.push(n);
+        n = document.getElementById('sync-actions-wrap'); if (n) out.push(n);
+        n = document.querySelector('.hdr-demo-btn'); if (n) out.push(n);
+        n = document.getElementById('ops-theme-tog'); if (n) out.push(n);
+        n = document.querySelector('button.hdr-icon-btn[onclick="signOut()"]'); if (n) out.push(n);
+        return out;
+      }
+      function grabHomes(controls){
+        for (var i=0;i<controls.length;i++){
+          var nd = controls[i], known = false;
+          for (var j=0;j<CTRL_HOME.length;j++){ if (CTRL_HOME[j].node === nd){ known = true; break; } }
+          if (!known && nd.closest('.app-header')) CTRL_HOME.push({ node: nd, parent: nd.parentNode, next: nd.nextSibling });
+        }
+        for (var k=CTRL_HOME.length-1;k>=0;k--){ if (!CTRL_HOME[k].node.isConnected) CTRL_HOME.splice(k,1); }
+      }
+      function placeActions(){
+        try {
+          var tb = document.getElementById('tb-actions'), rail = document.getElementById('action-rail'), top = document.getElementById('topbar');
+          if (!tb || !rail || !top) return;
+          var controls = railControls();
+          grabHomes(controls);
+          var shell = document.getElementById('app-shell');
+          var signedIn = !(shell && shell.style.display === 'none');
+          if (mq.matches || !signedIn){
+            if (tb.parentElement === rail) top.appendChild(tb);
+            for (var i=0;i<CTRL_HOME.length;i++){
+              var h0 = CTRL_HOME[i];
+              try {
+                if (h0.parent && h0.parent.isConnected && h0.node.parentNode !== h0.parent)
+                  (h0.next && h0.next.parentNode === h0.parent) ? h0.parent.insertBefore(h0.node, h0.next) : h0.parent.appendChild(h0.node);
+              } catch(e){}
+            }
+            rail.style.display = 'none';
+          } else {
+            if (tb.parentElement !== rail) rail.appendChild(tb);
+            for (var j=0;j<controls.length;j++){ if (controls[j].parentNode !== rail) rail.appendChild(controls[j]); }
+            rail.style.display = 'flex';
+          }
+        } catch(e){}
+      }
+      var _st2 = window.setTopbar;
+      if (typeof _st2 === 'function'){
+        window.setTopbar = function(){ var o = _st2.apply(this, arguments); try { placeActions(); } catch(e){} return o; };
+      }
+      var _soc = window.setOrgContext;
+      if (typeof _soc === 'function'){
+        window.setOrgContext = function(org){
+          try {
+            if (isDemoOrg(org)) enterDemoOrg(org);
+            else leaveDemoOrgIfNeeded();
+          } catch(e){}
+          return _soc.apply(this, arguments);
+        };
+      }
+      var _as = window.autoSave;
+      if (typeof _as === 'function'){
+        window.autoSave = function(){ if (S && S._demoOrg) return; return _as.apply(this, arguments); };
+      }
+      var _psq = window.pushToSheetsQuiet;
+      if (typeof _psq === 'function'){
+        window.pushToSheetsQuiet = function(){ if (S && S._demoOrg) return; return _psq.apply(this, arguments); };
+      }
+      var _nav = window.navTo;
+      if (typeof _nav === 'function'){
+        window.navTo = function(){ closeSheet();
+          var prev = (typeof S !== 'undefined' && S.page) || null;
+          var out = _nav.apply(this, arguments);
+          try { if (typeof S !== 'undefined' && S.page !== prev) fullMode = null; } catch(e){}
+          renderChrome(); return out; };
+      }
+      function after(){
+        try { mobilizeTables(); } catch(e){}
+        try { renderChrome(); } catch(e){}
+        try { settingsFrame(); } catch(e){}
+        try { placeActions(); } catch(e){}
+      }
+      document.addEventListener('click', function(ev){
+        try {
+          var t = ev.target.closest ? ev.target.closest('[data-nav],[data-sheet],[data-full],[data-back],[data-cat],[data-fn]') : null;
+          if (!t) return;
+          if (t.hasAttribute('data-nav')) { closeSheet(); navTo(t.getAttribute('data-nav')); }
+          else if (t.hasAttribute('data-sheet')) openSheet();
+          else if (t.hasAttribute('data-full')) { fullMode = S.page; window.render(); window.scrollTo(0,0); }
+          else if (t.hasAttribute('data-back')) { fullMode = null; window.render(); window.scrollTo(0,0); }
+          else if (t.hasAttribute('data-fn')) {
+            var fn = t.getAttribute('data-fn');
+            try {
+              if (fn === 'theme'){ var tt = document.getElementById('ops-theme-tog'); if (tt) tt.click(); }
+              else if (fn === 'demo'){ if (typeof seedDemo === 'function') seedDemo(); }
+              else if (fn === 'refresh'){ if (typeof loadFromSheets === 'function') loadFromSheets(); }
+              else if (fn === 'save'){ if (typeof pushToSheets === 'function') pushToSheets(); }
+              else if (fn === 'reset'){ if (typeof seedFromSheets === 'function') seedFromSheets(); }
+            } catch(e){}
+            closeSheet();
+          }
+          else if (t.hasAttribute('data-cat')) {
+            try { S.activeCategoryId = t.getAttribute('data-cat'); } catch(e){}
+            closeSheet(); navTo('teams');
+          }
+        } catch(e){}
+      });
+      function settingsFrame(){
+        if (!mq.matches || !SETTINGS_PAGES[S.page]) return;
+        var mc = el('main-content'); if (!mc || document.getElementById('m-jump-row')) return;
+        var hs = mc.querySelectorAll('h2, h3, .card-title, .sec-title, .dash-sec-title');
+        if (!hs.length) return;
+        var row = document.createElement('div'); row.id = 'm-jump-row'; row.className = 'm-jump-row';
+        var html = '';
+        for (var i=0;i<hs.length && i<12;i++){
+          if (!hs[i].textContent.trim()) continue;
+          var idm = 'mj-' + i;
+          hs[i].id = idm;
+          html += '<a class="m-jump" href="#' + idm + '">' + esc(hs[i].textContent.trim().slice(0,22)) + '</a>';
+        }
+        row.innerHTML = html;
+        mc.insertBefore(row, mc.firstChild);
+      }
+
+      try {
+        if (!location.pathname.match(/^\/t\//)) leaveDemoOrgIfNeeded();
+      } catch(e){}
+      if (mq.addEventListener) mq.addEventListener('change', function(){
+        try { placeActions(); } catch(e){}
+        renderChrome();
+        try { if (typeof S !== 'undefined' && S.page) window.render(); } catch(e){}
+      });
+      try {
+        var shell = el('app-shell');
+        if (shell && window.MutationObserver){
+          new MutationObserver(function(){ renderChrome(); try { placeActions(); } catch(e){} }).observe(shell, { attributes:true, attributeFilter:['style'] });
+        }
+      } catch(e){}
+      document.addEventListener('DOMContentLoaded', function(){ renderChrome(); });
+      renderChrome();
+    } catch(e){}
+  }
+  install();
+
+  function mfilter(input){
+    try {
+      var q = (input.value || '').toLowerCase();
+      var cards = document.querySelectorAll('#main-content [data-msearch]');
+      for (var i=0;i<cards.length;i++) cards[i].style.display = (!q || (cards[i].textContent||'').toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+    } catch(e){}
+  }
+  return { bp: BP, isMobile: function(){ return mq.matches; }, openSheet: openSheet, closeSheet: closeSheet,
+           renderChrome: renderChrome, mobilizeTables: mobilizeTables, mfilter: mfilter,
+           fullEditor: function(){ fullMode = (typeof S !== 'undefined' && S.page) || null; try { window.render(); } catch(e){} } };
 })();
 </script>
 </body>

@@ -67,7 +67,7 @@ export function Hero(variant, opts = {}) {
           <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px">${esc(b.hero.dashboardHero)}</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;position:relative">
-          <button class="btn sm" style="background:#fff;color:#0a0a0a;border-color:#fff;font-weight:800" onclick="navigator.clipboard && navigator.clipboard.writeText(location.origin + location.pathname + '?view=live'); showToast && showToast('Live link copied')"><i class="ti ti-share"></i> Share Live</button>
+          <button class="btn sm" style="background:#fff!important;color:#0a0a0a!important;border-color:#fff!important;font-weight:800" onclick="navigator.clipboard && navigator.clipboard.writeText(location.origin + location.pathname + '?view=live'); showToast && showToast('Live link copied')"><i class="ti ti-share"></i> Share Live</button>
           <button class="btn primary sm" style="background:#c8ff32;color:#0a0a0a;border-color:#c8ff32;font-weight:800" onclick="navTo && navTo('live')"><i class="ti ti-player-play"></i> View Live</button>
         </div>
       </div>`
@@ -76,12 +76,12 @@ export function Hero(variant, opts = {}) {
       const isTV = variant === 'tv'
       return `
       <div style="${isTV ? 'text-align:center;padding:8px 0' : 'margin-bottom:12px'}">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(0,0,0,.5);margin-bottom:6px;text-align:center">Dula HQ • Tournament Manager</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tm,#A1A1AA);margin-bottom:6px;text-align:center">Dula HQ • Tournament Manager</div>
         <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;background:${isTV ? '#c8ff32' : '#0a0a0a'};border:1px solid ${isTV ? '#c8ff32' : '#0a0a0a'};font-family:'JetBrains Mono',monospace;font-size:${isTV ? '13px' : '12px'};font-weight:800;letter-spacing:.04em;color:${isTV ? '#0a0a0a' : '#fff'};text-transform:uppercase">
           <span style="width:8px;height:8px;background:${isTV ? '#0a0a0a' : '#c8ff32'};border-radius:50%;display:inline-block;animation:pulse 1.2s infinite"></span>
           ${esc(b.hero.liveHero)}${opts.liveCount ? ` · ${opts.liveCount}` : ''}
         </div>
-        ${opts.subtitle ? `<div style="font-size:${isTV ? '15px' : '13px'};color:${isTV ? '#0a0a0a' : 'rgba(0,0,0,.6)'};margin-top:8px;font-weight:600">${esc(opts.subtitle)}</div>` : ''}
+        ${opts.subtitle ? `<div style="font-size:${isTV ? '15px' : '13px'};color:var(--ts,#F4F4F5);margin-top:8px;font-weight:600">${esc(opts.subtitle)}</div>` : ''}
       </div>`
     }
     if (variant === 'empty') {
@@ -93,7 +93,7 @@ export function Hero(variant, opts = {}) {
         <p style="font-size:13px;color:rgba(255,255,255,.7);max-width:420px;margin:0 auto 14px">${esc(opts.subtitle || b.hero.emptyDrawSubtitle)}</p>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
           ${opts.primaryAction ? `<button class="btn primary" style="background:#c8ff32;color:#0a0a0a;border-color:#c8ff32;font-weight:800" onclick="${esc(opts.primaryAction)}">Go to Setup</button>` : ''}
-          ${opts.secondaryAction ? `<button class="btn" style="background:#fff;color:#0a0a0a;border-color:#fff" onclick="${esc(opts.secondaryAction)}">Import teams</button>` : ''}
+          ${opts.secondaryAction ? `<button class="btn" style="background:#fff!important;color:#0a0a0a!important;border-color:#fff!important" onclick="${esc(opts.secondaryAction)}">Import teams</button>` : ''}
         </div>
       </div>`
     }
