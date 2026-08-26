@@ -266,6 +266,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);color:var(-
   .modal{max-width:100%;width:100%;max-height:85vh;border-radius:16px 16px 0 0;border-bottom:none}
   .app-header-sub{display:none}
   .hdr-demo-btn span{display:none}
+  .app-header-user{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 8px)}
 }
 
 /* ===== demo tenant banner (ported) ===== */
@@ -291,8 +292,22 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);color:var(-
   #action-rail #sync-actions-wrap button{width:100%!important}
   #action-rail .hdr-demo-btn{min-height:40px;justify-content:center}
   #action-rail button.hdr-icon-btn[onclick="signOut()"]{min-height:40px}
+  #action-rail #ops-theme-tog{min-height:40px;display:inline-flex;align-items:center;justify-content:center}
+}
+
+/* ===== dark theme (warm espresso) — flips the cream tokens ===== */
+html[data-theme="dark"]{color-scheme:dark;
+  --navy:#141210;--n2:#1c1916;--n3:#242019;--n4:#2e2920;
+  --nb:rgba(255,255,255,.12);--nbl:rgba(255,255,255,.07);
+  --text:#F2EEE3;--ts:#C9C2B2;--tm:#948C7C;
+  --gold:#E3B341;--navacc:#4ADE80;--green:#4ADE80;
+  --red:#F87171;--amber:#FBBF24;--blue:#7CA9FF;--purple:#C4B5FD;
 }
 </style>
+<script>
+/* apply saved theme before first paint (cream is the default/light) */
+try{ if(localStorage.getItem('dulahq-theme')==='dark') document.documentElement.setAttribute('data-theme','dark'); }catch(e){}
+</script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -4279,7 +4294,7 @@ function renderLiveView() {
       + (m ? ('<span class="badge ' + (isViewable ? 'brd' : 'bgy') + '">' + (isViewable ? '\u25cf LIVE' : 'Not live') + '</span>') : '') + '</div>';
     if (isViewable) {
       var platform = detectStreamPlatform(em.url);
-      var platformBadge = platform === 'youtube' ? '<span class="badge brd" style="background:var(--rdbg);color:#c4302b">YouTube</span>' : (platform === 'facebook' ? '<span class="badge blbg" style="color:var(--blue)">Facebook</span>' : '<span class="badge" style="color:var(--tm)">Unrecognized platform</span>');
+      var platformBadge = platform === 'youtube' ? '<span class="badge brd" style="background:var(--rdbg);color:var(--red)">YouTube</span>' : (platform === 'facebook' ? '<span class="badge blbg" style="color:var(--blue)">Facebook</span>' : '<span class="badge" style="color:var(--tm)">Unrecognized platform</span>');
       html += '<div style="margin-bottom:6px">' + platformBadge + '</div>';
       html += '<div style="border-radius:8px;overflow:hidden;background:#000"><iframe src="' + esc(liveEmbedSrc(em.url)) + '" width="100%" height="280" style="border:none;overflow:hidden;display:block" scrolling="no" frameborder="0" allowfullscreen="true" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe></div>';
     } else {
@@ -6035,11 +6050,40 @@ function renderDemoBanner_(){
   fence('autoSave'); fence('pushToSheetsQuiet'); fence('pushToSheets'); fence('seedFromSheets'); fence('loadFromSheets');
 })();
 
+/* Light/dark toggle — cream default, warm-espresso dark; remembered per browser */
+window.toggleTheme_ = function(){
+  var r = document.documentElement;
+  var dark = r.getAttribute('data-theme') === 'dark';
+  if (dark) r.removeAttribute('data-theme'); else r.setAttribute('data-theme', 'dark');
+  try { localStorage.setItem('dulahq-theme', dark ? 'light' : 'dark'); } catch(e){}
+  var b = document.getElementById('ops-theme-tog');
+  if (b) b.textContent = dark ? '\u{1F319}' : '\u2600\uFE0F';
+};
+(function(){
+  function makeThemeBtn(){
+    try {
+      if (document.getElementById('ops-theme-tog')) return;
+      var host = document.querySelector('.app-header-user');
+      if (!host) return;
+      var b = document.createElement('button');
+      b.id = 'ops-theme-tog'; b.className = 'hdr-icon-btn'; b.type = 'button';
+      b.title = 'Toggle light / dark theme'; b.setAttribute('aria-label', 'Toggle light or dark theme');
+      b.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '\u2600\uFE0F' : '\u{1F319}';
+      b.onclick = function(){ try { toggleTheme_(); } catch(e){} };
+      host.insertBefore(b, host.firstChild);
+    } catch(e){}
+  }
+  makeThemeBtn();
+  document.addEventListener('DOMContentLoaded', makeThemeBtn);
+  setInterval(makeThemeBtn, 3000);
+})();
+
 /* Mobile More sheet: System group (same functions the desktop rail buttons call) */
 function demoSystemGroupHtml_(){
   try {
     if (typeof AUTH === 'undefined' || !AUTH || !AUTH.signedIn) return '';
     var h = '<div class="dropdown-group-label" style="margin-top:6px">System</div>';
+    h += '<button class="nav-item" onclick="closeMobMoreSheet();toggleTheme_()"><i class="ti ti-sun-high"></i>Toggle light / dark</button>';
     h += '<button class="nav-item" onclick="closeMobMoreSheet();seedDemo()"><i class="ti ti-wand"></i>Demo data</button>';
     h += '<button class="nav-item" onclick="closeMobMoreSheet();loadFromSheets()"><i class="ti ti-cloud-download"></i>Refresh from backend</button>';
     if (AUTH.role === 'admin'){
@@ -6059,6 +6103,7 @@ function railControls(){
   nd = document.getElementById('viewas-dropdown-wrap'); if (nd) out.push(nd);
   nd = document.getElementById('sync-actions-wrap'); if (nd) out.push(nd);
   nd = document.querySelector('.hdr-demo-btn'); if (nd) out.push(nd);
+  nd = document.getElementById('ops-theme-tog'); if (nd) out.push(nd);
   nd = document.querySelector('button.hdr-icon-btn[onclick="signOut()"]'); if (nd) out.push(nd);
   return out;
 }
