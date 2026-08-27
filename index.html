@@ -5462,8 +5462,8 @@ function renderSignInPage() {
   if (S._tournamentMeta.guestAccessEnabled) {
     guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="enterGuestView()">Continue as Guest</span>');
   }
-  guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showOfflineMode()">Continue as guest (admin preview)</span>');
-  guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showSuperadminConsole()">Platform console (superadmin preview)</span>');
+  guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showOfflineMode()">Tenant Admin (preview)</span>');
+  guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showSuperadminConsole()">Platform Console (superadmin preview)</span>');
   html += '<div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">' + guestLinks.join('') + '</div>';
   html += '</div></div>';
   return html;
