@@ -17,6 +17,11 @@
 <meta name="twitter:description" content="Run brackets, groups, live scoring, referee tools, and team registration — all in one place.">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<!-- Not deferred, unlike the export libs below: auth/tenant resolution needs
+     this available before the main boot script runs (it's a classic inline
+     script, not a module, so it executes synchronously during parsing —
+     a deferred script here would still be loading when it does). -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -392,6 +397,34 @@ try{ if(localStorage.getItem('dulahq-theme')==='dark') document.documentElement.
 
 <script>
 'use strict';
+
+/* Real tenant backend (Supabase project "Dula HQ" — organizations/
+   org_members/platform_admins/tournaments, RLS already in place).
+   Separate from, and does not touch, the legacy Google-Sheets sync below
+   or the local-only demo-tenant mechanism further down this file — those
+   keep working exactly as before for their existing use cases. Only real
+   (non-demo) sign-ins and the Superadmin Console talk to this. */
+var SUPABASE_URL = 'https://zytyakbgwaegvftblkcn.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_Lu9O2SAwGkHqlSILlkWEDA_EQFhr1pN';
+var sb = (typeof supabase !== 'undefined' && supabase.createClient)
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
+  : null;
+/* Set once a real (non-demo) session resolves to a platform admin or an
+   org member — see completeSupabaseLogin(). Null means "no real backend
+   session active", which every real-tenant code path below treats as
+   "fall back to existing local/demo behavior, change nothing." */
+var TENANT_ORG = null;
+var IS_PLATFORM_ADMIN_SESSION = false;
+if (sb) {
+  /* Fires on: an existing persisted session found at page load, a magic
+     link completing (Supabase parses the URL fragment automatically —
+     detectSessionInUrl:true above), and token refreshes. completeLogin_
+     ignores anything that isn't a fresh sign-in-shaped event; harmless
+     to call on refresh too since it just re-resolves the same org. */
+  sb.auth.onAuthStateChange(function(event, session){
+    if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) { completeSupabaseLogin_(session); }
+  });
+}
 
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQrs3lvXxZzrE0wyvdZSStrPJojl-8lNb_mYv46FxZMWsdcjUL3l0CxrUfvwQLz2Hccg/exec';
 var GOOGLE_CLIENT_ID = '';
@@ -5328,6 +5361,7 @@ function autoSave() {
   if (AUTH.signedIn && SCRIPT_URL && (AUTH.role === 'admin' || AUTH.role === 'referee' || AUTH.role === 'official')) {
     pushToSheetsQuiet();
   }
+  if (S && S._tenantOrgId) { saveTenantTournament_(); }
 }
 function pushToSheetsQuiet() {
   var stripped = JSON.parse(JSON.stringify(S));
@@ -5472,6 +5506,16 @@ function attemptEmailLogin() {
   var emailEl = el('login-email');
   var email = ((emailEl ? emailEl.value : '') || '').trim().toLowerCase();
   if (!email) { showLoginError('Enter your email address.'); return; }
+  /* Demo tenants stay fully local, same guarantee the rest of the demo
+     system already makes ("demo data never reaches the sheet") — never
+     touch the real backend while previewing a demo org. */
+  if (sb && !(S && S._demoOrg)) {
+    sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.origin + location.pathname } }).then(function(res){
+      if (res.error) { showLoginError(res.error.message || 'Sign-in failed. Try again.'); return; }
+      showLoginMessage_('Check your email for a sign-in link.');
+    }).catch(function(e){ showLoginError('Sign-in service unavailable: ' + ((e && e.message) || 'unknown error')); });
+    return;
+  }
   var user = null;
   for (var i = 0; i < S.users.length; i++) { if ((S.users[i].email || '').toLowerCase() === email) { user = S.users[i]; break; } }
   if (!user) { showLoginError('No account found for that email. Request access or register a team below.'); return; }
@@ -5501,7 +5545,91 @@ function completeLogin(user) {
 }
 function showLoginError(msg) {
   var errEl = el('auth-error');
-  if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  if (errEl) { errEl.style.color = ''; errEl.style.background = ''; errEl.style.borderColor = ''; errEl.textContent = msg; errEl.style.display = 'block'; }
+}
+function showLoginMessage_(msg) {
+  var errEl = el('auth-error');
+  if (errEl) { errEl.style.color = 'var(--green)'; errEl.style.background = 'var(--grbg)'; errEl.style.borderColor = 'var(--grb)'; errEl.textContent = msg; errEl.style.display = 'block'; }
+}
+
+/* ============================================================
+   REAL TENANT AUTH + DATA SYNC (Supabase). See the sb/TENANT_ORG
+   comment near the top of this script for what this does and does not
+   touch. Every function here is a no-op if sb is null (library failed to
+   load / offline) or if the lookups come back empty — falls through to
+   whatever the existing local/demo behavior already does, never throws.
+   ============================================================ */
+function completeSupabaseLogin_(session) {
+  if (!sb || !session || !session.user || !session.user.email) return;
+  /* A persisted real session's INITIAL_SESSION event fires on every page
+     load, including while the synchronous demo-tenant boot code (further
+     down this file) has already swapped S into a demo org's state a tick
+     earlier. Never let this overwrite that — demo tenants stay fully
+     local no matter what real session exists in the background. */
+  if (S && S._demoOrg) return;
+  var email = session.user.email.toLowerCase();
+  sb.from('platform_admins').select('email').eq('email', email).maybeSingle().then(function(res){
+    if (res.data) {
+      IS_PLATFORM_ADMIN_SESSION = true;
+      AUTH.email = email;
+      showSuperadminConsole();
+      return;
+    }
+    sb.from('org_members').select('org_id,role').eq('email', email).limit(1).maybeSingle().then(function(res2){
+      if (!res2.data) {
+        showLoginError('Signed in as ' + email + ', but no tenant membership was found. Contact your platform admin.');
+        return;
+      }
+      sb.from('organizations').select('*').eq('id', res2.data.org_id).maybeSingle().then(function(orgRes){
+        if (orgRes.data && orgRes.data.status === 'suspended') {
+          showTenantPausedScreen_(orgRes.data);
+          return;
+        }
+        TENANT_ORG = orgRes.data || null;
+        loadTenantTournament_(res2.data.org_id, res2.data.role, email);
+      });
+    });
+  });
+}
+function loadTenantTournament_(orgId, role, email) {
+  if (!sb) return;
+  sb.from('tournaments').select('*').eq('org_id', orgId).maybeSingle().then(function(res){
+    var row = res.data;
+    if (row && row.data && Object.keys(row.data).length) { swapStateInPlace_(row.data); }
+    S._tenantOrgId = orgId;
+    AUTH.signedIn = true;
+    AUTH.email = email;
+    AUTH.name = (TENANT_ORG && TENANT_ORG.name ? TENANT_ORG.name + ' — ' : '') + email;
+    AUTH.role = role;
+    S.role = role;
+    S.page = NAV[role] ? NAV[role][0].p : 'schedule';
+    var sWrap = el('signin-wrap'); if (sWrap) sWrap.innerHTML = '';
+    var aEl = el('app-shell'); if (aEl) aEl.style.display = 'flex';
+    updateUserBadge();
+    renderRoleViewAs();
+    renderSyncActions();
+    renderNav();
+    render();
+    showToast('Signed in' + (TENANT_ORG ? ' — ' + TENANT_ORG.name + ' loaded' : ''));
+  });
+}
+/* Explicit update-then-insert instead of .upsert(): tournaments.id is the
+   primary key but is NOT org_id (it's a free-form text id — the existing
+   seeded row is literally id:'primary'), and org_id has no unique
+   constraint, so there is no valid ON CONFLICT target for an upsert
+   keyed by org. This checks for an existing row for the org first. */
+function saveTenantTournament_() {
+  if (!sb || !S || !S._tenantOrgId) return;
+  var payload = JSON.parse(JSON.stringify(S));
+  payload.timerInterval = null;
+  var orgId = S._tenantOrgId;
+  sb.from('tournaments').select('id').eq('org_id', orgId).maybeSingle().then(function(res){
+    if (res.data && res.data.id) {
+      sb.from('tournaments').update({ data: payload, updated_at: new Date().toISOString() }).eq('id', res.data.id).then(function(){});
+    } else {
+      sb.from('tournaments').insert({ id: orgId, org_id: orgId, name: (TENANT_ORG && TENANT_ORG.name) || 'Tournament', data: payload }).then(function(){});
+    }
+  });
 }
 function backToSignIn() {
   var sWrap = el('signin-wrap');
@@ -5709,26 +5837,47 @@ function renderSuperadmin(){
 var SA_EXPANDED_SLUG = null;
 function saToggleManage(slug){ SA_EXPANDED_SLUG = (SA_EXPANDED_SLUG === slug) ? null : slug; renderSuperadmin(); }
 
+/* Dual-mode: IS_PLATFORM_ADMIN_SESSION (a real, completed Supabase login
+   that resolved against platform_admins) reads/writes the real
+   organizations table; otherwise falls back to the existing local/demo
+   directory below, completely unchanged. SA_REAL_ORGS is a simple
+   fetch-once-then-cache — actions that mutate clear it so the next
+   render refetches instead of trusting a stale local copy. */
+var SA_REAL_ORGS = null;
 function renderSaDirectory_(){
-  var dir = getTenantDirectory();
-  var html = '<div class="card"><div class="card-title"><i class="ti ti-list-details"></i>Tenant Directory</div>';
+  if (IS_PLATFORM_ADMIN_SESSION && sb) {
+    if (SA_REAL_ORGS === null) {
+      sb.from('organizations').select('*').order('created_at').then(function(res){
+        SA_REAL_ORGS = res.data || [];
+        renderSuperadmin();
+      });
+      return '<div class="card"><div class="card-title"><i class="ti ti-list-details"></i>Tenant Directory</div><div class="empty"><p>Loading tenants…</p></div></div>';
+    }
+    return renderSaDirectoryRows_(SA_REAL_ORGS, true);
+  }
+  return renderSaDirectoryRows_(getTenantDirectory(), false);
+}
+function renderSaDirectoryRows_(dir, isReal){
+  var html = '<div class="card"><div class="card-title"><i class="ti ti-list-details"></i>Tenant Directory'
+    + '<span class="badge ' + (isReal ? 'b-green' : 'b-amber') + '" style="margin-left:auto">' + (isReal ? 'Live backend' : 'Local/demo directory') + '</span></div>';
   if (!dir.length) { html += '<div class="empty"><p>No tenants yet — provision one to get started.</p></div></div>'; return html; }
   for (var i = 0; i < dir.length; i++) {
     var t = dir[i];
+    var key = isReal ? t.id : t.slug; /* real mutations need the uuid PK, not the slug */
     var suspended = t.status === 'suspended';
     html += '<div class="sa-row">';
     html += '<span class="sa-swatch" style="background:' + esc(t.accent || '#999') + '"></span>';
     html += '<div style="flex:1;min-width:0"><div style="font-weight:600">' + esc(t.name) + ' ' + (suspended ? '<span class="badge b-amber">Suspended</span>' : '<span class="badge b-green">Active</span>') + '</div>';
     html += '<div style="font-size:var(--fs12);color:var(--tm)">/t/' + esc(t.slug) + '</div></div>';
     html += '<button class="btn sm" onclick="window.open(location.origin+\'/t/' + esc(t.slug) + '\',\'_blank\')"><i class="ti ti-external-link"></i> Open</button>';
-    html += '<button class="btn sm" onclick="saToggleManage(\'' + esc(t.slug) + '\')"><i class="ti ti-settings"></i> Manage</button>';
-    html += '<button class="btn sm' + (suspended ? ' primary' : '') + '" onclick="saToggleSuspend(\'' + esc(t.slug) + '\')">' + (suspended ? 'Activate' : 'Suspend') + '</button>';
+    html += '<button class="btn sm" onclick="saToggleManage(\'' + esc(key) + '\')"><i class="ti ti-settings"></i> Manage</button>';
+    html += '<button class="btn sm' + (suspended ? ' primary' : '') + '" onclick="' + (isReal ? 'saToggleSuspendReal_' : 'saToggleSuspend') + '(\'' + esc(key) + '\')">' + (suspended ? 'Activate' : 'Suspend') + '</button>';
     html += '</div>';
-    if (SA_EXPANDED_SLUG === t.slug) {
+    if (SA_EXPANDED_SLUG === key) {
       html += '<div style="padding:14px;background:var(--n3);border-radius:8px;margin:-4px 0 10px">';
-      html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(t.slug) + '" value="' + esc(t.name) + '"></div>';
-      html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(t.slug) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
-      html += '<button class="btn primary sm" onclick="saSaveManage(\'' + esc(t.slug) + '\')"><i class="ti ti-check"></i> Save</button>';
+      html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(key) + '" value="' + esc(t.name) + '"></div>';
+      html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(key) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
+      html += '<button class="btn primary sm" onclick="' + (isReal ? 'saSaveManageReal_' : 'saSaveManage') + '(\'' + esc(key) + '\')"><i class="ti ti-check"></i> Save</button>';
       html += '</div>';
     }
   }
@@ -5757,17 +5906,70 @@ function saSaveManage(slug){
   renderSuperadmin();
   showToast('Tenant updated');
 }
+function saToggleSuspendReal_(orgId){
+  var org = null;
+  for (var i = 0; i < (SA_REAL_ORGS||[]).length; i++) { if (SA_REAL_ORGS[i].id === orgId) { org = SA_REAL_ORGS[i]; break; } }
+  if (!org) return;
+  var next = (org.status === 'suspended') ? 'active' : 'suspended';
+  sb.from('organizations').update({ status: next }).eq('id', orgId).then(function(res){
+    if (res.error) { showToast('Update failed: ' + res.error.message); return; }
+    SA_REAL_ORGS = null; /* force refetch so the directory reflects the real row */
+    renderSuperadmin();
+  });
+}
+function saSaveManageReal_(orgId){
+  var nameEl = el('sa-name-' + orgId), colorEl = el('sa-color-' + orgId);
+  var patch = {};
+  if (nameEl && nameEl.value.trim()) patch.name = nameEl.value.trim();
+  if (colorEl) patch.accent = colorEl.value;
+  sb.from('organizations').update(patch).eq('id', orgId).then(function(res){
+    if (res.error) { showToast('Update failed: ' + res.error.message); return; }
+    SA_EXPANDED_SLUG = null;
+    SA_REAL_ORGS = null;
+    renderSuperadmin();
+    showToast('Tenant updated');
+  });
+}
 
 function renderSaProvision_(){
-  var html = '<div class="card"><div class="card-title"><i class="ti ti-plus"></i>Provision a new tenant</div>';
+  var real = IS_PLATFORM_ADMIN_SESSION && sb;
+  var html = '<div class="card"><div class="card-title"><i class="ti ti-plus"></i>Provision a new tenant'
+    + '<span class="badge ' + (real ? 'b-green' : 'b-amber') + '" style="margin-left:auto">' + (real ? 'Creates a real tenant' : 'Local/demo directory only') + '</span></div>';
   html += '<div class="field"><label>Slug (used as /t/slug)</label><input id="sa-new-slug" placeholder="e.g. rally-point"></div>';
   html += '<div class="field"><label>Business / tournament name</label><input id="sa-new-name" placeholder="e.g. Rally Point Open 2026"></div>';
   html += '<div class="field"><label>Accent color</label><input id="sa-new-color" type="color" value="#15803D" style="width:70px;padding:2px;height:38px"></div>';
   html += '<div class="field"><label>Admin email</label><input id="sa-new-admin" type="email" placeholder="admin@example.com"></div>';
   html += '<div id="sa-provision-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-bottom:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb)"></div>';
-  html += '<button class="btn primary" onclick="saProvisionTenant()"><i class="ti ti-check"></i> Create / Register Tenant</button>';
+  html += '<button class="btn primary" onclick="' + (real ? 'saProvisionTenantReal_' : 'saProvisionTenant') + '()"><i class="ti ti-check"></i> Create / Register Tenant</button>';
   html += '</div>';
   return html;
+}
+function saProvisionTenantReal_(){
+  var slugEl = el('sa-new-slug'), nameEl = el('sa-new-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
+  var errEl = el('sa-provision-error');
+  var slug = (slugEl.value || '').trim().toLowerCase();
+  var name = (nameEl.value || '').trim();
+  var adminEmail = (adminEl.value || '').trim().toLowerCase();
+  function fail(msg){ errEl.textContent = msg; errEl.style.display = 'block'; }
+  if (!/^[a-z0-9-]+$/.test(slug)) { fail('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
+  if (!name) { fail('Business name is required.'); return; }
+  if (!adminEmail) { fail('Admin email is required so someone can actually sign in to this tenant.'); return; }
+  sb.from('organizations').select('id').eq('slug', slug).maybeSingle().then(function(existing){
+    if (existing.data) { fail('That slug is already registered — pick another.'); return; }
+    sb.from('organizations').insert({ slug: slug, name: name, accent: colorEl.value || '#15803D', status: 'active' }).select().single().then(function(res){
+      if (res.error) { fail('Create failed: ' + res.error.message); return; }
+      var orgId = res.data.id;
+      sb.from('org_members').insert({ org_id: orgId, email: adminEmail, role: 'admin' }).then(function(memRes){
+        if (memRes.error) { fail('Tenant created, but adding the admin failed: ' + memRes.error.message + '. Add them from Manage.'); return; }
+        errEl.style.display = 'none';
+        showToast('Tenant "' + name + '" created — ' + adminEmail + ' can sign in at /t/' + slug);
+        slugEl.value = ''; nameEl.value = ''; adminEl.value = '';
+        SA_REAL_ORGS = null;
+        SUPERADMIN_TAB = 'directory';
+        renderSuperadmin();
+      });
+    });
+  });
 }
 function saProvisionTenant(){
   var slugEl = el('sa-new-slug'), nameEl = el('sa-new-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
@@ -6432,16 +6634,36 @@ function placeActions(){
   } catch(e){}
 })();
 
+/* /t/{slug} for a real (Supabase) org is branding/paused-screen only at
+   boot — actual tournament data loads post-auth via org_members lookup
+   (completeSupabaseLogin_), regardless of which URL got them there, so a
+   signed-in user only ever sees orgs they actually belong to. Slugs that
+   aren't a real org fall through to the existing local demo-tenant path
+   unchanged. */
+function bootDemoTenantPath_(slug){
+  var tenant_ = findTenant(slug);
+  if (tenant_) {
+    if (tenant_.status === 'suspended') { showTenantPausedScreen_(tenant_); }
+    else if (!S._demoOrg || S._demoOrg !== slug) { enterDemoOrg(tenant_); renderDemoBanner_(); try { renderNav(); } catch(e){} }
+  }
+}
 /* boot — /t/{slug} enters a demo tenant; any other path restores your real state */
 (function(){
   try {
     var m = location.pathname.match(/^\/t\/([a-z0-9-]+)/i);
     if (m) {
       var slug = m[1].toLowerCase();
-      var tenant_ = findTenant(slug);
-      if (tenant_) {
-        if (tenant_.status === 'suspended') { showTenantPausedScreen_(tenant_); }
-        else if (!S._demoOrg || S._demoOrg !== slug) { enterDemoOrg(tenant_); }
+      if (sb) {
+        sb.from('organizations').select('*').eq('slug', slug).maybeSingle().then(function(res){
+          if (res.data) {
+            if (res.data.status === 'suspended') { showTenantPausedScreen_(res.data); }
+            try { var snR = el('sb-trn-name'); if (snR) snR.textContent = res.data.name; } catch(e){}
+          } else {
+            bootDemoTenantPath_(slug);
+          }
+        }).catch(function(){ bootDemoTenantPath_(slug); });
+      } else {
+        bootDemoTenantPath_(slug);
       }
     } else {
       leaveDemoOrgIfNeeded();
