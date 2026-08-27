@@ -422,6 +422,12 @@ var IS_PLATFORM_ADMIN_SESSION = false;
    loadTenantTournament_ then auto-picks if there's only one, or shows a
    picker if there are several. */
 var PENDING_TENANT_SLUG = null;
+/* The org-slug segment of the current /t/{org-slug}[/{tournament-slug}]
+   URL, captured synchronously (pure string match on location.pathname,
+   no network call) — see the boot path near the bottom of this file.
+   completeSupabaseLogin_ reads it to prefer "this is the tenant they meant
+   to open" over the default platform-admin-first routing. */
+var PENDING_TENANT_ORG_SLUG = null;
 /* Sign-in page subtitle, normally the static "Tournament Manager" label.
    Set once a real org (and, if applicable, a specific tournament) is
    resolved at boot — see the /t/ boot path near the bottom of this file. */
@@ -5583,28 +5589,57 @@ function completeSupabaseLogin_(session) {
      local no matter what real session exists in the background. */
   if (S && S._demoOrg) return;
   var email = session.user.email.toLowerCase();
-  sb.from('platform_admins').select('email').eq('email', email).maybeSingle().then(function(res){
-    if (res.data) {
-      IS_PLATFORM_ADMIN_SESSION = true;
-      AUTH.email = email;
-      showSuperadminConsole();
-      return;
-    }
-    sb.from('org_members').select('org_id,role').eq('email', email).limit(1).maybeSingle().then(function(res2){
+  function goSuperadmin(){
+    IS_PLATFORM_ADMIN_SESSION = true;
+    AUTH.email = email;
+    showSuperadminConsole();
+  }
+  function checkPlatformAdmin(){
+    sb.from('platform_admins').select('email').eq('email', email).maybeSingle().then(function(res){
+      if (res.data) { goSuperadmin(); }
+      else { showLoginError('Signed in as ' + email + ', but no tenant membership was found. Contact your platform admin.'); }
+    });
+  }
+  function resolveOrgMember(orgRow, fallbackToPlatformAdmin){
+    var q = sb.from('org_members').select('org_id,role').eq('email', email);
+    if (orgRow) q = q.eq('org_id', orgRow.id);
+    q.limit(1).maybeSingle().then(function(res2){
       if (!res2.data) {
-        showLoginError('Signed in as ' + email + ', but no tenant membership was found. Contact your platform admin.');
+        if (fallbackToPlatformAdmin) { checkPlatformAdmin(); }
+        else { showLoginError('Signed in as ' + email + ', but no tenant membership was found. Contact your platform admin.'); }
         return;
       }
-      sb.from('organizations').select('*').eq('id', res2.data.org_id).maybeSingle().then(function(orgRes){
-        if (orgRes.data && orgRes.data.status === 'suspended') {
-          showTenantPausedScreen_(orgRes.data);
-          return;
-        }
-        TENANT_ORG = orgRes.data || null;
+      function enter(org){
+        if (org && org.status === 'suspended') { showTenantPausedScreen_(org); return; }
+        TENANT_ORG = org || TENANT_ORG;
         loadTenantTournament_(res2.data.org_id, res2.data.role, email);
-      });
+      }
+      if (orgRow) { enter(orgRow); }
+      else { sb.from('organizations').select('*').eq('id', res2.data.org_id).maybeSingle().then(function(orgRes){ enter(orgRes.data); }); }
     });
-  });
+  }
+  /* PENDING_TENANT_ORG_SLUG is captured synchronously (from the URL, no
+     network round trip) the instant the boot script runs — see the /t/
+     boot path further down this file — so it's always ready by the time
+     this async auth callback fires, no race with that path's own
+     (separately async) branding fetch. If someone explicitly navigated to
+     /t/{org-slug}, honor that intent: try them as a member of THAT org
+     first, even if they're also a platform admin, and only fall back to
+     the Superadmin Console if they don't actually belong to it. Plain
+     sign-in (no tenant URL) keeps the original platform-admin-first
+     behavior. */
+  if (PENDING_TENANT_ORG_SLUG) {
+    sb.from('organizations').select('*').eq('slug', PENDING_TENANT_ORG_SLUG).maybeSingle().then(function(orgRes){
+      if (!orgRes.data) { checkPlatformAdmin(); return; }
+      if (orgRes.data.status === 'suspended') { showTenantPausedScreen_(orgRes.data); return; }
+      resolveOrgMember(orgRes.data, true);
+    });
+  } else {
+    sb.from('platform_admins').select('email').eq('email', email).maybeSingle().then(function(res){
+      if (res.data) { goSuperadmin(); return; }
+      resolveOrgMember(null, false);
+    });
+  }
 }
 /* An org can run more than one tournament at once (tournaments.org_id has
    no unique constraint, by design). If the URL named a specific one
@@ -6779,11 +6814,16 @@ function bootDemoTenantPath_(slug){
     if (m) {
       var slug = m[1].toLowerCase();
       var tSlug = m[2] ? m[2].toLowerCase() : null;
+      /* Set synchronously (pure string match, no network call) so
+         completeSupabaseLogin_ always sees these in time, regardless of
+         how the org-lookup fetch below or the auth session check race
+         against each other. */
+      PENDING_TENANT_ORG_SLUG = slug;
+      PENDING_TENANT_SLUG = tSlug;
       if (sb) {
         sb.from('organizations').select('*').eq('slug', slug).maybeSingle().then(function(res){
           if (res.data) {
             if (res.data.status === 'suspended') { showTenantPausedScreen_(res.data); return; }
-            PENDING_TENANT_SLUG = tSlug;
             if (tSlug) {
               sb.from('tournaments').select('name').eq('org_id', res.data.id).eq('slug', tSlug).maybeSingle().then(function(tRes){
                 var trnName = tRes.data ? tRes.data.name : res.data.name;
