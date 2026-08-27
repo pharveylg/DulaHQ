@@ -66,6 +66,7 @@ h1,h2,h3,.app-header-name,.tb-title,.card-title,.sec-label{font-family:var(--fon
 .topbar{padding:16px 20px;border-bottom:1px solid var(--nb);display:flex;align-items:center;justify-content:space-between;background:var(--n2);position:sticky;top:0;z-index:50}
 .topbar::after{content:'';position:absolute;bottom:-1px;left:0;width:15%;height:2px;background:var(--navacc)}
 .content{flex:1;padding:20px;max-width:1300px}
+.app-footer{padding:16px 20px;text-align:center;font-size:var(--fs12);color:var(--ts)}
 .app-header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--n2);border-bottom:1px solid var(--nb);position:sticky;top:0;z-index:100;flex-wrap:wrap}
 .app-header-brand{display:flex;flex-direction:column;margin-right:4px}
 .app-header-name{font-size:var(--fs16);font-weight:700;line-height:1.1}
@@ -276,6 +277,7 @@ h1,h2,h3,.app-header-name,.tb-title,.card-title,.sec-label{font-family:var(--fon
   :root{--fs11:10px;--fs12:11px;--fs13:12px;--fs14:12px;--fs15:13px;--fs16:14px;--fs18:15px;--fs20:17px;--fs22:18px;--fs24:20px;--fs26:21px;--fs29:24px;--fs34:27px;--fs38:30px;--fs41:32px;--fs44:35px;--fs46:36px;--fs48:38px;--fs52:41px;--fs53:42px;--fs58:46px;}
   .mob-nav{display:block}
   .content{padding:14px;padding-bottom:80px}
+  .app-footer{padding-bottom:76px}
   .g4{grid-template-columns:1fr 1fr}
   .g3{grid-template-columns:1fr}
   .g2{grid-template-columns:1fr}
@@ -341,7 +343,7 @@ html[data-theme="dark"]{color-scheme:dark;
 }
 
 /* ---- Superadmin Console: separate full-screen view, no tenant chrome ---- */
-body.superadmin-mode .app-header,body.superadmin-mode .category-strip,body.superadmin-mode .topbar,body.superadmin-mode .mob-nav{display:none!important}
+body.superadmin-mode .app-header,body.superadmin-mode .category-strip,body.superadmin-mode .topbar,body.superadmin-mode .mob-nav,body.superadmin-mode .app-footer{display:none!important}
 .sa-header{display:flex;align-items:center;gap:12px;padding:14px 20px;border:1px solid var(--nb);border-radius:10px;background:var(--n2);flex-wrap:wrap;margin-bottom:20px}
 .sa-header-name{font-family:var(--font-heading);font-size:var(--fs22);font-weight:700;text-transform:uppercase;letter-spacing:.02em}
 .sa-header-name span{color:var(--gold)}
@@ -376,6 +378,7 @@ try{ if(localStorage.getItem('dulahq-theme')==='dark') document.documentElement.
       <div class="tb-actions" id="tb-actions"></div>
     </div>
     <div class="content" id="main-content"></div>
+    <footer class="app-footer">Powered by Dula HQ</footer>
   </main>
 </div>
 <!-- No inline display:none here on purpose: the .mob-nav class already
