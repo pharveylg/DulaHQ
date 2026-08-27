@@ -415,6 +415,21 @@ var sb = (typeof supabase !== 'undefined' && supabase.createClient)
    "fall back to existing local/demo behavior, change nothing." */
 var TENANT_ORG = null;
 var IS_PLATFORM_ADMIN_SESSION = false;
+/* Set by the /t/{org-slug}/{tournament-slug} boot path below when a
+   second URL segment names a specific tournament (an organizer running
+   more than one at once). Consumed once by loadTenantTournament_ right
+   after login, then cleared. Null means "no tournament specified" —
+   loadTenantTournament_ then auto-picks if there's only one, or shows a
+   picker if there are several. */
+var PENDING_TENANT_SLUG = null;
+/* Sign-in page subtitle, normally the static "Tournament Manager" label.
+   Set once a real org (and, if applicable, a specific tournament) is
+   resolved at boot — see the /t/ boot path near the bottom of this file. */
+var TENANT_SIGNIN_SUBTITLE = null;
+function setTenantSigninSubtitle_(text) {
+  TENANT_SIGNIN_SUBTITLE = text;
+  try { var sEl = document.getElementById('signin-subtitle'); if (sEl && text) sEl.textContent = text; } catch(e){}
+}
 if (sb) {
   /* Fires on: an existing persisted session found at page load, a magic
      link completing (Supabase parses the URL fragment automatically —
@@ -5361,7 +5376,7 @@ function autoSave() {
   if (AUTH.signedIn && SCRIPT_URL && (AUTH.role === 'admin' || AUTH.role === 'referee' || AUTH.role === 'official')) {
     pushToSheetsQuiet();
   }
-  if (S && S._tenantOrgId) { saveTenantTournament_(); }
+  if (S && S._tenantTournamentId) { saveTenantTournament_(); }
 }
 function pushToSheetsQuiet() {
   var stripped = JSON.parse(JSON.stringify(S));
@@ -5478,7 +5493,7 @@ function renderSignInPage() {
   html += '<div style="position:relative;z-index:1;background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:40px 32px;max-width:400px;width:100%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)">';
   html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:4px">Dula <span style="color:var(--gold)">HQ</span></div>';
   html += '<div style="width:64px;height:4px;background:linear-gradient(90deg,var(--gold),var(--navacc));margin:10px auto 14px;border-radius:2px"></div>';
-  html += '<div style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">Tournament Manager</div>';
+  html += '<div id="signin-subtitle" style="font-size:var(--fs14);color:var(--tm);text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:24px">' + esc(TENANT_SIGNIN_SUBTITLE || 'Tournament Manager') + '</div>';
   if (GOOGLE_CLIENT_ID) {
     html += '<div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:16px"></div>';
     html += '<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--tm);font-size:var(--fs13)"><div style="flex:1;height:1px;background:var(--nb)"></div>or<div style="flex:1;height:1px;background:var(--nb)"></div></div>';
@@ -5591,45 +5606,74 @@ function completeSupabaseLogin_(session) {
     });
   });
 }
+/* An org can run more than one tournament at once (tournaments.org_id has
+   no unique constraint, by design). If the URL named a specific one
+   (PENDING_TENANT_SLUG, from /t/{org-slug}/{tournament-slug}) load that;
+   otherwise auto-pick when there's exactly one, or ask when there are
+   several — never guess which one someone meant. */
 function loadTenantTournament_(orgId, role, email) {
   if (!sb) return;
-  sb.from('tournaments').select('*').eq('org_id', orgId).maybeSingle().then(function(res){
-    var row = res.data;
-    if (row && row.data && Object.keys(row.data).length) { swapStateInPlace_(row.data); }
-    S._tenantOrgId = orgId;
-    AUTH.signedIn = true;
-    AUTH.email = email;
-    AUTH.name = (TENANT_ORG && TENANT_ORG.name ? TENANT_ORG.name + ' — ' : '') + email;
-    AUTH.role = role;
-    S.role = role;
-    S.page = NAV[role] ? NAV[role][0].p : 'schedule';
-    var sWrap = el('signin-wrap'); if (sWrap) sWrap.innerHTML = '';
-    var aEl = el('app-shell'); if (aEl) aEl.style.display = 'flex';
-    updateUserBadge();
-    renderRoleViewAs();
-    renderSyncActions();
-    renderNav();
-    render();
-    showToast('Signed in' + (TENANT_ORG ? ' — ' + TENANT_ORG.name + ' loaded' : ''));
+  var q = sb.from('tournaments').select('*').eq('org_id', orgId);
+  if (PENDING_TENANT_SLUG) q = q.eq('slug', PENDING_TENANT_SLUG);
+  var slugUsed = PENDING_TENANT_SLUG;
+  PENDING_TENANT_SLUG = null;
+  q.then(function(res){
+    var rows = res.data || [];
+    if (!slugUsed && rows.length > 1) { renderTournamentPicker_(rows, orgId, role, email); return; }
+    var row = rows[0] || null;
+    if (slugUsed && !row) { showLoginError('That tournament link is no longer valid. Ask your platform admin for the current link.'); return; }
+    enterTenantTournament_(row, orgId, role, email);
   });
 }
-/* Explicit update-then-insert instead of .upsert(): tournaments.id is the
-   primary key but is NOT org_id (it's a free-form text id — the existing
-   seeded row is literally id:'primary'), and org_id has no unique
-   constraint, so there is no valid ON CONFLICT target for an upsert
-   keyed by org. This checks for an existing row for the org first. */
+function enterTenantTournament_(row, orgId, role, email) {
+  if (row && row.data && Object.keys(row.data).length) { swapStateInPlace_(row.data); }
+  if (row) { S._tournamentMeta.name = row.name; }
+  S._tenantOrgId = orgId;
+  S._tenantTournamentId = row ? row.id : null;
+  AUTH.signedIn = true;
+  AUTH.email = email;
+  AUTH.name = (TENANT_ORG && TENANT_ORG.name ? TENANT_ORG.name + ' — ' : '') + email;
+  AUTH.role = role;
+  S.role = role;
+  S.page = NAV[role] ? NAV[role][0].p : 'schedule';
+  var sWrap = el('signin-wrap'); if (sWrap) sWrap.innerHTML = '';
+  var aEl = el('app-shell'); if (aEl) aEl.style.display = 'flex';
+  updateUserBadge();
+  renderRoleViewAs();
+  renderSyncActions();
+  renderNav();
+  render();
+  showToast('Signed in' + (row ? ' — ' + row.name + ' loaded' : ''));
+}
+var PENDING_TENANT_PICKER_ = null;
+function renderTournamentPicker_(tournaments, orgId, role, email) {
+  PENDING_TENANT_PICKER_ = { tournaments: tournaments, orgId: orgId, role: role, email: email };
+  var sWrap = el('signin-wrap');
+  if (!sWrap) return;
+  var html = '<div id="signin-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);padding:20px">';
+  html += '<div style="background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:32px;max-width:420px;width:100%;text-align:center">';
+  html += '<div style="font-size:var(--fs22);font-weight:700;margin-bottom:6px">' + esc((TENANT_ORG && TENANT_ORG.name) || 'Choose a tournament') + '</div>';
+  html += '<div style="font-size:var(--fs13);color:var(--tm);margin-bottom:20px">You manage more than one tournament — pick one to continue</div>';
+  for (var i = 0; i < tournaments.length; i++) {
+    var t = tournaments[i];
+    html += '<button class="btn" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="pickTenantTournament_(\'' + esc(t.id) + '\')"><i class="ti ti-trophy"></i> ' + esc(t.name) + '</button>';
+  }
+  html += '</div></div>';
+  sWrap.innerHTML = html;
+}
+function pickTenantTournament_(tournamentId) {
+  if (!PENDING_TENANT_PICKER_) return;
+  var p = PENDING_TENANT_PICKER_, t = null;
+  for (var i = 0; i < p.tournaments.length; i++) { if (String(p.tournaments[i].id) === tournamentId) { t = p.tournaments[i]; break; } }
+  PENDING_TENANT_PICKER_ = null;
+  if (!t) return;
+  enterTenantTournament_(t, p.orgId, p.role, p.email);
+}
 function saveTenantTournament_() {
-  if (!sb || !S || !S._tenantOrgId) return;
+  if (!sb || !S || !S._tenantTournamentId) return;
   var payload = JSON.parse(JSON.stringify(S));
   payload.timerInterval = null;
-  var orgId = S._tenantOrgId;
-  sb.from('tournaments').select('id').eq('org_id', orgId).maybeSingle().then(function(res){
-    if (res.data && res.data.id) {
-      sb.from('tournaments').update({ data: payload, updated_at: new Date().toISOString() }).eq('id', res.data.id).then(function(){});
-    } else {
-      sb.from('tournaments').insert({ id: orgId, org_id: orgId, name: (TENANT_ORG && TENANT_ORG.name) || 'Tournament', data: payload }).then(function(){});
-    }
-  });
+  sb.from('tournaments').update({ data: payload, updated_at: new Date().toISOString() }).eq('id', S._tenantTournamentId).then(function(){});
 }
 function backToSignIn() {
   var sWrap = el('signin-wrap');
@@ -5878,11 +5922,81 @@ function renderSaDirectoryRows_(dir, isReal){
       html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(key) + '" value="' + esc(t.name) + '"></div>';
       html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(key) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
       html += '<button class="btn primary sm" onclick="' + (isReal ? 'saSaveManageReal_' : 'saSaveManage') + '(\'' + esc(key) + '\')"><i class="ti ti-check"></i> Save</button>';
+      if (isReal) html += renderSaTournaments_(key);
       html += '</div>';
     }
   }
   html += '</div>';
   return html;
+}
+
+/* Tournaments for a real org — separate cache keyed by org id, same
+   fetch-once-then-cache/invalidate-on-mutate pattern as SA_REAL_ORGS.
+   Local/demo mode has no equivalent: a demo org only ever has the one
+   tournament baked into its seed data. */
+function newTournamentId_(){
+  return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('t-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+}
+var SA_REAL_TOURNAMENTS = {};
+function renderSaTournaments_(orgId){
+  var html = '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--nb)">';
+  html += '<div style="font-weight:600;font-size:var(--fs13);text-transform:uppercase;letter-spacing:1px;color:var(--tm);margin-bottom:10px">Tournaments</div>';
+  var list = SA_REAL_TOURNAMENTS[orgId];
+  if (list === undefined) {
+    SA_REAL_TOURNAMENTS[orgId] = null;
+    sb.from('tournaments').select('*').eq('org_id', orgId).order('created_at').then(function(res){
+      SA_REAL_TOURNAMENTS[orgId] = res.data || [];
+      renderSuperadmin();
+    });
+    html += '<div class="empty"><p>Loading…</p></div>';
+  } else if (list === null) {
+    html += '<div class="empty"><p>Loading…</p></div>';
+  } else {
+    if (!list.length) html += '<div class="empty"><p>No tournaments yet.</p></div>';
+    for (var i = 0; i < list.length; i++) {
+      var trn = list[i];
+      html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+      html += '<input id="sa-trn-name-' + esc(trn.id) + '" value="' + esc(trn.name) + '" placeholder="Tournament name" style="flex:1">';
+      html += '<input id="sa-trn-slug-' + esc(trn.id) + '" value="' + esc(trn.slug || '') + '" placeholder="slug (if 2+ tournaments)" style="flex:1">';
+      html += '<button class="btn sm" onclick="saSaveTournamentReal_(\'' + esc(orgId) + '\',\'' + esc(trn.id) + '\')"><i class="ti ti-check"></i></button>';
+      html += '</div>';
+    }
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-top:10px">';
+    html += '<input id="sa-new-trn-name-' + esc(orgId) + '" placeholder="New tournament name" style="flex:1">';
+    html += '<input id="sa-new-trn-slug-' + esc(orgId) + '" placeholder="slug (required if adding another)" style="flex:1">';
+    html += '<button class="btn sm" onclick="saAddTournamentReal_(\'' + esc(orgId) + '\')"><i class="ti ti-plus"></i> Add</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+function saAddTournamentReal_(orgId){
+  var nameEl = el('sa-new-trn-name-' + orgId), slugEl = el('sa-new-trn-slug-' + orgId);
+  var name = (nameEl.value || '').trim();
+  var slug = (slugEl.value || '').trim().toLowerCase();
+  var existing = SA_REAL_TOURNAMENTS[orgId] || [];
+  if (!name) { showToast('Tournament name is required.'); return; }
+  if (existing.length >= 1 && !slug) { showToast('A slug is required once an organizer has more than one tournament.'); return; }
+  if (slug && !/^[a-z0-9-]+$/.test(slug)) { showToast('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
+  sb.from('tournaments').insert({ id: newTournamentId_(), org_id: orgId, name: name, slug: slug || null }).then(function(res){
+    if (res.error) { showToast('Add failed: ' + res.error.message); return; }
+    SA_REAL_TOURNAMENTS[orgId] = undefined;
+    renderSuperadmin();
+    showToast('Tournament "' + name + '" added');
+  });
+}
+function saSaveTournamentReal_(orgId, trnId){
+  var nameEl = el('sa-trn-name-' + trnId), slugEl = el('sa-trn-slug-' + trnId);
+  var name = (nameEl.value || '').trim();
+  var slug = (slugEl.value || '').trim().toLowerCase();
+  if (!name) { showToast('Tournament name is required.'); return; }
+  if (slug && !/^[a-z0-9-]+$/.test(slug)) { showToast('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
+  sb.from('tournaments').update({ name: name, slug: slug || null }).eq('id', trnId).then(function(res){
+    if (res.error) { showToast('Update failed: ' + res.error.message); return; }
+    SA_REAL_TOURNAMENTS[orgId] = undefined;
+    renderSuperadmin();
+    showToast('Tournament updated');
+  });
 }
 
 function saToggleSuspend(slug){
@@ -5936,7 +6050,8 @@ function renderSaProvision_(){
   var html = '<div class="card"><div class="card-title"><i class="ti ti-plus"></i>Provision a new tenant'
     + '<span class="badge ' + (real ? 'b-green' : 'b-amber') + '" style="margin-left:auto">' + (real ? 'Creates a real tenant' : 'Local/demo directory only') + '</span></div>';
   html += '<div class="field"><label>Slug (used as /t/slug)</label><input id="sa-new-slug" placeholder="e.g. rally-point"></div>';
-  html += '<div class="field"><label>Business / tournament name</label><input id="sa-new-name" placeholder="e.g. Rally Point Open 2026"></div>';
+  html += '<div class="field"><label>Organizer / business name</label><input id="sa-new-org-name" placeholder="e.g. Rally Point Sports"></div>';
+  html += '<div class="field"><label>Tournament name</label><input id="sa-new-trn-name" placeholder="e.g. Rally Point Open 2026"></div>';
   html += '<div class="field"><label>Accent color</label><input id="sa-new-color" type="color" value="#15803D" style="width:70px;padding:2px;height:38px"></div>';
   html += '<div class="field"><label>Admin email</label><input id="sa-new-admin" type="email" placeholder="admin@example.com"></div>';
   html += '<div id="sa-provision-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-bottom:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb)"></div>';
@@ -5945,51 +6060,59 @@ function renderSaProvision_(){
   return html;
 }
 function saProvisionTenantReal_(){
-  var slugEl = el('sa-new-slug'), nameEl = el('sa-new-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
+  var slugEl = el('sa-new-slug'), orgNameEl = el('sa-new-org-name'), trnNameEl = el('sa-new-trn-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
   var errEl = el('sa-provision-error');
   var slug = (slugEl.value || '').trim().toLowerCase();
-  var name = (nameEl.value || '').trim();
+  var orgName = (orgNameEl.value || '').trim();
+  var trnName = (trnNameEl.value || '').trim();
   var adminEmail = (adminEl.value || '').trim().toLowerCase();
   function fail(msg){ errEl.textContent = msg; errEl.style.display = 'block'; }
   if (!/^[a-z0-9-]+$/.test(slug)) { fail('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
-  if (!name) { fail('Business name is required.'); return; }
+  if (!orgName) { fail('Organizer / business name is required.'); return; }
+  if (!trnName) { fail('Tournament name is required.'); return; }
   if (!adminEmail) { fail('Admin email is required so someone can actually sign in to this tenant.'); return; }
   sb.from('organizations').select('id').eq('slug', slug).maybeSingle().then(function(existing){
     if (existing.data) { fail('That slug is already registered — pick another.'); return; }
-    sb.from('organizations').insert({ slug: slug, name: name, accent: colorEl.value || '#15803D', status: 'active' }).select().single().then(function(res){
+    sb.from('organizations').insert({ slug: slug, name: orgName, accent: colorEl.value || '#15803D', status: 'active' }).select().single().then(function(res){
       if (res.error) { fail('Create failed: ' + res.error.message); return; }
       var orgId = res.data.id;
-      sb.from('org_members').insert({ org_id: orgId, email: adminEmail, role: 'admin' }).then(function(memRes){
-        if (memRes.error) { fail('Tenant created, but adding the admin failed: ' + memRes.error.message + '. Add them from Manage.'); return; }
-        errEl.style.display = 'none';
-        showToast('Tenant "' + name + '" created — ' + adminEmail + ' can sign in at /t/' + slug);
-        slugEl.value = ''; nameEl.value = ''; adminEl.value = '';
-        SA_REAL_ORGS = null;
-        SUPERADMIN_TAB = 'directory';
-        renderSuperadmin();
+      /* tournaments.id has no server-side default (unlike organizations.id) —
+         it must be supplied on every insert. */
+      sb.from('tournaments').insert({ id: newTournamentId_(), org_id: orgId, name: trnName }).then(function(trnRes){
+        if (trnRes.error) { fail('Organizer created, but the tournament failed to create: ' + trnRes.error.message + '.'); return; }
+        sb.from('org_members').insert({ org_id: orgId, email: adminEmail, role: 'admin' }).then(function(memRes){
+          if (memRes.error) { fail('Tenant created, but adding the admin failed: ' + memRes.error.message + '. Add them from Manage.'); return; }
+          errEl.style.display = 'none';
+          showToast('Tenant "' + orgName + '" created — ' + adminEmail + ' can sign in at /t/' + slug);
+          slugEl.value = ''; orgNameEl.value = ''; trnNameEl.value = ''; adminEl.value = '';
+          SA_REAL_ORGS = null;
+          SUPERADMIN_TAB = 'directory';
+          renderSuperadmin();
+        });
       });
     });
   });
 }
 function saProvisionTenant(){
-  var slugEl = el('sa-new-slug'), nameEl = el('sa-new-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
+  var slugEl = el('sa-new-slug'), orgNameEl = el('sa-new-org-name'), trnNameEl = el('sa-new-trn-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
   var errEl = el('sa-provision-error');
   var slug = (slugEl.value || '').trim().toLowerCase();
-  var name = (nameEl.value || '').trim();
+  var orgName = (orgNameEl.value || '').trim();
+  var trnName = (trnNameEl.value || '').trim() || orgName;
   function fail(msg){ errEl.textContent = msg; errEl.style.display = 'block'; }
   if (!/^[a-z0-9-]+$/.test(slug)) { fail('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
-  if (!name) { fail('Business name is required.'); return; }
+  if (!orgName) { fail('Organizer / business name is required.'); return; }
   var dir = getTenantDirectory();
   for (var i = 0; i < dir.length; i++) { if (dir[i].slug === slug) { fail('That slug is already registered — pick another.'); return; } }
   dir.push({
-    slug: slug, name: name, accent: colorEl.value || '#15803D',
+    slug: slug, name: orgName, accent: colorEl.value || '#15803D',
     admin: (adminEl.value || '').trim() || (slug + '@dulahq.test'), status: 'active',
-    demo: { stage: 'group', meta: { name: name, venue: '', date: '' } }
+    demo: { stage: 'group', meta: { name: trnName, venue: '', date: '' } }
   });
   saveTenantDirectory(dir);
   errEl.style.display = 'none';
-  showToast('Tenant "' + name + '" created — visit /t/' + slug + ' to seed and view it');
-  slugEl.value = ''; nameEl.value = ''; adminEl.value = '';
+  showToast('Tenant "' + orgName + '" created — visit /t/' + slug + ' to seed and view it');
+  slugEl.value = ''; orgNameEl.value = ''; trnNameEl.value = ''; adminEl.value = '';
   SUPERADMIN_TAB = 'directory';
   renderSuperadmin();
 }
@@ -6650,14 +6773,27 @@ function bootDemoTenantPath_(slug){
 /* boot — /t/{slug} enters a demo tenant; any other path restores your real state */
 (function(){
   try {
-    var m = location.pathname.match(/^\/t\/([a-z0-9-]+)/i);
+    /* Second segment (m[2]) is the optional per-tournament slug for an
+       organizer running more than one at once — /t/{org-slug}/{tournament-slug}. */
+    var m = location.pathname.match(/^\/t\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?/i);
     if (m) {
       var slug = m[1].toLowerCase();
+      var tSlug = m[2] ? m[2].toLowerCase() : null;
       if (sb) {
         sb.from('organizations').select('*').eq('slug', slug).maybeSingle().then(function(res){
           if (res.data) {
-            if (res.data.status === 'suspended') { showTenantPausedScreen_(res.data); }
-            try { var snR = el('sb-trn-name'); if (snR) snR.textContent = res.data.name; } catch(e){}
+            if (res.data.status === 'suspended') { showTenantPausedScreen_(res.data); return; }
+            PENDING_TENANT_SLUG = tSlug;
+            if (tSlug) {
+              sb.from('tournaments').select('name').eq('org_id', res.data.id).eq('slug', tSlug).maybeSingle().then(function(tRes){
+                var trnName = tRes.data ? tRes.data.name : res.data.name;
+                try { var snR = el('sb-trn-name'); if (snR) snR.textContent = trnName; } catch(e){}
+                setTenantSigninSubtitle_(trnName);
+              });
+            } else {
+              try { var snR2 = el('sb-trn-name'); if (snR2) snR2.textContent = res.data.name; } catch(e){}
+              setTenantSigninSubtitle_(res.data.name);
+            }
           } else {
             bootDemoTenantPath_(slug);
           }
