@@ -334,6 +334,27 @@ html[data-theme="dark"]{color-scheme:dark;
   --blue:#7CA9FF;--purple:#C4B5FD;
   --shadow:0 4px 20px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.35);
 }
+
+/* ---- Superadmin Console: separate full-screen view, no tenant chrome ---- */
+body.superadmin-mode .app-header,body.superadmin-mode .category-strip,body.superadmin-mode .topbar,body.superadmin-mode .mob-nav{display:none!important}
+.sa-header{display:flex;align-items:center;gap:12px;padding:14px 20px;border:1px solid var(--nb);border-radius:10px;background:var(--n2);flex-wrap:wrap;margin-bottom:20px}
+.sa-header-name{font-family:var(--font-heading);font-size:var(--fs22);font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.sa-header-name span{color:var(--gold)}
+.sa-body{display:flex;gap:20px;align-items:flex-start}
+.sa-tabs{width:200px;flex:none;padding:8px;border:1px solid var(--nb);border-radius:10px;background:var(--n2)}
+.sa-tab{display:block;width:100%;text-align:left;padding:9px 12px;border-radius:0;border-left:3px solid transparent;background:transparent;color:var(--ts);font-size:var(--fs14);font-weight:600;cursor:pointer;margin-bottom:2px;font-family:inherit}
+.sa-tab:hover{background:var(--n3)}
+.sa-tab.active{background:var(--navaccl);color:var(--navacc);border-left-color:var(--navacc)}
+.sa-content{flex:1;min-width:0;overflow-x:auto}
+.sa-swatch{width:14px;height:14px;border-radius:3px;flex:none;display:inline-block}
+.sa-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--nbl)}
+.sa-row:last-child{border-bottom:none}
+@media(max-width:860px){
+  .sa-body{flex-direction:column}
+  .sa-tabs{width:100%;display:flex;gap:6px;overflow-x:auto;border-right:none;border-bottom:1px solid var(--nb)}
+  .sa-tab{width:auto;white-space:nowrap;border-left:none;border-bottom:3px solid transparent;border-radius:0}
+  .sa-tab.active{border-left:none;border-bottom-color:var(--navacc);border-radius:0}
+}
 </style>
 <script>
 /* apply saved theme before first paint (cream is the default/light) */
@@ -1261,6 +1282,18 @@ function closeMobMoreSheet() {
   if (UI_DROPDOWN.mobMore) { UI_DROPDOWN.mobMore = false; renderNav(); }
 }
 function renderNav() {
+  /* The Superadmin Console has no sidebar/dropdown/mobile-tab nav of its
+     own — it's a separate full-screen view (see .superadmin-mode CSS and
+     renderSuperadmin()), same spirit as the pickleball app's superadmin
+     console being architecturally separate from the tenant-facing app.
+     NAV[S.role] would be undefined here, so bail out before touching it. */
+  if (S.role === 'superadmin') {
+    var mdw = el('manage-dropdown-wrap'); if (mdw) mdw.innerHTML = '';
+    var cse = el('category-strip'); if (cse) cse.innerHTML = '';
+    var mni = el('mob-nav-inner'); if (mni) mni.innerHTML = '';
+    var mms = el('mob-more-sheet'); if (mms) { mms.innerHTML = ''; mms.className = 'mob-more-sheet'; }
+    return;
+  }
   migrateLegacyData();
   var items = NAV[S.role];
   var roleLabels = { admin: 'Manage', team: 'Team', referee: 'Referee', official: 'Committee', audience: 'View' };
@@ -1331,6 +1364,7 @@ function setTopbar(title, sub, actions) {
 
 function render() {
   var p = S.page;
+  if (p === 'superadmin') { renderSuperadmin(); hydrateIcons(document.body); return; }
   if (p === 'admindashboard') renderAdminDashboard();
   else if (p === 'setup') renderSetup();
   else if (p === 'manualdraw') renderManualDraw();
@@ -5429,6 +5463,7 @@ function renderSignInPage() {
     guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="enterGuestView()">Continue as Guest</span>');
   }
   guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showOfflineMode()">Continue as guest (admin preview)</span>');
+  guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showSuperadminConsole()">Platform console (superadmin preview)</span>');
   html += '<div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">' + guestLinks.join('') + '</div>';
   html += '</div></div>';
   return html;
@@ -5612,6 +5647,181 @@ function showOfflineMode() {
   renderSyncActions();
   renderNav();
   render();
+}
+/* Superadmin Console entry — same "manually reached, no self-serve
+   signup" spirit as the pickleball app's real Firebase-auth-gated
+   console, adapted to this app having no backend: reachable from the
+   sign-in page like the admin preview link above, not a security
+   boundary. AUTH.role is a value nothing else in NAV/MOB_BAR indexes
+   into (renderNav() bails out for it before that would matter). */
+function showSuperadminConsole() {
+  AUTH.signedIn = true;
+  AUTH.email = 'platform@dulahq.local';
+  AUTH.name = 'Platform Admin';
+  AUTH.role = 'superadmin';
+  S.role = 'superadmin';
+  S.page = 'superadmin';
+  var sWrap = el('signin-wrap');
+  if (sWrap) sWrap.innerHTML = '';
+  var aEl = el('app-shell');
+  if (aEl) aEl.style.display = 'flex';
+  document.body.classList.add('superadmin-mode');
+  updateUserBadge();
+  renderNav();
+  render();
+}
+function exitSuperadminConsole() {
+  document.body.classList.remove('superadmin-mode');
+  signOut();
+}
+
+/* ============================================================
+   SUPERADMIN CONSOLE — Tenant Directory / Provisioning / Feature
+   Ideas. Client-side only, mirroring the pickleball app's console
+   structure without a backend: no billing/usage/reports tab, since
+   there's no real event ledger to report on (see getTenantDirectory()
+   above for why the directory itself IS real/persisted, just local).
+   ============================================================ */
+var SUPERADMIN_TAB = 'directory';
+function saSetTab(tab){ SUPERADMIN_TAB = tab; renderSuperadmin(); }
+
+function renderSuperadmin(){
+  var tabs = [
+    { id:'directory', label:'Tenant Directory', icon:'ti-list-details' },
+    { id:'provision', label:'Provisioning', icon:'ti-plus' },
+    { id:'ideas', label:'Feature Ideas', icon:'ti-bulb' }
+  ];
+  var html = '<div class="sa-header"><div class="sa-header-name">Dulà <span>HQ</span> — Platform Console</div>'
+    + '<div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:var(--fs13);color:var(--tm)">' + esc(AUTH.name || 'Platform Admin')
+    + ' <button class="hdr-icon-btn" onclick="exitSuperadminConsole()" title="Exit console"><i class="ti ti-logout"></i></button></div></div>';
+  html += '<div class="sa-body"><div class="sa-tabs">';
+  for (var i = 0; i < tabs.length; i++) {
+    html += '<button class="sa-tab' + (SUPERADMIN_TAB === tabs[i].id ? ' active' : '') + '" onclick="saSetTab(\'' + tabs[i].id + '\')"><i class="ti ' + tabs[i].icon + '"></i> ' + tabs[i].label + '</button>';
+  }
+  html += '</div><div class="sa-content">';
+  if (SUPERADMIN_TAB === 'provision') html += renderSaProvision_();
+  else if (SUPERADMIN_TAB === 'ideas') html += renderSaIdeas_();
+  else html += renderSaDirectory_();
+  html += '</div></div>';
+  el('main-content').innerHTML = html;
+}
+
+var SA_EXPANDED_SLUG = null;
+function saToggleManage(slug){ SA_EXPANDED_SLUG = (SA_EXPANDED_SLUG === slug) ? null : slug; renderSuperadmin(); }
+
+function renderSaDirectory_(){
+  var dir = getTenantDirectory();
+  var html = '<div class="card"><div class="card-title"><i class="ti ti-list-details"></i>Tenant Directory</div>';
+  if (!dir.length) { html += '<div class="empty"><p>No tenants yet — provision one to get started.</p></div></div>'; return html; }
+  for (var i = 0; i < dir.length; i++) {
+    var t = dir[i];
+    var suspended = t.status === 'suspended';
+    html += '<div class="sa-row">';
+    html += '<span class="sa-swatch" style="background:' + esc(t.accent || '#999') + '"></span>';
+    html += '<div style="flex:1;min-width:0"><div style="font-weight:600">' + esc(t.name) + ' ' + (suspended ? '<span class="badge b-amber">Suspended</span>' : '<span class="badge b-green">Active</span>') + '</div>';
+    html += '<div style="font-size:var(--fs12);color:var(--tm)">/t/' + esc(t.slug) + '</div></div>';
+    html += '<button class="btn sm" onclick="window.open(location.origin+\'/t/' + esc(t.slug) + '\',\'_blank\')"><i class="ti ti-external-link"></i> Open</button>';
+    html += '<button class="btn sm" onclick="saToggleManage(\'' + esc(t.slug) + '\')"><i class="ti ti-settings"></i> Manage</button>';
+    html += '<button class="btn sm' + (suspended ? ' primary' : '') + '" onclick="saToggleSuspend(\'' + esc(t.slug) + '\')">' + (suspended ? 'Activate' : 'Suspend') + '</button>';
+    html += '</div>';
+    if (SA_EXPANDED_SLUG === t.slug) {
+      html += '<div style="padding:14px;background:var(--n3);border-radius:8px;margin:-4px 0 10px">';
+      html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(t.slug) + '" value="' + esc(t.name) + '"></div>';
+      html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(t.slug) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
+      html += '<button class="btn primary sm" onclick="saSaveManage(\'' + esc(t.slug) + '\')"><i class="ti ti-check"></i> Save</button>';
+      html += '</div>';
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+function saToggleSuspend(slug){
+  var dir = getTenantDirectory();
+  for (var i = 0; i < dir.length; i++) { if (dir[i].slug === slug) { dir[i].status = (dir[i].status === 'suspended') ? 'active' : 'suspended'; break; } }
+  saveTenantDirectory(dir);
+  renderSuperadmin();
+}
+function saSaveManage(slug){
+  var nameEl = el('sa-name-' + slug), colorEl = el('sa-color-' + slug);
+  var dir = getTenantDirectory();
+  for (var i = 0; i < dir.length; i++) {
+    if (dir[i].slug === slug) {
+      if (nameEl && nameEl.value.trim()) dir[i].name = nameEl.value.trim();
+      if (colorEl) dir[i].accent = colorEl.value;
+      break;
+    }
+  }
+  saveTenantDirectory(dir);
+  SA_EXPANDED_SLUG = null;
+  renderSuperadmin();
+  showToast('Tenant updated');
+}
+
+function renderSaProvision_(){
+  var html = '<div class="card"><div class="card-title"><i class="ti ti-plus"></i>Provision a new tenant</div>';
+  html += '<div class="field"><label>Slug (used as /t/slug)</label><input id="sa-new-slug" placeholder="e.g. rally-point"></div>';
+  html += '<div class="field"><label>Business / tournament name</label><input id="sa-new-name" placeholder="e.g. Rally Point Open 2026"></div>';
+  html += '<div class="field"><label>Accent color</label><input id="sa-new-color" type="color" value="#15803D" style="width:70px;padding:2px;height:38px"></div>';
+  html += '<div class="field"><label>Admin email</label><input id="sa-new-admin" type="email" placeholder="admin@example.com"></div>';
+  html += '<div id="sa-provision-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-bottom:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb)"></div>';
+  html += '<button class="btn primary" onclick="saProvisionTenant()"><i class="ti ti-check"></i> Create / Register Tenant</button>';
+  html += '</div>';
+  return html;
+}
+function saProvisionTenant(){
+  var slugEl = el('sa-new-slug'), nameEl = el('sa-new-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
+  var errEl = el('sa-provision-error');
+  var slug = (slugEl.value || '').trim().toLowerCase();
+  var name = (nameEl.value || '').trim();
+  function fail(msg){ errEl.textContent = msg; errEl.style.display = 'block'; }
+  if (!/^[a-z0-9-]+$/.test(slug)) { fail('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
+  if (!name) { fail('Business name is required.'); return; }
+  var dir = getTenantDirectory();
+  for (var i = 0; i < dir.length; i++) { if (dir[i].slug === slug) { fail('That slug is already registered — pick another.'); return; } }
+  dir.push({
+    slug: slug, name: name, accent: colorEl.value || '#15803D',
+    admin: (adminEl.value || '').trim() || (slug + '@dulahq.test'), status: 'active',
+    demo: { stage: 'group', meta: { name: name, venue: '', date: '' } }
+  });
+  saveTenantDirectory(dir);
+  errEl.style.display = 'none';
+  showToast('Tenant "' + name + '" created — visit /t/' + slug + ' to seed and view it');
+  slugEl.value = ''; nameEl.value = ''; adminEl.value = '';
+  SUPERADMIN_TAB = 'directory';
+  renderSuperadmin();
+}
+
+var FEATURE_IDEAS_LS = 'dulahq:platform-feature-ideas';
+function getFeatureIdeas(){ try { return JSON.parse(localStorage.getItem(FEATURE_IDEAS_LS) || '[]'); } catch(e){ return []; } }
+function saveFeatureIdeas(list){ try { localStorage.setItem(FEATURE_IDEAS_LS, JSON.stringify(list)); } catch(e){} }
+function renderSaIdeas_(){
+  var ideas = getFeatureIdeas();
+  var html = '<div class="card"><div class="card-title"><i class="ti ti-bulb"></i>Feature ideas</div>';
+  html += '<div style="display:flex;gap:8px;margin-bottom:14px"><input id="sa-idea-input" placeholder="Something worth scoping later..." style="flex:1;padding:8px 10px;background:var(--n3);border:1px solid var(--nb);border-radius:var(--r);color:var(--text);font-size:var(--fs15);font-family:inherit" onkeydown="if(event.key===\'Enter\')saAddIdea()"><button class="btn primary" onclick="saAddIdea()">Add</button></div>';
+  if (!ideas.length) { html += '<div class="empty"><p>No ideas yet.</p></div>'; }
+  else {
+    for (var i = 0; i < ideas.length; i++) {
+      html += '<div class="sa-row"><div style="flex:1">' + esc(ideas[i]) + '</div><button class="btn sm" onclick="saRemoveIdea(' + i + ')"><i class="ti ti-trash"></i></button></div>';
+    }
+  }
+  html += '</div>';
+  return html;
+}
+function saAddIdea(){
+  var inp = el('sa-idea-input');
+  var v = (inp.value || '').trim();
+  if (!v) return;
+  var ideas = getFeatureIdeas();
+  ideas.unshift(v);
+  saveFeatureIdeas(ideas);
+  renderSuperadmin();
+}
+function saRemoveIdea(idx){
+  var ideas = getFeatureIdeas();
+  ideas.splice(idx, 1);
+  saveFeatureIdeas(ideas);
+  renderSuperadmin();
 }
 /* Pre-login shortcut for prospective team managers: enter as Team
    (the role "Register a team" now lives under) rather than dropping
@@ -5973,6 +6183,26 @@ if (GOOGLE_CLIENT_ID) {
    backed up and restored when you leave; backend sync is disabled while
    inside a demo tenant so demo data never reaches the sheet.
    ===================================================================== */
+/* DEMO_ORGS below is the seed/default list. The Superadmin Console's
+   Tenant Directory is the persisted, mutable version of it — renamed,
+   recolored, suspended, or newly-provisioned tenants live in localStorage
+   and every other reader of "which tenants exist" (the /t/{slug} boot
+   handler, the demo banner, the console itself) goes through
+   getTenantDirectory()/findTenant(), never DEMO_ORGS directly, so a
+   change made in the console actually takes effect everywhere. */
+var TENANT_DIR_LS = 'dulahq:platform-tenants';
+function getTenantDirectory(){
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem(TENANT_DIR_LS) || 'null'); } catch(e){}
+  if (saved && saved.length) return saved;
+  return DEMO_ORGS.slice();
+}
+function saveTenantDirectory(list){ try { localStorage.setItem(TENANT_DIR_LS, JSON.stringify(list)); } catch(e){} }
+function findTenant(slug){
+  var dir = getTenantDirectory();
+  for (var i=0;i<dir.length;i++) if (dir[i].slug === slug) return dir[i];
+  return null;
+}
 var DEMO_ORGS = [
   { slug:'usnagali', name:'Copa Gali Futbol', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active',
     demo:{ stage:'complete', meta:{ name:'Copa Gali Futbol 2026', venue:'Gali Valley Sports Complex', date:'2026-05-09' } } },
@@ -6053,8 +6283,7 @@ function renderDemoBanner_(){
   try {
     var old = document.getElementById('org-banner'); if (old) old.remove();
     if (!S || !S._demoOrg) return;
-    var org = null;
-    for (var i=0;i<DEMO_ORGS.length;i++) if (DEMO_ORGS[i].slug === S._demoOrg) org = DEMO_ORGS[i];
+    var org = findTenant(S._demoOrg);
     if (!org) return;
     var b = document.createElement('div'); b.id = 'org-banner';
     b.innerHTML = 'Viewing · ' + esc(org.name) + ' <button id="org-return">Return</button>';
@@ -6063,6 +6292,22 @@ function renderDemoBanner_(){
       try { leaveDemoOrgIfNeeded(); } catch(e){}
       location.href = location.origin + '/';
     };
+  } catch(e){}
+}
+/* Shown instead of loading a tenant's demo data when the Superadmin
+   Console has suspended it. Overwrites #signin-wrap (which lives outside
+   #app-shell, so this shows regardless of auth state) and deliberately
+   does NOT call enterDemoOrg — S is left untouched. */
+function showTenantPausedScreen_(tenant){
+  try {
+    var sw = el('signin-wrap');
+    if (!sw) return;
+    sw.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);padding:20px">'
+      + '<div style="background:var(--n2);border:1px solid var(--nb);border-radius:12px;padding:40px 32px;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow)">'
+      + '<i class="ti ti-player-pause" style="font-size:var(--fs44);color:var(--tm)"></i>'
+      + '<div style="font-size:var(--fs22);font-weight:700;margin:14px 0 8px">' + esc(tenant.name) + ' is paused</div>'
+      + '<div style="font-size:var(--fs14);color:var(--tm);line-height:1.5">This tournament page has been temporarily suspended by the platform admin.</div>'
+      + '</div></div>';
   } catch(e){}
 }
 
@@ -6193,9 +6438,10 @@ function placeActions(){
     var m = location.pathname.match(/^\/t\/([a-z0-9-]+)/i);
     if (m) {
       var slug = m[1].toLowerCase();
-      for (var i=0;i<DEMO_ORGS.length;i++) if (DEMO_ORGS[i].slug === slug) {
-        if (!S._demoOrg || S._demoOrg !== slug) enterDemoOrg(DEMO_ORGS[i]);
-        break;
+      var tenant_ = findTenant(slug);
+      if (tenant_) {
+        if (tenant_.status === 'suspended') { showTenantPausedScreen_(tenant_); }
+        else if (!S._demoOrg || S._demoOrg !== slug) { enterDemoOrg(tenant_); }
       }
     } else {
       leaveDemoOrgIfNeeded();
