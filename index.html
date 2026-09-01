@@ -5526,6 +5526,69 @@ function renderSignInPage() {
   html += '</div></div>';
   return html;
 }
+
+/* Root landing page ("/", no /t/ segment): a public gallery of tournament
+   posters instead of a sign-in form. Every /t/{org-slug} URL still shows
+   the real branded sign-in above, completely unchanged — this only
+   replaces what an anonymous visitor sees at the bare root. Real tenants
+   opt in via organizations.publicly_listed (off by default, set from the
+   Superadmin Console); demo tenants always appear as a stand-in for
+   organizers who haven't set a poster yet. */
+function renderTournamentGallery_() {
+  var html = '<div id="gallery-screen" style="min-height:100vh;background:var(--navy);padding:48px 20px 60px">';
+  html += '<div style="max-width:1100px;margin:0 auto 36px;text-align:center">';
+  html += '<div style="font-size:var(--fs52);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:10px">Dula <span style="color:var(--gold)">HQ</span></div>';
+  html += '<div style="font-size:var(--fs16);color:var(--tm)">Find your tournament</div>';
+  html += '</div>';
+  html += '<div id="gallery-grid" style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px">';
+  html += '<div style="grid-column:1/-1;text-align:center;color:var(--tm);padding:40px 0">Loading tournaments&hellip;</div>';
+  html += '</div>';
+  html += '<div style="max-width:1100px;margin:36px auto 0;text-align:center;display:flex;justify-content:center;gap:20px;flex-wrap:wrap">';
+  html += '<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showOfflineMode()">Tenant Admin (preview)</span>';
+  html += '<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showSuperadminConsole()">Platform Console (superadmin preview)</span>';
+  html += '</div>';
+  html += '</div>';
+  if (sb) {
+    sb.from('organizations').select('*').eq('status', 'active').eq('publicly_listed', true).then(function(res){
+      renderGalleryGrid_(res.data || []);
+    });
+  } else {
+    renderGalleryGrid_([]);
+  }
+  return html;
+}
+function galleryCardHtml_(t, isDemo) {
+  var hasPoster = !isDemo && t.poster_url;
+  var bg = hasPoster
+    ? ('background-image:url(\'' + esc(t.poster_url) + '\');background-size:cover;background-position:center;')
+    : ('background:linear-gradient(160deg,' + esc(t.accent || '#15803D') + ',rgba(0,0,0,.65));');
+  var title = isDemo ? ((t.demo && t.demo.meta && t.demo.meta.name) || t.name) : t.name;
+  var html = '<div onclick="location.href=\'/t/' + esc(t.slug) + '\'" style="position:relative;aspect-ratio:3/4;border-radius:var(--r);overflow:hidden;cursor:pointer;box-shadow:var(--shadow);' + bg + '">';
+  if (isDemo) html += '<span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:4px;font-family:var(--font-heading)">Demo</span>';
+  html += '<div style="position:absolute;left:0;right:0;bottom:0;padding:16px 14px;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent)">';
+  html += '<div style="color:#fff;font-weight:700;font-size:var(--fs16);font-family:var(--font-heading);text-transform:uppercase;letter-spacing:.02em">' + esc(title) + '</div>';
+  html += '<div style="color:rgba(255,255,255,.8);font-size:var(--fs12);margin-top:2px">View Tournament &rarr;</div>';
+  html += '</div></div>';
+  return html;
+}
+function renderGalleryGrid_(realOrgs) {
+  var grid = el('gallery-grid');
+  if (!grid) return;
+  var demoTenants = getTenantDirectory().filter(function(t){ return t.status !== 'suspended'; });
+  var html = '';
+  for (var i = 0; i < realOrgs.length; i++) html += galleryCardHtml_(realOrgs[i], false);
+  for (var j = 0; j < demoTenants.length; j++) html += galleryCardHtml_(demoTenants[j], true);
+  grid.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;color:var(--tm);padding:40px 0">No tournaments listed yet.</div>';
+  hydrateIcons(document.body);
+}
+/* Decides what an unauthenticated visitor sees: the real branded sign-in
+   for any /t/{org-slug} URL (unchanged), or the public gallery for
+   everything else (root, or an unrecognized path). */
+function renderRootEntry_() {
+  var sWrap = el('signin-wrap');
+  if (!sWrap) return;
+  sWrap.innerHTML = /^\/t\//i.test(location.pathname) ? renderSignInPage() : renderTournamentGallery_();
+}
 function attemptEmailLogin() {
   var emailEl = el('login-email');
   var email = ((emailEl ? emailEl.value : '') || '').trim().toLowerCase();
@@ -5949,7 +6012,7 @@ function renderSaDirectoryRows_(dir, isReal){
     var suspended = t.status === 'suspended';
     html += '<div class="sa-row">';
     html += '<span class="sa-swatch" style="background:' + esc(t.accent || '#999') + '"></span>';
-    html += '<div style="flex:1;min-width:0"><div style="font-weight:600">' + esc(t.name) + ' ' + (suspended ? '<span class="badge b-amber">Suspended</span>' : '<span class="badge b-green">Active</span>') + '</div>';
+    html += '<div style="flex:1;min-width:0"><div style="font-weight:600">' + esc(t.name) + ' ' + (suspended ? '<span class="badge b-amber">Suspended</span>' : '<span class="badge b-green">Active</span>') + (isReal && t.publicly_listed ? ' <span class="badge b-green">Public</span>' : '') + '</div>';
     html += '<div style="font-size:var(--fs12);color:var(--tm)">/t/' + esc(t.slug) + '</div></div>';
     html += '<button class="btn sm" onclick="window.open(location.origin+\'/t/' + esc(t.slug) + '\',\'_blank\')"><i class="ti ti-external-link"></i> Open</button>';
     html += '<button class="btn sm" onclick="saToggleManage(\'' + esc(key) + '\')"><i class="ti ti-settings"></i> Manage</button>';
@@ -5959,6 +6022,10 @@ function renderSaDirectoryRows_(dir, isReal){
       html += '<div style="padding:14px;background:var(--n3);border-radius:8px;margin:-4px 0 10px">';
       html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(key) + '" value="' + esc(t.name) + '"></div>';
       html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(key) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
+      if (isReal) {
+        html += '<div class="field"><label>Poster image URL</label><input id="sa-poster-' + esc(key) + '" value="' + esc(t.poster_url || '') + '" placeholder="https://.../poster.jpg"></div>';
+        html += '<div class="field" style="display:flex;align-items:center;gap:8px"><input id="sa-public-' + esc(key) + '" type="checkbox" style="width:auto"' + (t.publicly_listed ? ' checked' : '') + '><label for="sa-public-' + esc(key) + '" style="margin:0">List publicly on the homepage gallery</label></div>';
+      }
       html += '<button class="btn primary sm" onclick="' + (isReal ? 'saSaveManageReal_' : 'saSaveManage') + '(\'' + esc(key) + '\')"><i class="ti ti-check"></i> Save</button>';
       if (isReal) html += renderSaTournaments_(key);
       html += '</div>';
@@ -6071,9 +6138,12 @@ function saToggleSuspendReal_(orgId){
 }
 function saSaveManageReal_(orgId){
   var nameEl = el('sa-name-' + orgId), colorEl = el('sa-color-' + orgId);
+  var posterEl = el('sa-poster-' + orgId), publicEl = el('sa-public-' + orgId);
   var patch = {};
   if (nameEl && nameEl.value.trim()) patch.name = nameEl.value.trim();
   if (colorEl) patch.accent = colorEl.value;
+  if (posterEl) patch.poster_url = posterEl.value.trim();
+  if (publicEl) patch.publicly_listed = publicEl.checked;
   sb.from('organizations').update(patch).eq('id', orgId).then(function(res){
     if (res.error) { showToast('Update failed: ' + res.error.message); return; }
     SA_EXPANDED_SLUG = null;
@@ -6092,6 +6162,10 @@ function renderSaProvision_(){
   html += '<div class="field"><label>Tournament name</label><input id="sa-new-trn-name" placeholder="e.g. Rally Point Open 2026"></div>';
   html += '<div class="field"><label>Accent color</label><input id="sa-new-color" type="color" value="#15803D" style="width:70px;padding:2px;height:38px"></div>';
   html += '<div class="field"><label>Admin email</label><input id="sa-new-admin" type="email" placeholder="admin@example.com"></div>';
+  if (real) {
+    html += '<div class="field"><label>Poster image URL (optional)</label><input id="sa-new-poster" placeholder="https://.../poster.jpg"></div>';
+    html += '<div class="field" style="display:flex;align-items:center;gap:8px"><input id="sa-new-public" type="checkbox" style="width:auto"><label for="sa-new-public" style="margin:0">List publicly on the homepage gallery</label></div>';
+  }
   html += '<div id="sa-provision-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-bottom:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb)"></div>';
   html += '<button class="btn primary" onclick="' + (real ? 'saProvisionTenantReal_' : 'saProvisionTenant') + '()"><i class="ti ti-check"></i> Create / Register Tenant</button>';
   html += '</div>';
@@ -6099,11 +6173,14 @@ function renderSaProvision_(){
 }
 function saProvisionTenantReal_(){
   var slugEl = el('sa-new-slug'), orgNameEl = el('sa-new-org-name'), trnNameEl = el('sa-new-trn-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
+  var posterEl = el('sa-new-poster'), publicEl = el('sa-new-public');
   var errEl = el('sa-provision-error');
   var slug = (slugEl.value || '').trim().toLowerCase();
   var orgName = (orgNameEl.value || '').trim();
   var trnName = (trnNameEl.value || '').trim();
   var adminEmail = (adminEl.value || '').trim().toLowerCase();
+  var posterUrl = (posterEl && posterEl.value || '').trim();
+  var publiclyListed = !!(publicEl && publicEl.checked);
   function fail(msg){ errEl.textContent = msg; errEl.style.display = 'block'; }
   if (!/^[a-z0-9-]+$/.test(slug)) { fail('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
   if (!orgName) { fail('Organizer / business name is required.'); return; }
@@ -6111,7 +6188,7 @@ function saProvisionTenantReal_(){
   if (!adminEmail) { fail('Admin email is required so someone can actually sign in to this tenant.'); return; }
   sb.from('organizations').select('id').eq('slug', slug).maybeSingle().then(function(existing){
     if (existing.data) { fail('That slug is already registered — pick another.'); return; }
-    sb.from('organizations').insert({ slug: slug, name: orgName, accent: colorEl.value || '#15803D', status: 'active' }).select().single().then(function(res){
+    sb.from('organizations').insert({ slug: slug, name: orgName, accent: colorEl.value || '#15803D', status: 'active', poster_url: posterUrl, publicly_listed: publiclyListed }).select().single().then(function(res){
       if (res.error) { fail('Create failed: ' + res.error.message); return; }
       var orgId = res.data.id;
       /* tournaments.id has no server-side default (unlike organizations.id) —
@@ -6123,6 +6200,7 @@ function saProvisionTenantReal_(){
           errEl.style.display = 'none';
           showToast('Tenant "' + orgName + '" created — ' + adminEmail + ' can sign in at /t/' + slug);
           slugEl.value = ''; orgNameEl.value = ''; trnNameEl.value = ''; adminEl.value = '';
+          if (posterEl) posterEl.value = ''; if (publicEl) publicEl.checked = false;
           SA_REAL_ORGS = null;
           SUPERADMIN_TAB = 'directory';
           renderSuperadmin();
@@ -6219,8 +6297,7 @@ function signOut() {
   if (window.google && window.google.accounts) google.accounts.id.disableAutoSelect();
   var aEl = el('app-shell');
   if (aEl) aEl.style.display = 'none';
-  var sWrap = el('signin-wrap');
-  if (sWrap) sWrap.innerHTML = renderSignInPage();
+  renderRootEntry_();
   if (window.google && window.google.accounts) {
     google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse });
     var btnEl = el('g-signin-btn');
@@ -6525,8 +6602,7 @@ seedDemoData(); // restores the full demo scenario + 4 test accounts. To
                  // go back to a genuinely empty production boot instead,
                  // swap this line for seedDefaultAdmin().
 renderNav();
-var sw = el('signin-wrap');
-if (sw) sw.innerHTML = renderSignInPage();
+renderRootEntry_();
 hydrateIcons(document.body);
 if (GOOGLE_CLIENT_ID) {
   window.addEventListener('load', function () {
