@@ -6189,7 +6189,9 @@ function renderSaDirectoryRows_(dir, isReal){
       html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(key) + '" value="' + esc(t.name) + '"></div>';
       html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(key) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
       if (isReal) {
-        html += '<div class="field"><label>Poster image URL</label><input id="sa-poster-' + esc(key) + '" value="' + esc(t.poster_url || '') + '" placeholder="https://.../poster.jpg"></div>';
+        if (t.poster_url) { html += '<img src="' + esc(t.poster_url) + '" style="width:70px;height:93px;object-fit:cover;border-radius:6px;border:1px solid var(--nb);margin-bottom:8px" alt="Current poster">'; }
+        html += '<div class="field"><label>Poster image</label><input id="sa-poster-file-' + esc(key) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
+        html += '<div class="field"><label>...or a poster image URL</label><input id="sa-poster-' + esc(key) + '" value="' + esc(t.poster_url || '') + '" placeholder="https://.../poster.jpg"></div>';
         html += '<div class="field" style="display:flex;align-items:center;gap:8px"><input id="sa-public-' + esc(key) + '" type="checkbox" style="width:auto"' + (t.publicly_listed ? ' checked' : '') + '><label for="sa-public-' + esc(key) + '" style="margin:0">List publicly on the homepage gallery</label></div>';
       }
       html += '<button class="btn primary sm" onclick="' + (isReal ? 'saSaveManageReal_' : 'saSaveManage') + '(\'' + esc(key) + '\')"><i class="ti ti-check"></i> Save</button>';
@@ -6207,6 +6209,20 @@ function renderSaDirectoryRows_(dir, isReal){
    tournament baked into its seed data. */
 function newTournamentId_(){
   return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('t-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+}
+/* Uploads to the public tournament-posters bucket (RLS: read is public,
+   writes are platform-admin only) and hands back its public URL.
+   pathPrefix is typically the org's slug (not created yet at provisioning
+   time) or its real uuid (once it exists, from Manage). cb(url, error). */
+function uploadPosterFile_(file, pathPrefix, cb) {
+  if (!file) { cb(null); return; }
+  var ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  var path = pathPrefix + '/poster-' + Date.now() + '.' + ext;
+  sb.storage.from('tournament-posters').upload(path, file, { upsert: true }).then(function(res){
+    if (res.error) { cb(null, res.error); return; }
+    var pub = sb.storage.from('tournament-posters').getPublicUrl(path);
+    cb(pub && pub.data ? pub.data.publicUrl : null, null);
+  });
 }
 var SA_REAL_TOURNAMENTS = {};
 function renderSaTournaments_(orgId){
@@ -6304,12 +6320,26 @@ function saToggleSuspendReal_(orgId){
 }
 function saSaveManageReal_(orgId){
   var nameEl = el('sa-name-' + orgId), colorEl = el('sa-color-' + orgId);
-  var posterEl = el('sa-poster-' + orgId), publicEl = el('sa-public-' + orgId);
-  var patch = {};
-  if (nameEl && nameEl.value.trim()) patch.name = nameEl.value.trim();
-  if (colorEl) patch.accent = colorEl.value;
-  if (posterEl) patch.poster_url = posterEl.value.trim();
-  if (publicEl) patch.publicly_listed = publicEl.checked;
+  var posterEl = el('sa-poster-' + orgId), posterFileEl = el('sa-poster-file-' + orgId), publicEl = el('sa-public-' + orgId);
+  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
+  function applyPatch(finalPosterUrl) {
+    var patch = {};
+    if (nameEl && nameEl.value.trim()) patch.name = nameEl.value.trim();
+    if (colorEl) patch.accent = colorEl.value;
+    if (finalPosterUrl !== undefined) patch.poster_url = finalPosterUrl;
+    if (publicEl) patch.publicly_listed = publicEl.checked;
+    saSaveManageRealPatch_(orgId, patch);
+  }
+  if (posterFile) {
+    uploadPosterFile_(posterFile, orgId, function(uploadedUrl, uploadErr) {
+      if (uploadErr) { showToast('Poster upload failed: ' + uploadErr.message); return; }
+      applyPatch(uploadedUrl || (posterEl ? posterEl.value.trim() : undefined));
+    });
+  } else {
+    applyPatch(posterEl ? posterEl.value.trim() : undefined);
+  }
+}
+function saSaveManageRealPatch_(orgId, patch) {
   sb.from('organizations').update(patch).eq('id', orgId).then(function(res){
     if (res.error) { showToast('Update failed: ' + res.error.message); return; }
     SA_EXPANDED_SLUG = null;
@@ -6329,7 +6359,8 @@ function renderSaProvision_(){
   html += '<div class="field"><label>Accent color</label><input id="sa-new-color" type="color" value="#15803D" style="width:70px;padding:2px;height:38px"></div>';
   html += '<div class="field"><label>Admin email</label><input id="sa-new-admin" type="email" placeholder="admin@example.com"></div>';
   if (real) {
-    html += '<div class="field"><label>Poster image URL (optional)</label><input id="sa-new-poster" placeholder="https://.../poster.jpg"></div>';
+    html += '<div class="field"><label>Poster image</label><input id="sa-new-poster-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
+    html += '<div class="field"><label>...or a poster image URL</label><input id="sa-new-poster" placeholder="https://.../poster.jpg"></div>';
     html += '<div class="field" style="display:flex;align-items:center;gap:8px"><input id="sa-new-public" type="checkbox" style="width:auto"><label for="sa-new-public" style="margin:0">List publicly on the homepage gallery</label></div>';
   }
   html += '<div id="sa-provision-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-bottom:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb)"></div>';
@@ -6339,13 +6370,14 @@ function renderSaProvision_(){
 }
 function saProvisionTenantReal_(){
   var slugEl = el('sa-new-slug'), orgNameEl = el('sa-new-org-name'), trnNameEl = el('sa-new-trn-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
-  var posterEl = el('sa-new-poster'), publicEl = el('sa-new-public');
+  var posterEl = el('sa-new-poster'), posterFileEl = el('sa-new-poster-file'), publicEl = el('sa-new-public');
   var errEl = el('sa-provision-error');
   var slug = (slugEl.value || '').trim().toLowerCase();
   var orgName = (orgNameEl.value || '').trim();
   var trnName = (trnNameEl.value || '').trim();
   var adminEmail = (adminEl.value || '').trim().toLowerCase();
   var posterUrl = (posterEl && posterEl.value || '').trim();
+  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
   var publiclyListed = !!(publicEl && publicEl.checked);
   function fail(msg){ errEl.textContent = msg; errEl.style.display = 'block'; }
   if (!/^[a-z0-9-]+$/.test(slug)) { fail('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
@@ -6354,25 +6386,35 @@ function saProvisionTenantReal_(){
   if (!adminEmail) { fail('Admin email is required so someone can actually sign in to this tenant.'); return; }
   sb.from('organizations').select('id').eq('slug', slug).maybeSingle().then(function(existing){
     if (existing.data) { fail('That slug is already registered — pick another.'); return; }
-    sb.from('organizations').insert({ slug: slug, name: orgName, accent: colorEl.value || '#15803D', status: 'active', poster_url: posterUrl, publicly_listed: publiclyListed }).select().single().then(function(res){
-      if (res.error) { fail('Create failed: ' + res.error.message); return; }
-      var orgId = res.data.id;
-      /* tournaments.id has no server-side default (unlike organizations.id) —
-         it must be supplied on every insert. */
-      sb.from('tournaments').insert({ id: newTournamentId_(), org_id: orgId, name: trnName }).then(function(trnRes){
-        if (trnRes.error) { fail('Organizer created, but the tournament failed to create: ' + trnRes.error.message + '.'); return; }
-        sb.from('org_members').insert({ org_id: orgId, email: adminEmail, role: 'admin' }).then(function(memRes){
-          if (memRes.error) { fail('Tenant created, but adding the admin failed: ' + memRes.error.message + '. Add them from Manage.'); return; }
-          errEl.style.display = 'none';
-          showToast('Tenant "' + orgName + '" created — ' + adminEmail + ' can sign in at /t/' + slug);
-          slugEl.value = ''; orgNameEl.value = ''; trnNameEl.value = ''; adminEl.value = '';
-          if (posterEl) posterEl.value = ''; if (publicEl) publicEl.checked = false;
-          SA_REAL_ORGS = null;
-          SUPERADMIN_TAB = 'directory';
-          renderSuperadmin();
+    function createOrg(finalPosterUrl) {
+      sb.from('organizations').insert({ slug: slug, name: orgName, accent: colorEl.value || '#15803D', status: 'active', poster_url: finalPosterUrl, publicly_listed: publiclyListed }).select().single().then(function(res){
+        if (res.error) { fail('Create failed: ' + res.error.message); return; }
+        var orgId = res.data.id;
+        /* tournaments.id has no server-side default (unlike organizations.id) —
+           it must be supplied on every insert. */
+        sb.from('tournaments').insert({ id: newTournamentId_(), org_id: orgId, name: trnName }).then(function(trnRes){
+          if (trnRes.error) { fail('Organizer created, but the tournament failed to create: ' + trnRes.error.message + '.'); return; }
+          sb.from('org_members').insert({ org_id: orgId, email: adminEmail, role: 'admin' }).then(function(memRes){
+            if (memRes.error) { fail('Tenant created, but adding the admin failed: ' + memRes.error.message + '. Add them from Manage.'); return; }
+            errEl.style.display = 'none';
+            showToast('Tenant "' + orgName + '" created — ' + adminEmail + ' can sign in at /t/' + slug);
+            slugEl.value = ''; orgNameEl.value = ''; trnNameEl.value = ''; adminEl.value = '';
+            if (posterEl) posterEl.value = ''; if (posterFileEl) posterFileEl.value = ''; if (publicEl) publicEl.checked = false;
+            SA_REAL_ORGS = null;
+            SUPERADMIN_TAB = 'directory';
+            renderSuperadmin();
+          });
         });
       });
-    });
+    }
+    if (posterFile) {
+      uploadPosterFile_(posterFile, slug, function(uploadedUrl, uploadErr) {
+        if (uploadErr) { fail('Poster upload failed: ' + uploadErr.message); return; }
+        createOrg(uploadedUrl || posterUrl);
+      });
+    } else {
+      createOrg(posterUrl);
+    }
   });
 }
 function saProvisionTenant(){
