@@ -266,6 +266,9 @@ h1,h2,h3,.app-header-name,.tb-title,.card-title,.sec-label{font-family:var(--fon
 .view-toggle{display:flex;gap:6px;margin-bottom:14px;padding:4px;background:var(--n3);border-radius:var(--r);border:1px solid var(--nb);width:fit-content}
 .vt-btn{padding:6px 14px;border-radius:6px;border:none;background:transparent;color:var(--ts);font-size:var(--fs14);font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px}
 .vt-btn.active{background:var(--gold);color:var(--on-accent)}
+.tab-strip{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px}
+.tab-btn{flex-shrink:0;padding:7px 16px;border-radius:0;border:1px solid var(--nb);background:var(--n2);color:var(--ts);font-size:var(--fs13);font-weight:600;cursor:pointer;font-family:var(--font-heading);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);transition:background .15s}
+.tab-btn.active{background:var(--navaccl);color:var(--navacc);border-color:var(--navaccb);font-weight:700}
 .pip{font-size:var(--fs12);padding:2px 6px;border-radius:10px;font-weight:600;border:1px solid}
 @keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
@@ -1478,6 +1481,18 @@ function enhanceTablesForMobile() {
 }
 
 /* ---------------- SETUP ---------------- */
+var SETUP_ACTIVE_TAB = 'details';
+/* Deliberately does NOT call renderSetup() again — every tab's inputs
+   stay in the DOM the whole time (see renderSetup), so switching tabs
+   only needs to flip which panel is visible, never re-reads S.tournament
+   and so never discards something typed but not yet saved. */
+function setSetupTab_(id) {
+  SETUP_ACTIVE_TAB = id;
+  var panels = document.querySelectorAll('.setup-tab-panel');
+  for (var i = 0; i < panels.length; i++) { panels[i].style.display = (panels[i].getAttribute('data-tab') === id) ? '' : 'none'; }
+  var tabs = document.querySelectorAll('#setup-tabs .tab-btn');
+  for (var j = 0; j < tabs.length; j++) { tabs[j].classList.toggle('active', tabs[j].getAttribute('data-tabid') === id); }
+}
 function renderSetup() {
   setTopbar('Tournament setup', 'Configure format, rules and categories', '<button class="btn primary" onclick="saveSetup()"><i class="ti ti-check"></i> Save</button>');
   var t = S.tournament;
@@ -1534,20 +1549,32 @@ function renderSetup() {
     tbHtml += '<div class="tb-item"><div class="tb-rank">' + (ti + 1) + '</div><div><div style="font-size:var(--fs14);font-weight:600">' + tbItems[ti][0] + '</div><div style="font-size:var(--fs13);color:var(--tm);margin-top:2px">' + tbItems[ti][1] + '</div>' + tbItems[ti][2] + '</div></div>';
   }
   var canGen = S.teams.length >= 2;
-  var html = '';
+  var setupTabs = [{ id: 'details', label: 'Details' }, { id: 'format', label: 'Format & Structure' }, { id: 'pitches', label: 'Pitches' }, { id: 'rules', label: 'Rules' }, { id: 'access', label: 'Access' }];
+  /* All five panels stay in the DOM at once (just display:none-toggled by
+     setSetupTab_) rather than being re-rendered per tab, so saveSetup()
+     can still read every field regardless of which tab is showing, and
+     switching tabs never discards something typed but not yet saved. */
+  var html = '<div id="setup-tabs">' + renderTabStrip(setupTabs, SETUP_ACTIVE_TAB, 'setSetupTab_') + '</div>';
+  html += '<div class="setup-tab-panel" data-tab="details"' + (SETUP_ACTIVE_TAB === 'details' ? '' : ' style="display:none"') + '>';
   html += '<div class="card"><div class="card-title"><i class="ti ti-settings"></i> Details</div>';
   html += '<div class="g2"><div class="field"><label>Tournament name</label><input id="inp-name" value="' + esc(t.name) + '"></div>';
   html += '<div class="field"><label>Venue</label><input id="inp-venue" value="' + esc(t.venue) + '"></div></div>';
   html += '<div class="g2"><div class="field"><label>Start date</label><input type="date" id="inp-date" value="' + esc(t.date) + '"></div>';
   html += '<div class="field"><label>Age category</label><select id="inp-age">' + ageOpts + '</select></div></div></div>';
+  html += '</div>';
+  html += '<div class="setup-tab-panel" data-tab="format"' + (SETUP_ACTIVE_TAB === 'format' ? '' : ' style="display:none"') + '>';
   html += '<div class="card"><div class="card-title"><i class="ti ti-ball-football"></i> Match format</div>';
   html += '<div class="g3" style="margin-bottom:12px">' + fmtHtml + '</div>';
   html += '<div class="field" style="margin-bottom:0"><label>Game duration (min)</label><input type="number" id="inp-dur" value="' + t.duration + '" min="10" max="120" style="width:110px"></div></div>';
   html += '<div class="card"><div class="card-title"><i class="ti ti-tournament"></i> Tournament structure</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:12px">How the competition is organised.</div>' + strHtml + '</div>';
+  html += '</div>';
+  html += '<div class="setup-tab-panel" data-tab="pitches"' + (SETUP_ACTIVE_TAB === 'pitches' ? '' : ' style="display:none"') + '>';
   html += '<div class="card"><div class="card-title"><i class="ti ti-map-pin"></i> Pitches</div>';
   html += '<div style="font-size:var(--fs14);color:var(--tm);margin-bottom:10px">Define playing pitches for match assignments.</div>';
   html += '<div id="pitch-list">' + pitchRows + '</div>';
   html += '<button class="btn" onclick="addPitch()" style="margin-top:4px"><i class="ti ti-plus"></i> Add pitch</button></div>';
+  html += '</div>';
+  html += '<div class="setup-tab-panel" data-tab="rules"' + (SETUP_ACTIVE_TAB === 'rules' ? '' : ' style="display:none"') + '>';
   html += '<div class="card"><div class="card-title"><i class="ti ti-adjustments"></i> Rules</div>';
   html += '<div class="trow"><div><div class="tgl-label">Offside rule applies</div><div class="tgl-sub">Flag offside during play</div></div><div class="tgl' + (t.offside ? ' on' : '') + '" id="tgl-offside" onclick="this.classList.toggle(\'on\')"></div></div>';
   html += '<div class="trow"><div><div class="tgl-label">Extra time enabled</div><div class="tgl-sub">For knockout ties</div></div><div class="tgl' + (t.extraTime ? ' on' : '') + '" id="tgl-et" onclick="this.classList.toggle(\'on\')"></div></div>';
@@ -1558,8 +1585,11 @@ function renderSetup() {
   html += '<i class="ti ti-chevron-down" id="tb-icon"></i> View</button></div>';
   html += '<div class="tb-list-panel" id="tb-list">' + tbHtml;
   html += '<div class="alert alert-info" style="margin-top:8px"><i class="ti ti-info-circle"></i><span>Applied in sequence. Card logs feed into Fair Play Points.</span></div></div></div>';
+  html += '</div>';
+  html += '<div class="setup-tab-panel" data-tab="access"' + (SETUP_ACTIVE_TAB === 'access' ? '' : ' style="display:none"') + '>';
   html += '<div class="card"><div class="card-title"><i class="ti ti-eye"></i> Access</div>';
   html += '<div class="trow"><div><div class="tgl-label">Guest view</div><div class="tgl-sub">Lets anyone open the app without an account and browse Schedule/Bracket/Standings read-only. Off by default.</div></div><div class="tgl' + (t.guestAccessEnabled ? ' on' : '') + '" id="tgl-guest" onclick="this.classList.toggle(\'on\')"></div></div></div>';
+  html += '</div>';
   if (S.generated) { html += '<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i><span>Regenerating will reset all groups, matches and results.</span></div><br>'; }
   if (canGen) {
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
@@ -2510,7 +2540,7 @@ function renderRegistrations() {
       + '<div><div style="font-weight:600">' + esc(r.teamName) + '</div><div style="font-size:var(--fs13);color:var(--tm)">' + (cat ? esc(cat.name) : '(deleted category)') + ' \u00b7 ' + r.players.length + ' players \u00b7 Manager: ' + esc(r.managerName) + ' (' + esc(r.managerEmail) + ')</div></div>'
       + statusBadge + '</div>'
       + '<div style="font-size:var(--fs13);color:var(--tm);margin-bottom:8px">Documents: ' + (docsSubmitted.length ? esc(docsSubmitted.join(', ')) : 'none uploaded') + '</div>'
-      + '<button class="expand-btn" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> View roster</button><div class="mc-expand">' + regPlayersTable(r) + '</div>'
+      + '<button class="expand-btn" data-label="roster" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Show roster</button><div class="mc-expand">' + regPlayersTable(r) + '</div>'
       + (r.status === 'pending' ? ('<div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary sm" onclick="approveRegistration(\'' + r.id + '\')"><i class="ti ti-check"></i> Approve</button><button class="btn sm danger" onclick="rejectRegistration(\'' + r.id + '\')"><i class="ti ti-x"></i> Reject</button></div>')
         : (r.status === 'rejected' && r.rejectReason ? ('<div style="font-size:var(--fs13);color:var(--red);margin-top:6px">Reason: ' + esc(r.rejectReason) + '</div>') : ''))
       + '</div>';
@@ -2658,14 +2688,30 @@ function saveEditRoster() {
   showToast('Roster updated');
 }
 
+var TEAMS_ACTIVE_TAB = 'all';
+function setTeamsTab_(id) { TEAMS_ACTIVE_TAB = id; renderTeams(); }
 function renderTeams() {
   if (S.role === 'admin' && S.viewAllCategories) { renderTeamsAllCategories(); return; }
   var cat = activeCategory();
   setTopbar('Teams', cat.teams.length + ' registered', '<button class="btn" onclick="addDemoTeam()"><i class="ti ti-wand"></i> Add demo team</button><button class="btn primary" onclick="openAddTeam()"><i class="ti ti-plus"></i> Add team</button>');
   if (!cat.teams.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-users-group"></i><p>No teams in <strong>' + esc(cat.name) + '</strong> yet.</p></div>'; return; }
-  var html = '';
-  for (var i = 0; i < cat.teams.length; i++) {
-    var tm = cat.teams[i];
+  var teamsTabsHtml = '';
+  var visibleTeams = cat.teams;
+  if (S.generated && S.groups.length > 1) {
+    var teamsTabs = [{ id: 'all', label: 'All Teams' }];
+    for (var tgi = 0; tgi < S.groups.length; tgi++) { teamsTabs.push({ id: S.groups[tgi].name, label: 'Group ' + S.groups[tgi].name }); }
+    teamsTabsHtml = renderTabStrip(teamsTabs, TEAMS_ACTIVE_TAB, 'setTeamsTab_');
+    if (TEAMS_ACTIVE_TAB !== 'all') {
+      var activeGrp = null;
+      for (var agi = 0; agi < S.groups.length; agi++) { if (S.groups[agi].name === TEAMS_ACTIVE_TAB) { activeGrp = S.groups[agi]; break; } }
+      visibleTeams = activeGrp ? cat.teams.filter(function (t) { return activeGrp.teamIds.indexOf(t.id) !== -1; }) : cat.teams;
+    }
+  } else {
+    TEAMS_ACTIVE_TAB = 'all';
+  }
+  var html = teamsTabsHtml;
+  for (var i = 0; i < visibleTeams.length; i++) {
+    var tm = visibleTeams[i];
     html += '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
       + '<div style="display:flex;align-items:center;gap:10px"><div class="ava" style="width:38px;height:38px;font-size:var(--fs15)">' + ini(tm.name) + '</div>'
       + '<div><div style="font-weight:600">' + esc(tm.name) + '</div><div style="font-size:var(--fs13);color:var(--tm)">' + (tm.coach || 'No coach') + (teamManagerStaffName(tm) ? (' \u00b7 Mgr: ' + esc(teamManagerStaffName(tm))) : '') + ' \u00b7 ' + tm.players.length + ' players</div></div></div>'
@@ -3120,9 +3166,26 @@ function renderMatchEvents(m) {
 function toggleExpand(btn) {
   var p = btn.nextElementSibling;
   var open = p.classList.toggle('open');
-  btn.innerHTML = '<i class="ti ti-chevron-' + (open ? 'up' : 'down') + '"></i> ' + (open ? 'Hide' : 'Show') + ' match stats';
+  var label = btn.getAttribute('data-label') || 'details';
+  btn.innerHTML = '<i class="ti ti-chevron-' + (open ? 'up' : 'down') + '"></i> ' + (open ? 'Hide' : 'Show') + ' ' + label;
+}
+/* Shared tab strip for switching a page's content between a fixed set of
+   panes (by group, by category, by section) without navigating away.
+   tabs: [{id, label}]. onSelectFn: name of a global function taking the
+   selected tab's id and re-rendering the page. Callers own their own
+   "which tab is active" state (a variable or an S field) and pass the
+   current id back in as activeId. */
+function renderTabStrip(tabs, activeId, onSelectFn) {
+  var html = '<div class="tab-strip">';
+  for (var i = 0; i < tabs.length; i++) {
+    html += '<button class="tab-btn' + (tabs[i].id === activeId ? ' active' : '') + '" data-tabid="' + esc(String(tabs[i].id)) + '" onclick="' + onSelectFn + '(\'' + esc(String(tabs[i].id)) + '\')">' + esc(tabs[i].label) + '</button>';
+  }
+  html += '</div>';
+  return html;
 }
 
+var GROUPS_ACTIVE_TAB = 0;
+function setGroupsTab_(idx) { GROUPS_ACTIVE_TAB = parseInt(idx, 10) || 0; renderGroups(); }
 function renderGroups() {
   var k = S.tournament.structure || 'groups_knockout';
   var titles = { groups_knockout: 'Groups', knockout: 'Knockout', round_robin: 'Round Robin', double_round_robin: 'Double Round Robin', custom: 'Custom matches' };
@@ -3132,8 +3195,15 @@ function renderGroups() {
   if (k === 'knockout') { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Knockout format \u2014 <a href="#" onclick="navTo(\'bracket\')" style="color:var(--gold)">go to Bracket</a> to enter results.</p></div>'; return; }
   if (k === 'custom') { renderCustomGroups(); return; }
   var isRR = (k === 'round_robin' || k === 'double_round_robin');
+  if (GROUPS_ACTIVE_TAB >= S.groups.length) GROUPS_ACTIVE_TAB = 0;
   var html = '';
+  if (S.groups.length > 1) {
+    var groupTabs = [];
+    for (var gti = 0; gti < S.groups.length; gti++) { groupTabs.push({ id: gti, label: isRR ? S.groups[gti].name : ('Group ' + S.groups[gti].name) }); }
+    html += renderTabStrip(groupTabs, GROUPS_ACTIVE_TAB, 'setGroupsTab_');
+  }
   for (var gi = 0; gi < S.groups.length; gi++) {
+    if (S.groups.length > 1 && gi !== GROUPS_ACTIVE_TAB) continue;
     var grp = S.groups[gi];
     var standings = calcGroupStandings(gi);
     var advPer = isRR ? 0 : Math.min(S.tournament.advancePer || 2, standings.length);
@@ -3164,7 +3234,7 @@ function renderGroups() {
         html += '<div class="mc"><div class="mc-hd"><div style="display:flex;align-items:center;gap:6px"><span class="badge ' + (mm5.played ? 'bgr' : 'bgy') + '">' + (mm5.played ? 'Full time' : 'Scheduled') + '</span>' + (mm5.round ? ('<span style="font-size:var(--fs12);color:var(--tm)">Round ' + mm5.round + '</span>') : '') + '</div>'
           + (S.role === 'admin' ? ('<button class="btn sm" onclick="openMatchEdit(\'' + mm5.id + '\')"><i class="ti ti-edit"></i> ' + (mm5.played ? 'Edit' : 'Score') + '</button>') : '') + '</div>'
           + '<div class="mc-teams"><div class="mc-team">' + (ht ? esc(ht.name) : '?') + '</div><div class="mc-score">' + (mm5.played ? (mm5.homeScore + '\u2013' + mm5.awayScore) : '\u2013') + '</div><div class="mc-team r">' + (at ? esc(at.name) : '?') + '</div></div>'
-          + ((mm5.played && mm5.events && mm5.events.length) ? ('<button class="expand-btn" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Match stats</button><div class="mc-expand">' + renderMatchEvents(mm5) + '</div>') : '')
+          + ((mm5.played && mm5.events && mm5.events.length) ? ('<button class="expand-btn" data-label="match stats" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Show match stats</button><div class="mc-expand">' + renderMatchEvents(mm5) + '</div>') : '')
           + '</div>';
       }
       html += '</div>';
@@ -3253,6 +3323,8 @@ function getAdvancers() {
   }
   return adv;
 }
+var STANDINGS_ACTIVE_TAB = 'all';
+function setStandingsTab_(id) { STANDINGS_ACTIVE_TAB = id; renderStandings(); }
 function renderStandings() {
   if (S.role === 'admin' && S.viewAllCategories) { renderStandingsAllCategories(); return; }
   setTopbar('Standings', '', exportButtonsHtml('standings'));
@@ -3268,12 +3340,21 @@ function renderStandings() {
       all.push(copy);
     }
   }
+  if (S.groups.length > 1 && STANDINGS_ACTIVE_TAB !== 'all') {
+    all = all.filter(function (row) { return row.grpName === STANDINGS_ACTIVE_TAB; });
+  }
   all.sort(function (a, b) {
     if (b.pts !== a.pts) return b.pts - a.pts;
     if ((b.gf - b.ga) !== (a.gf - a.ga)) return (b.gf - b.ga) - (a.gf - a.ga);
     return b.gf - a.gf;
   });
-  var html = '<div class="card"><div class="card-title"><i class="ti ti-medal"></i> Overall standings</div>';
+  var standingsTabsHtml = '';
+  if (S.groups.length > 1) {
+    var standingsTabs = [{ id: 'all', label: 'All Groups' }];
+    for (var sgi = 0; sgi < S.groups.length; sgi++) { standingsTabs.push({ id: S.groups[sgi].name, label: 'Group ' + S.groups[sgi].name }); }
+    standingsTabsHtml = renderTabStrip(standingsTabs, STANDINGS_ACTIVE_TAB, 'setStandingsTab_');
+  }
+  var html = standingsTabsHtml + '<div class="card"><div class="card-title"><i class="ti ti-medal"></i> ' + (STANDINGS_ACTIVE_TAB === 'all' ? 'Overall standings' : ('Group ' + esc(STANDINGS_ACTIVE_TAB) + ' standings')) + '</div>';
   html += '<table class="tbl"><thead><tr><th>#</th><th>Team</th><th>Group</th><th class="num">MP</th><th class="num">Pts</th><th class="num">GD</th><th class="num">GF</th></tr></thead><tbody>';
   for (var i = 0; i < all.length; i++) {
     var s2 = all[i];
@@ -3467,20 +3548,23 @@ function renderBracketChart(rounds) {
 function renderBracket() {
   setTopbar('Knockout bracket', '');
   var mc = el('main-content');
-  mc.innerHTML = '<div class="view-toggle"><button class="vt-btn' + (S.bracketView === 'chart' ? ' active' : '') + '" onclick="S.bracketView=\'chart\';renderBracket()"><i class="ti ti-tournament"></i> Chart</button><button class="vt-btn' + (S.bracketView === 'list' ? ' active' : '') + '" onclick="S.bracketView=\'list\';renderBracket()"><i class="ti ti-list"></i> List</button></div><div id="bk"></div>';
-  var bk = el('bk');
-  if (!S.generated) { bk.innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Generate the draw first.</p></div>'; return; }
+  /* The Chart/List toggle only makes sense once there's an actual bracket
+     to switch views on — render it (and the #bk wrapper) after all the
+     not-ready-yet checks below, not before them. */
+  if (!S.generated) { mc.innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Generate the draw first.</p></div>'; return; }
   var k = S.tournament.structure || 'groups_knockout';
-  if (k === 'knockout' && !S.knockoutRounds.length) { bk.innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Enter the first round results to progress the bracket.</p></div>'; return; }
+  if (k === 'knockout' && !S.knockoutRounds.length) { mc.innerHTML = '<div class="empty"><i class="ti ti-tournament"></i><p>Enter the first round results to progress the bracket.</p></div>'; return; }
   var total = S.groupMatches.length, played = 0;
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].played) played++; }
   if (k !== 'knockout' && played < total && !S.knockoutRounds.length) {
     var pct = Math.round(played / total * 100);
-    bk.innerHTML = '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
+    mc.innerHTML = '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
     return;
   }
   if (!S.knockoutRounds.length) { var built = buildKnockout(); if (built) S.knockoutRounds = built; }
   propagateKnockout();
+  mc.innerHTML = '<div class="view-toggle"><button class="vt-btn' + (S.bracketView === 'chart' ? ' active' : '') + '" onclick="S.bracketView=\'chart\';renderBracket()"><i class="ti ti-tournament"></i> Chart</button><button class="vt-btn' + (S.bracketView === 'list' ? ' active' : '') + '" onclick="S.bracketView=\'list\';renderBracket()"><i class="ti ti-list"></i> List</button></div><div id="bk"></div>';
+  var bk = el('bk');
   var lastRound = S.knockoutRounds[S.knockoutRounds.length - 1];
   var champion = (lastRound && lastRound.matches[0]) ? lastRound.matches[0].winner : null;
   var html = '';
@@ -3503,7 +3587,7 @@ function renderBracket() {
         var p1 = m.p1 ? getTeamById(m.p1.id) : null, p2 = m.p2 ? getTeamById(m.p2.id) : null;
         html += '<div class="mc" style="margin-bottom:6px"><div class="mc-hd"><span class="badge bgr">' + round.name + '</span>' + ((m.ps1 !== null && m.ps1 !== undefined) ? ('<span class="badge bpur">Pens ' + m.ps1 + '\u2013' + m.ps2 + '</span>') : '') + '</div>'
           + '<div class="mc-teams"><div class="mc-team" style="' + ((m.winner && m.winner.id === m.p1.id) ? 'color:var(--gold)' : '') + '">' + (p1 ? esc(p1.name) : '?') + '</div><div class="mc-score">' + m.s1 + '\u2013' + m.s2 + '</div><div class="mc-team r" style="' + ((m.winner && m.winner.id === m.p2.id) ? 'color:var(--gold)' : '') + '">' + (p2 ? esc(p2.name) : '?') + '</div></div>'
-          + ((m.events && m.events.length) ? ('<button class="expand-btn" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Match stats</button><div class="mc-expand">' + renderMatchEvents(m) + '</div>') : '') + '</div>';
+          + ((m.events && m.events.length) ? ('<button class="expand-btn" data-label="match stats" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Show match stats</button><div class="mc-expand">' + renderMatchEvents(m) + '</div>') : '') + '</div>';
       }
     }
   } else {
@@ -3519,7 +3603,7 @@ function renderBracket() {
           + '<div class="mc-score">' + (m2.played ? (m2.s1 + '\u2013' + m2.s2) : '\u2013') + '</div>'
           + '<div class="mc-team r" style="' + ((m2.winner && m2.p2 && m2.winner.id === m2.p2.id) ? 'color:var(--gold)' : '') + '">' + (p2b ? esc(p2b.name) : '<span style="color:var(--tm);font-style:italic">TBD</span>') + '</div></div>'
           + ((m2.played && m2.winner) ? ('<div style="padding:4px 14px 10px;font-size:var(--fs13)"><span class="badge bgr">' + (getTeamById(m2.winner.id) ? getTeamById(m2.winner.id).name : '?') + ' advances</span>' + ((m2.ps1 !== null && m2.ps1 !== undefined) ? ('<span class="badge bpur" style="margin-left:6px">Pens: ' + m2.ps1 + '\u2013' + m2.ps2 + '</span>') : '') + '</div>') : '')
-          + ((m2.events && m2.events.length) ? ('<button class="expand-btn" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Match stats</button><div class="mc-expand">' + renderMatchEvents(m2) + '</div>') : '')
+          + ((m2.events && m2.events.length) ? ('<button class="expand-btn" data-label="match stats" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Show match stats</button><div class="mc-expand">' + renderMatchEvents(m2) + '</div>') : '')
           + '</div>';
       }
       html += '</div>';
@@ -3561,6 +3645,8 @@ function saveKoScore(ri, mi) {
 }
 
 /* ---------------- SCHEDULE ---------------- */
+var SCHEDULE_ACTIVE_TAB = 0;
+function setScheduleTab_(idx) { SCHEDULE_ACTIVE_TAB = parseInt(idx, 10) || 0; renderSchedule(); }
 function renderSchedule() {
   setTopbar('Match schedule', 'All fixtures', exportButtonsHtml('schedule'));
   if (!S.generated) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-calendar"></i><p>Generate the draw first.</p></div>'; return; }
@@ -3568,7 +3654,17 @@ function renderSchedule() {
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].played) playedCount++; }
   var html = '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
     + '<span class="badge bg">' + playedCount + '/' + S.groupMatches.length + ' group matches</span></div>';
+  if (SCHEDULE_ACTIVE_TAB >= S.groups.length) SCHEDULE_ACTIVE_TAB = 0;
+  if (S.groups.length > 1) {
+    var schedTabs = [];
+    for (var sti = 0; sti < S.groups.length; sti++) {
+      var stg = S.groups[sti];
+      schedTabs.push({ id: sti, label: stg.name === 'RR' ? 'Round Robin' : (stg.name === 'KO' ? 'Knockout' : ('Group ' + stg.name)) });
+    }
+    html += renderTabStrip(schedTabs, SCHEDULE_ACTIVE_TAB, 'setScheduleTab_');
+  }
   for (var gi = 0; gi < S.groups.length; gi++) {
+    if (S.groups.length > 1 && gi !== SCHEDULE_ACTIVE_TAB) continue;
     var grp = S.groups[gi];
     var titleName = grp.name === 'RR' ? 'Round Robin' : (grp.name === 'KO' ? 'Knockout' : ('Group ' + grp.name));
     html += '<div class="card"><div class="card-title"><i class="ti ti-calendar"></i> ' + esc(titleName) + '</div>';
@@ -3579,7 +3675,7 @@ function renderSchedule() {
       html += '<div class="mc"><div class="mc-hd"><span class="badge ' + (m.played ? 'bgr' : 'bgy') + '">' + (m.played ? 'Full time' : 'Scheduled') + '</span>' + (m.played && !m.verified ? ' <span class="badge bamb" style="font-size:var(--fs11)" title="Result not yet confirmed by the tournament committee">Pending verification</span>' : '') + '</div>'
         + '<div class="mc-teams"><div class="mc-team team-link" onclick="viewTeamProfile(\'' + m.homeId + '\')">' + (ht ? esc(ht.name) : '?') + '</div><div class="mc-score">' + (m.played ? (m.homeScore + '\u2013' + m.awayScore) : '\u2013') + '</div><div class="mc-team r team-link" onclick="viewTeamProfile(\'' + m.awayId + '\')">' + (at ? esc(at.name) : '?') + '</div></div>'
         + matchLogisticsLine(m)
-        + ((m.played && m.events && m.events.length) ? ('<button class="expand-btn" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Match stats</button><div class="mc-expand">' + renderMatchEvents(m) + '</div>') : '') + '</div>';
+        + ((m.played && m.events && m.events.length) ? ('<button class="expand-btn" data-label="match stats" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Show match stats</button><div class="mc-expand">' + renderMatchEvents(m) + '</div>') : '') + '</div>';
     }
     html += '</div>';
   }
@@ -3705,7 +3801,7 @@ function renderTeamProfile() {
       var resColor = res === 'W' ? 'var(--green)' : (res === 'D' ? 'var(--tm)' : 'var(--red)');
       html += '<div class="mc"><div class="mc-hd"><span style="font-weight:700;color:' + resColor + '">' + res + '</span>' + (!pmch.verified ? ' <span class="badge bamb" style="font-size:var(--fs11)">Pending verification</span>' : '') + '</div>'
         + '<div class="mc-teams"><div class="mc-team">' + esc(tm.name) + '</div><div class="mc-score">' + myScore + '\u2013' + oppScore + '</div><div class="mc-team r team-link" onclick="viewTeamProfile(\'' + oppId2 + '\')">' + (opp2 ? esc(opp2.name) : '?') + '</div></div>'
-        + '<button class="expand-btn" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Match details</button><div class="mc-expand">' + matchLogisticsLine(pmch) + ((pmch.events && pmch.events.length) ? renderMatchEvents(pmch) : '<div style="font-size:var(--fs14);color:var(--tm);margin-top:8px">No goals, cards, or substitutions logged.</div>') + '</div>'
+        + '<button class="expand-btn" data-label="match details" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Show match details</button><div class="mc-expand">' + matchLogisticsLine(pmch) + ((pmch.events && pmch.events.length) ? renderMatchEvents(pmch) : '<div style="font-size:var(--fs14);color:var(--tm);margin-top:8px">No goals, cards, or substitutions logged.</div>') + '</div>'
         + '</div>';
     }
   } else { html += '<div style="font-size:var(--fs14);color:var(--tm)">No matches played yet.</div>'; }
@@ -3792,7 +3888,7 @@ function renderTeamDash() {
       var resColor = res === 'W' ? 'var(--green)' : (res === 'D' ? 'var(--tm)' : 'var(--red)');
       html += '<div class="mc"><div class="mc-hd"><span style="font-weight:700;color:' + resColor + ';width:16px">' + res + '</span>' + (!pmch.verified ? ' <span class="badge bamb" style="font-size:var(--fs11);margin-left:6px" title="Result not yet confirmed by the tournament committee">Pending</span>' : '') + '</div>'
         + '<div class="mc-teams"><div class="mc-team">' + esc(tm.name) + '</div><div class="mc-score">' + myScore + '\u2013' + oppScore + '</div><div class="mc-team r">' + (opp2 ? esc(opp2.name) : '?') + '</div></div>'
-        + '<button class="expand-btn" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Match details</button><div class="mc-expand">' + matchLogisticsLine(pmch) + ((pmch.events && pmch.events.length) ? renderMatchEvents(pmch) : '<div style="font-size:var(--fs14);color:var(--tm);margin-top:8px">No goals, cards, or substitutions logged.</div>') + '</div>'
+        + '<button class="expand-btn" data-label="match details" onclick="toggleExpand(this)"><i class="ti ti-chevron-down"></i> Show match details</button><div class="mc-expand">' + matchLogisticsLine(pmch) + ((pmch.events && pmch.events.length) ? renderMatchEvents(pmch) : '<div style="font-size:var(--fs14);color:var(--tm);margin-top:8px">No goals, cards, or substitutions logged.</div>') + '</div>'
         + '</div>';
     }
   } else { html += '<div style="font-size:var(--fs14);color:var(--tm)">No matches played yet.</div>'; }
@@ -3812,7 +3908,7 @@ function renderRoster() {
     html += '<div class="card"><div class="card-title"><i class="ti ti-shield-check"></i> Staff \u2014 ' + staffList.length + '</div>';
     for (var s = 0; s < staffList.length; s++) {
       var st = staffList[s];
-      html += '<div class="p-row"><div class="ava">' + ini(st.name) + '</div><div class="p-info"><div class="p-name">' + esc(st.name) + '</div><div class="p-sub">' + esc(st.role === 'Other' ? (st.roleOther || 'Other') : st.role) + (st.phone ? (' \u00b7 ' + esc(st.phone)) : '') + '</div></div></div>';
+      html += '<div class="p-row" style="cursor:pointer" onclick="openEditRoster(\'' + tm.id + '\')" title="Edit roster"><div class="ava">' + ini(st.name) + '</div><div class="p-info"><div class="p-name">' + esc(st.name) + '</div><div class="p-sub">' + esc(st.role === 'Other' ? (st.roleOther || 'Other') : st.role) + (st.phone ? (' \u00b7 ' + esc(st.phone)) : '') + '</div></div><i class="ti ti-edit" style="color:var(--tm);flex-shrink:0"></i></div>';
     }
     html += '</div>';
   }
@@ -3824,7 +3920,7 @@ function renderRoster() {
       var flagHtml = '';
       if (flags.missing.length) { flagHtml += '<span class="badge brd" style="font-size:var(--fs11);margin-left:6px" title="No document on file"><i class="ti ti-alert-triangle"></i> Missing: ' + esc(flags.missing.join(', ')) + '</span>'; }
       if (flags.pending.length) { flagHtml += '<span class="badge bamb" style="font-size:var(--fs11);margin-left:6px" title="Uploaded, awaiting review"><i class="ti ti-hourglass"></i> Pending: ' + esc(flags.pending.join(', ')) + '</span>'; }
-      html += '<div class="p-row"><div class="ava">' + ini(p.name) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + ' <span style="color:var(--tm);font-weight:400">#' + esc(p.jersey) + '</span>' + flagHtml + '</div><div class="p-sub">' + esc(p.pos) + ' \u00b7 Age ' + esc(p.age) + '</div></div></div>';
+      html += '<div class="p-row" style="cursor:pointer" onclick="openEditRoster(\'' + tm.id + '\')" title="Edit roster"><div class="ava">' + ini(p.name) + '</div><div class="p-info"><div class="p-name">' + esc(p.name) + ' <span style="color:var(--tm);font-weight:400">#' + esc(p.jersey) + '</span>' + flagHtml + '</div><div class="p-sub">' + esc(p.pos) + ' \u00b7 Age ' + esc(p.age) + '</div></div><i class="ti ti-edit" style="color:var(--tm);flex-shrink:0"></i></div>';
     }
   } else { html += '<div style="font-size:var(--fs14);color:var(--tm);padding:8px 0">No players added.</div>'; }
   html += '</div>';
@@ -4089,6 +4185,8 @@ function getMatchScore(m) {
   return { hs: hs, as: as2 };
 }
 
+var OFFICIALS_ACTIVE_TAB = 'matches';
+function setOfficialsTab_(id) { OFFICIALS_ACTIVE_TAB = id; renderOfficials(); }
 function renderOfficials() {
   if (S.role === 'admin' && S.viewAllCategories) { renderOfficialsAllCategories(); return; }
   var canManage = (S.role === 'admin' || S.role === 'official');
@@ -4155,6 +4253,8 @@ function renderOfficials() {
       html += '</tbody></table></div>';
     }
   }
+  html += renderTabStrip([{ id: 'matches', label: 'All Matches' }, { id: 'scorers', label: 'Top Scorers' }, { id: 'discipline', label: 'Discipline' }], OFFICIALS_ACTIVE_TAB, 'setOfficialsTab_');
+  if (OFFICIALS_ACTIVE_TAB === 'matches') {
   html += '<div class="card"><div class="card-title"><i class="ti ti-list"></i> All matches</div><table class="tbl"><thead><tr><th>Pitch</th><th>Match</th><th>Home</th><th class="num">Score</th><th>Away</th><th>Status</th>' + (canManage ? '<th></th>' : '') + '</tr></thead><tbody>';
   for (var mi2 = 0; mi2 < S.groupMatches.length; mi2++) {
     var m3 = S.groupMatches[mi2];
@@ -4171,6 +4271,7 @@ function renderOfficials() {
     html += '<tr><td style="font-size:var(--fs13);font-weight:600;color:var(--gold)">' + (m3.pitchName || '\u2013') + '</td><td><span class="badge bgy" style="font-size:var(--fs12)">Grp ' + (S.groups[m3.group] ? S.groups[m3.group].name : '') + '</span>' + (m3.kickoff ? ('<span style="font-size:var(--fs12);color:var(--tm);margin-left:4px">' + m3.kickoff + '</span>') : '') + '</td><td style="font-weight:500;font-size:var(--fs14)">' + (ht3 ? esc(ht3.name) : '?') + '</td><td class="num" style="font-weight:700;color:' + ((m3.played || m3.inProgress) ? 'var(--gold)' : 'var(--tm)') + ';font-size:var(--fs15)">' + (m3.played ? (m3.homeScore + '\u2013' + m3.awayScore) : (m3.inProgress ? (sc3.hs + '\u2013' + sc3.as) : '\u2013')) + '</td><td style="font-weight:500;font-size:var(--fs14)">' + (at3 ? esc(at3.name) : '?') + '</td><td>' + sb + '</td>' + (canManage ? ('<td>' + (m3.inProgress ? '<span style="font-size:var(--fs12);color:var(--tm)">use Live now controls</span>' : ('<button class="btn sm" onclick="openMatchEdit(\'' + m3.id + '\')"><i class="ti ti-edit"></i></button>')) + '</td>') : '') + '</tr>';
   }
   html += '</tbody></table></div>';
+  } /* end matches tab */
   var scorers = {};
   for (var si = 0; si < S.groupMatches.length; si++) {
     var sm = S.groupMatches[si];
@@ -4187,6 +4288,7 @@ function renderOfficials() {
   for (var key2 in scorers) { scList.push(scorers[key2]); }
   scList.sort(function (a, b) { return b.goals - a.goals; });
   scList = scList.slice(0, 8);
+  if (OFFICIALS_ACTIVE_TAB === 'scorers') {
   if (scList.length) {
     html += '<div class="card"><div class="card-title"><i class="ti ti-ball-football"></i> Top scorers</div><table class="tbl"><thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">Goals</th></tr></thead><tbody>';
     for (var ti = 0; ti < scList.length; ti++) {
@@ -4195,7 +4297,8 @@ function renderOfficials() {
       html += '<tr><td style="font-weight:600;color:' + (ti < 3 ? 'var(--gold)' : 'var(--tm)') + '">' + (ti + 1) + '</td><td style="font-weight:500">' + esc(sc2.name) + '</td><td><span class="badge bgy" style="font-size:var(--fs12)">' + (tm4 ? esc(tm4.name) : '?') + '</span></td><td class="num" style="font-weight:700;color:var(--gold)">' + sc2.goals + '</td></tr>';
     }
     html += '</tbody></table></div>';
-  }
+  } else { html += '<div class="empty"><i class="ti ti-ball-football"></i><p>No goals logged yet.</p></div>'; }
+  } /* end scorers tab */
   var cardsMap = {};
   for (var ci2 = 0; ci2 < S.groupMatches.length; ci2++) {
     var cm = S.groupMatches[ci2];
@@ -4212,6 +4315,7 @@ function renderOfficials() {
   for (var key4 in cardsMap) { if (cardsMap[key4].yellow + cardsMap[key4].red > 0) cList.push(cardsMap[key4]); }
   cList.sort(function (a, b) { return (b.red * 3 + b.yellow) - (a.red * 3 + a.yellow); });
   cList = cList.slice(0, 6);
+  if (OFFICIALS_ACTIVE_TAB === 'discipline') {
   if (cList.length) {
     html += '<div class="card"><div class="card-title"><i class="ti ti-card"></i> Discipline</div><table class="tbl"><thead><tr><th>Player</th><th>Team</th><th class="num">Y</th><th class="num">R</th></tr></thead><tbody>';
     for (var cj = 0; cj < cList.length; cj++) {
@@ -4220,7 +4324,8 @@ function renderOfficials() {
       html += '<tr><td style="font-weight:500">' + esc(c.name) + '</td><td><span class="badge bgy" style="font-size:var(--fs12)">' + (tm5 ? esc(tm5.name) : '?') + '</span></td><td class="num" style="color:var(--amber);font-weight:600">' + (c.yellow || '\u2013') + '</td><td class="num" style="color:var(--red);font-weight:600">' + (c.red || '\u2013') + '</td></tr>';
     }
     html += '</tbody></table></div>';
-  }
+  } else { html += '<div class="empty"><i class="ti ti-card"></i><p>No cards logged yet.</p></div>'; }
+  } /* end discipline tab */
   el('main-content').innerHTML = html;
 }
 function renderOfficialsAllCategories() {
@@ -4466,6 +4571,8 @@ function releaseMatchInCategory(mid, categoryId) {
   if (categoryId && S.activeCategoryId !== categoryId) S.activeCategoryId = categoryId;
   releaseMatch(mid);
 }
+var MYMATCHES_ACTIVE_TAB = null;
+function setMyMatchesTab_(id) { MYMATCHES_ACTIVE_TAB = id; renderMyMatches(); }
 function renderMyMatches() {
   var idOpts = '<option value="">Please Select...</option>';
   for (var ridx = 0; ridx < S.referees.length; ridx++) {
@@ -4494,7 +4601,16 @@ function renderMyMatches() {
     byCategory[r.categoryId].items.push(r);
   }
   var html = idPicker;
+  if (order.length > 1) {
+    if (order.indexOf(MYMATCHES_ACTIVE_TAB) === -1) MYMATCHES_ACTIVE_TAB = order[0];
+    var mmTabs = [];
+    for (var mti = 0; mti < order.length; mti++) { mmTabs.push({ id: order[mti], label: byCategory[order[mti]].name }); }
+    html += renderTabStrip(mmTabs, MYMATCHES_ACTIVE_TAB, 'setMyMatchesTab_');
+  } else {
+    MYMATCHES_ACTIVE_TAB = order[0];
+  }
   for (var c = 0; c < order.length; c++) {
+    if (order.length > 1 && order[c] !== MYMATCHES_ACTIVE_TAB) continue;
     var grp = byCategory[order[c]];
     grp.items.sort(function (a, b) {
       var pa = a.match.inProgress ? 0 : (!a.match.played ? 1 : 2);
@@ -5293,35 +5409,61 @@ function confirmResetTimer(matchId) {
 }
 
 /* ---------------- AUDIT TRAIL ---------------- */
+var AUDIT_EXPANDED_DAYS = null; /* lazily seeded to {mostRecentDay: true} on first render */
+function toggleAuditDay_(key) {
+  if (!AUDIT_EXPANDED_DAYS) AUDIT_EXPANDED_DAYS = {};
+  AUDIT_EXPANDED_DAYS[key] = !AUDIT_EXPANDED_DAYS[key];
+  renderAudit();
+}
 function renderAudit() {
   setTopbar('Audit trail', 'Every edit, log, and override \u2014 timestamped');
   var log = S.auditLog || [];
   if (!log.length) { el('main-content').innerHTML = '<div class="empty"><i class="ti ti-list"></i><p>No audit entries yet.</p></div>'; return; }
-  var html = '<div class="card"><div class="card-title"><i class="ti ti-list"></i> ' + log.length + ' entries</div>';
+  /* Categorized by day (log is already newest-first). Collapsible so a
+     long history doesn't force scrolling through everything at once \u2014
+     today's entries open by default, older days collapsed. */
+  var days = {}, order = [];
   for (var i = 0; i < log.length; i++) {
-    var a = log[i];
-    var d = new Date(a.ts);
-    var dStr = isNaN(d.getTime()) ? a.ts : (d.toLocaleDateString() + ' ' + d.toLocaleTimeString());
-    var roleBadgeCls = a.role === 'admin' ? 'bg' : (a.role === 'referee' || a.role === 'official') ? 'bpur' : 'bgy';
-    var m = null;
-    if (a.matchId) { for (var k = 0; k < S.groupMatches.length; k++) { if (S.groupMatches[k].id === a.matchId) { m = S.groupMatches[k]; break; } } }
-    var matchTag = '';
-    if (m) {
-      var ht = getTeamById(m.homeId), at = getTeamById(m.awayId);
-      matchTag = '<span class="badge bgy" style="font-size:var(--fs12);margin-left:6px">' + (ht ? esc(ht.name) : '?') + ' vs ' + (at ? esc(at.name) : '?') + '</span>';
-    }
-    html += '<div style="padding:10px 0;border-bottom:1px solid var(--nbl)">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">'
-      + '<span class="badge ' + roleBadgeCls + '" style="font-size:var(--fs12)">' + esc(a.role || '?') + '</span>'
-      + '<span style="font-size:var(--fs14);font-weight:600">' + esc(a.action) + '</span>'
-      + matchTag
-      + '<span style="font-size:var(--fs12);color:var(--tm);margin-left:auto">' + dStr + '</span>'
-      + '</div>'
-      + '<div style="font-size:var(--fs14);color:var(--ts)">' + esc(a.detail) + '</div>'
-      + '<div style="font-size:var(--fs12);color:var(--tm);margin-top:2px">by ' + esc(a.actor) + '</div>'
-      + '</div>';
+    var d0 = new Date(log[i].ts);
+    var key = isNaN(d0.getTime()) ? 'Unknown date' : d0.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    if (!days[key]) { days[key] = []; order.push(key); }
+    days[key].push(log[i]);
   }
-  html += '</div>';
+  if (!AUDIT_EXPANDED_DAYS) { AUDIT_EXPANDED_DAYS = {}; AUDIT_EXPANDED_DAYS[order[0]] = true; }
+  var html = '';
+  for (var oi = 0; oi < order.length; oi++) {
+    var dayKey = order[oi];
+    var entries = days[dayKey];
+    var open = !!AUDIT_EXPANDED_DAYS[dayKey];
+    html += '<div class="card" style="margin-bottom:12px">';
+    html += '<div class="card-title" style="cursor:pointer" onclick="toggleAuditDay_(\'' + esc(dayKey).replace(/'/g, "\\'") + '\')"><i class="ti ti-chevron-' + (open ? 'up' : 'down') + '"></i> ' + esc(dayKey) + ' <span style="color:var(--tm);font-weight:400">(' + entries.length + ')</span></div>';
+    if (open) {
+      for (var i2 = 0; i2 < entries.length; i2++) {
+        var a = entries[i2];
+        var d = new Date(a.ts);
+        var dStr = isNaN(d.getTime()) ? a.ts : d.toLocaleTimeString();
+        var roleBadgeCls = a.role === 'admin' ? 'bg' : (a.role === 'referee' || a.role === 'official') ? 'bpur' : 'bgy';
+        var m = null;
+        if (a.matchId) { for (var k = 0; k < S.groupMatches.length; k++) { if (S.groupMatches[k].id === a.matchId) { m = S.groupMatches[k]; break; } } }
+        var matchTag = '';
+        if (m) {
+          var ht = getTeamById(m.homeId), at = getTeamById(m.awayId);
+          matchTag = '<span class="badge bgy" style="font-size:var(--fs12);margin-left:6px">' + (ht ? esc(ht.name) : '?') + ' vs ' + (at ? esc(at.name) : '?') + '</span>';
+        }
+        html += '<div style="padding:10px 0;border-bottom:1px solid var(--nbl)">'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">'
+          + '<span class="badge ' + roleBadgeCls + '" style="font-size:var(--fs12)">' + esc(a.role || '?') + '</span>'
+          + '<span style="font-size:var(--fs14);font-weight:600">' + esc(a.action) + '</span>'
+          + matchTag
+          + '<span style="font-size:var(--fs12);color:var(--tm);margin-left:auto">' + dStr + '</span>'
+          + '</div>'
+          + '<div style="font-size:var(--fs14);color:var(--ts)">' + esc(a.detail) + '</div>'
+          + '<div style="font-size:var(--fs12);color:var(--tm);margin-top:2px">by ' + esc(a.actor) + '</div>'
+          + '</div>';
+      }
+    }
+    html += '</div>';
+  }
   el('main-content').innerHTML = html;
 }
 
