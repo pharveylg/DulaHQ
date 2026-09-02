@@ -5671,12 +5671,14 @@ function renderSignInPage() {
 }
 
 /* Root landing page ("/", no /t/ segment): a public gallery of tournament
-   posters instead of a sign-in form. Every /t/{org-slug} URL still shows
-   the real branded sign-in above, completely unchanged — this only
-   replaces what an anonymous visitor sees at the bare root. Real tenants
-   opt in via organizations.publicly_listed (off by default, set from the
-   Superadmin Console); demo tenants always appear as a stand-in for
-   organizers who haven't set a poster yet. */
+   posters instead of a sign-in form. Posters belong to individual
+   tournaments (tournament_names view, publicly_listed opt-in per
+   tournament, set from the Superadmin Console) — an organizer running
+   several publicly-listed tournaments gets one card per tournament here.
+   Every card still links to its organizer's own /t/{org-slug} page, not
+   straight to the tournament, so a visitor sees everything else that
+   organizer runs before picking one. Demo tenants always appear as a
+   stand-in for organizers who haven't set a poster yet. */
 function renderTournamentGallery_() {
   var html = '<div id="gallery-screen" style="min-height:100vh;background:var(--navy);padding:48px 20px 60px">';
   html += '<div style="max-width:1100px;margin:0 auto 36px;text-align:center">';
@@ -5692,21 +5694,27 @@ function renderTournamentGallery_() {
   html += '</div>';
   html += '</div>';
   if (sb) {
-    sb.from('organizations').select('*').eq('status', 'active').eq('publicly_listed', true).then(function(res){
-      renderGalleryGrid_(res.data || []);
+    sb.from('tournament_names').select('*').eq('publicly_listed', true).then(function(res){
+      var rows = (res.data || []).filter(function(r){ return r.org_status === 'active'; });
+      renderGalleryGrid_(rows);
     });
   } else {
     renderGalleryGrid_([]);
   }
   return html;
 }
+/* t is either a tournament_names row (real) or a local demo tenant
+   object — the two shapes differ (org_slug/org_accent vs slug/accent),
+   normalized here rather than at every call site. */
 function galleryCardHtml_(t, isDemo) {
-  var hasPoster = !!t.poster_url;
-  var bg = hasPoster
-    ? ('background-image:url(\'' + esc(t.poster_url) + '\');background-size:cover;background-position:center;')
-    : ('background:linear-gradient(160deg,' + esc(t.accent || '#15803D') + ',rgba(0,0,0,.65));');
+  var posterUrl = t.poster_url;
+  var accent = isDemo ? t.accent : t.org_accent;
+  var linkSlug = isDemo ? t.slug : t.org_slug;
   var title = isDemo ? ((t.demo && t.demo.meta && t.demo.meta.name) || t.name) : t.name;
-  var html = '<div onclick="location.href=\'/t/' + esc(t.slug) + '\'" style="position:relative;aspect-ratio:3/4;border-radius:var(--r);overflow:hidden;cursor:pointer;box-shadow:var(--shadow);' + bg + '">';
+  var bg = posterUrl
+    ? ('background-image:url(\'' + esc(posterUrl) + '\');background-size:cover;background-position:center;')
+    : ('background:linear-gradient(160deg,' + esc(accent || '#15803D') + ',rgba(0,0,0,.65));');
+  var html = '<div onclick="location.href=\'/t/' + esc(linkSlug) + '\'" style="position:relative;aspect-ratio:3/4;border-radius:var(--r);overflow:hidden;cursor:pointer;box-shadow:var(--shadow);' + bg + '">';
   if (isDemo) html += '<span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:4px;font-family:var(--font-heading)">Demo</span>';
   html += '<div style="position:absolute;left:0;right:0;bottom:0;padding:16px 14px;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent)">';
   html += '<div style="color:#fff;font-weight:700;font-size:var(--fs16);font-family:var(--font-heading);text-transform:uppercase;letter-spacing:.02em">' + esc(title) + '</div>';
@@ -5714,15 +5722,45 @@ function galleryCardHtml_(t, isDemo) {
   html += '</div></div>';
   return html;
 }
-function renderGalleryGrid_(realOrgs) {
+function renderGalleryGrid_(publicTournaments) {
   var grid = el('gallery-grid');
   if (!grid) return;
   var demoTenants = getTenantDirectory().filter(function(t){ return t.status !== 'suspended'; });
   var html = '';
-  for (var i = 0; i < realOrgs.length; i++) html += galleryCardHtml_(realOrgs[i], false);
+  for (var i = 0; i < publicTournaments.length; i++) html += galleryCardHtml_(publicTournaments[i], false);
   for (var j = 0; j < demoTenants.length; j++) html += galleryCardHtml_(demoTenants[j], true);
   grid.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;color:var(--tm);padding:40px 0">No tournaments listed yet.</div>';
   hydrateIcons(document.body);
+}
+/* /t/{org-slug} with no tournament segment, for an organizer running 2+
+   tournaments: a small poster gallery scoped to just this organizer,
+   shown in place of the sign-in form. Each card links to
+   /t/{org-slug}/{tournament-slug}, which is where sign-in actually
+   happens (unchanged) — this page is discovery only. */
+function renderTenantTournamentGallery_(orgSlug, orgName, orgAccent, tournaments) {
+  var sWrap = el('signin-wrap');
+  if (!sWrap) return;
+  var html = '<div id="gallery-screen" style="min-height:100vh;background:var(--navy);padding:48px 20px 60px">';
+  html += '<div style="max-width:900px;margin:0 auto 36px;text-align:center">';
+  html += '<div style="font-size:var(--fs38);font-weight:800;font-style:italic;letter-spacing:-1px;line-height:1;margin-bottom:10px">' + esc(orgName) + '</div>';
+  html += '<div style="font-size:var(--fs16);color:var(--tm)">Choose a tournament</div>';
+  html += '</div>';
+  html += '<div style="max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px">';
+  for (var i = 0; i < tournaments.length; i++) {
+    var t = tournaments[i];
+    var bg = t.poster_url
+      ? ('background-image:url(\'' + esc(t.poster_url) + '\');background-size:cover;background-position:center;')
+      : ('background:linear-gradient(160deg,' + esc(orgAccent || '#15803D') + ',rgba(0,0,0,.65));');
+    html += '<div onclick="location.href=\'/t/' + esc(orgSlug) + '/' + esc(t.slug) + '\'" style="position:relative;aspect-ratio:3/4;border-radius:var(--r);overflow:hidden;cursor:pointer;box-shadow:var(--shadow);' + bg + '">';
+    html += '<div style="position:absolute;left:0;right:0;bottom:0;padding:16px 14px;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent)">';
+    html += '<div style="color:#fff;font-weight:700;font-size:var(--fs16);font-family:var(--font-heading);text-transform:uppercase;letter-spacing:.02em">' + esc(t.name) + '</div>';
+    html += '<div style="color:rgba(255,255,255,.8);font-size:var(--fs12);margin-top:2px">Sign in &rarr;</div>';
+    html += '</div></div>';
+  }
+  html += '</div>';
+  html += '<div style="max-width:900px;margin:36px auto 0;text-align:center"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="location.href=\'/\'">&larr; All tournaments</span></div>';
+  html += '</div>';
+  sWrap.innerHTML = html;
 }
 /* Dedicated platform-admin entry point — a real magic-link sign-in, no
    demo/preview shortcuts, no tenant branding. completeSupabaseLogin_
@@ -6178,7 +6216,7 @@ function renderSaDirectoryRows_(dir, isReal){
     var suspended = t.status === 'suspended';
     html += '<div class="sa-row">';
     html += '<span class="sa-swatch" style="background:' + esc(t.accent || '#999') + '"></span>';
-    html += '<div style="flex:1;min-width:0"><div style="font-weight:600">' + esc(t.name) + ' ' + (suspended ? '<span class="badge b-amber">Suspended</span>' : '<span class="badge b-green">Active</span>') + (isReal && t.publicly_listed ? ' <span class="badge b-green">Public</span>' : '') + '</div>';
+    html += '<div style="flex:1;min-width:0"><div style="font-weight:600">' + esc(t.name) + ' ' + (suspended ? '<span class="badge b-amber">Suspended</span>' : '<span class="badge b-green">Active</span>') + '</div>';
     html += '<div style="font-size:var(--fs12);color:var(--tm)">/t/' + esc(t.slug) + '</div></div>';
     html += '<button class="btn sm" onclick="window.open(location.origin+\'/t/' + esc(t.slug) + '\',\'_blank\')"><i class="ti ti-external-link"></i> Open</button>';
     html += '<button class="btn sm" onclick="saToggleManage(\'' + esc(key) + '\')"><i class="ti ti-settings"></i> Manage</button>';
@@ -6188,15 +6226,14 @@ function renderSaDirectoryRows_(dir, isReal){
       html += '<div style="padding:14px;background:var(--n3);border-radius:8px;margin:-4px 0 10px">';
       html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(key) + '" value="' + esc(t.name) + '"></div>';
       html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(key) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
-      if (t.poster_url) { html += '<img src="' + esc(t.poster_url) + '" style="width:70px;height:93px;object-fit:cover;border-radius:6px;border:1px solid var(--nb);margin-bottom:8px" alt="Current poster">'; }
-      html += '<div class="field"><label>Poster image</label><input id="sa-poster-file-' + esc(key) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
-      html += '<div class="field"><label>...or a poster image URL</label><input id="sa-poster-' + esc(key) + '" value="' + esc(t.poster_url || '') + '" placeholder="https://.../poster.jpg"></div>';
-      if (!isReal) { html += '<div style="font-size:var(--fs12);color:var(--tm);margin:-4px 0 10px">Stored locally in this browser only — max 1.5MB.</div>'; }
-      if (isReal) {
-        html += '<div class="field" style="display:flex;align-items:center;gap:8px"><input id="sa-public-' + esc(key) + '" type="checkbox" style="width:auto"' + (t.publicly_listed ? ' checked' : '') + '><label for="sa-public-' + esc(key) + '" style="margin:0">List publicly on the homepage gallery</label></div>';
+      if (!isReal) {
+        if (t.poster_url) { html += '<img src="' + esc(t.poster_url) + '" style="width:70px;height:93px;object-fit:cover;border-radius:6px;border:1px solid var(--nb);margin-bottom:8px" alt="Current poster">'; }
+        html += '<div class="field"><label>Poster image</label><input id="sa-poster-file-' + esc(key) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
+        html += '<div class="field"><label>...or a poster image URL</label><input id="sa-poster-' + esc(key) + '" value="' + esc(t.poster_url || '') + '" placeholder="https://.../poster.jpg"></div>';
+        html += '<div style="font-size:var(--fs12);color:var(--tm);margin:-4px 0 10px">Stored locally in this browser only — max 1.5MB.</div>';
       }
       html += '<button class="btn primary sm" onclick="' + (isReal ? 'saSaveManageReal_' : 'saSaveManage') + '(\'' + esc(key) + '\')"><i class="ti ti-check"></i> Save</button>';
-      if (isReal) html += renderSaTournaments_(key);
+      if (isReal) { html += '<div style="font-size:var(--fs12);color:var(--tm);margin-top:10px">Posters and public listing are set per tournament below.</div>'; html += renderSaTournaments_(key); }
       html += '</div>';
     }
   }
@@ -6257,16 +6294,36 @@ function renderSaTournaments_(orgId){
     if (!list.length) html += '<div class="empty"><p>No tournaments yet.</p></div>';
     for (var i = 0; i < list.length; i++) {
       var trn = list[i];
+      html += '<div style="padding:10px;margin-bottom:8px;background:var(--n2);border-radius:8px;border:1px solid var(--nb)">';
       html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
       html += '<input id="sa-trn-name-' + esc(trn.id) + '" value="' + esc(trn.name) + '" placeholder="Tournament name" style="flex:1">';
       html += '<input id="sa-trn-slug-' + esc(trn.id) + '" value="' + esc(trn.slug || '') + '" placeholder="slug (if 2+ tournaments)" style="flex:1">';
-      html += '<button class="btn sm" onclick="saSaveTournamentReal_(\'' + esc(orgId) + '\',\'' + esc(trn.id) + '\')"><i class="ti ti-check"></i></button>';
+      html += '</div>';
+      if (trn.poster_url) { html += '<img src="' + esc(trn.poster_url) + '" style="width:56px;height:74px;object-fit:cover;border-radius:6px;border:1px solid var(--nb);margin-bottom:8px" alt="Current poster">'; }
+      html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+      html += '<input id="sa-trn-poster-file-' + esc(trn.id) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="flex:1">';
+      html += '<input id="sa-trn-poster-' + esc(trn.id) + '" value="' + esc(trn.poster_url || '') + '" placeholder="...or a poster image URL" style="flex:1">';
+      html += '</div>';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">';
+      html += '<label style="display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs13)"><input id="sa-trn-public-' + esc(trn.id) + '" type="checkbox" style="width:auto"' + (trn.publicly_listed ? ' checked' : '') + '> List publicly</label>';
+      html += '<button class="btn sm" onclick="saSaveTournamentReal_(\'' + esc(orgId) + '\',\'' + esc(trn.id) + '\')"><i class="ti ti-check"></i> Save</button>';
+      html += '</div>';
       html += '</div>';
     }
-    html += '<div style="display:flex;gap:8px;align-items:center;margin-top:10px">';
+    html += '<div style="padding:10px;background:var(--n2);border-radius:8px;border:1px dashed var(--nb)">';
+    html += '<div style="font-size:var(--fs13);font-weight:600;margin-bottom:8px">Add a tournament</div>';
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
     html += '<input id="sa-new-trn-name-' + esc(orgId) + '" placeholder="New tournament name" style="flex:1">';
     html += '<input id="sa-new-trn-slug-' + esc(orgId) + '" placeholder="slug (required if adding another)" style="flex:1">';
+    html += '</div>';
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+    html += '<input id="sa-new-trn-poster-file-' + esc(orgId) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="flex:1">';
+    html += '<input id="sa-new-trn-poster-' + esc(orgId) + '" placeholder="...or a poster image URL" style="flex:1">';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">';
+    html += '<label style="display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs13)"><input id="sa-new-trn-public-' + esc(orgId) + '" type="checkbox" style="width:auto"> List publicly</label>';
     html += '<button class="btn sm" onclick="saAddTournamentReal_(\'' + esc(orgId) + '\')"><i class="ti ti-plus"></i> Add</button>';
+    html += '</div>';
     html += '</div>';
   }
   html += '</div>';
@@ -6274,31 +6331,58 @@ function renderSaTournaments_(orgId){
 }
 function saAddTournamentReal_(orgId){
   var nameEl = el('sa-new-trn-name-' + orgId), slugEl = el('sa-new-trn-slug-' + orgId);
+  var posterEl = el('sa-new-trn-poster-' + orgId), posterFileEl = el('sa-new-trn-poster-file-' + orgId), publicEl = el('sa-new-trn-public-' + orgId);
   var name = (nameEl.value || '').trim();
   var slug = (slugEl.value || '').trim().toLowerCase();
+  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
   var existing = SA_REAL_TOURNAMENTS[orgId] || [];
   if (!name) { showToast('Tournament name is required.'); return; }
   if (existing.length >= 1 && !slug) { showToast('A slug is required once an organizer has more than one tournament.'); return; }
   if (slug && !/^[a-z0-9-]+$/.test(slug)) { showToast('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
-  sb.from('tournaments').insert({ id: newTournamentId_(), org_id: orgId, name: name, slug: slug || null }).then(function(res){
-    if (res.error) { showToast('Add failed: ' + res.error.message); return; }
-    SA_REAL_TOURNAMENTS[orgId] = undefined;
-    renderSuperadmin();
-    showToast('Tournament "' + name + '" added');
-  });
+  var newId = newTournamentId_();
+  function insertTrn(finalPosterUrl) {
+    sb.from('tournaments').insert({ id: newId, org_id: orgId, name: name, slug: slug || null, poster_url: finalPosterUrl || '', publicly_listed: !!(publicEl && publicEl.checked) }).then(function(res){
+      if (res.error) { showToast('Add failed: ' + res.error.message); return; }
+      SA_REAL_TOURNAMENTS[orgId] = undefined;
+      renderSuperadmin();
+      showToast('Tournament "' + name + '" added');
+    });
+  }
+  if (posterFile) {
+    uploadPosterFile_(posterFile, newId, function(uploadedUrl, uploadErr) {
+      if (uploadErr) { showToast('Poster upload failed: ' + uploadErr.message); return; }
+      insertTrn(uploadedUrl || (posterEl ? posterEl.value.trim() : ''));
+    });
+  } else {
+    insertTrn(posterEl ? posterEl.value.trim() : '');
+  }
 }
 function saSaveTournamentReal_(orgId, trnId){
   var nameEl = el('sa-trn-name-' + trnId), slugEl = el('sa-trn-slug-' + trnId);
+  var posterEl = el('sa-trn-poster-' + trnId), posterFileEl = el('sa-trn-poster-file-' + trnId), publicEl = el('sa-trn-public-' + trnId);
   var name = (nameEl.value || '').trim();
   var slug = (slugEl.value || '').trim().toLowerCase();
+  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
   if (!name) { showToast('Tournament name is required.'); return; }
   if (slug && !/^[a-z0-9-]+$/.test(slug)) { showToast('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
-  sb.from('tournaments').update({ name: name, slug: slug || null }).eq('id', trnId).then(function(res){
-    if (res.error) { showToast('Update failed: ' + res.error.message); return; }
-    SA_REAL_TOURNAMENTS[orgId] = undefined;
-    renderSuperadmin();
-    showToast('Tournament updated');
-  });
+  function updateTrn(finalPosterUrl) {
+    var patch = { name: name, slug: slug || null, publicly_listed: !!(publicEl && publicEl.checked) };
+    if (finalPosterUrl !== undefined) patch.poster_url = finalPosterUrl;
+    sb.from('tournaments').update(patch).eq('id', trnId).then(function(res){
+      if (res.error) { showToast('Update failed: ' + res.error.message); return; }
+      SA_REAL_TOURNAMENTS[orgId] = undefined;
+      renderSuperadmin();
+      showToast('Tournament updated');
+    });
+  }
+  if (posterFile) {
+    uploadPosterFile_(posterFile, trnId, function(uploadedUrl, uploadErr) {
+      if (uploadErr) { showToast('Poster upload failed: ' + uploadErr.message); return; }
+      updateTrn(uploadedUrl || (posterEl ? posterEl.value.trim() : undefined));
+    });
+  } else {
+    updateTrn(posterEl ? posterEl.value.trim() : undefined);
+  }
 }
 
 function saToggleSuspend(slug){
@@ -6348,26 +6432,9 @@ function saToggleSuspendReal_(orgId){
 }
 function saSaveManageReal_(orgId){
   var nameEl = el('sa-name-' + orgId), colorEl = el('sa-color-' + orgId);
-  var posterEl = el('sa-poster-' + orgId), posterFileEl = el('sa-poster-file-' + orgId), publicEl = el('sa-public-' + orgId);
-  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
-  function applyPatch(finalPosterUrl) {
-    var patch = {};
-    if (nameEl && nameEl.value.trim()) patch.name = nameEl.value.trim();
-    if (colorEl) patch.accent = colorEl.value;
-    if (finalPosterUrl !== undefined) patch.poster_url = finalPosterUrl;
-    if (publicEl) patch.publicly_listed = publicEl.checked;
-    saSaveManageRealPatch_(orgId, patch);
-  }
-  if (posterFile) {
-    uploadPosterFile_(posterFile, orgId, function(uploadedUrl, uploadErr) {
-      if (uploadErr) { showToast('Poster upload failed: ' + uploadErr.message); return; }
-      applyPatch(uploadedUrl || (posterEl ? posterEl.value.trim() : undefined));
-    });
-  } else {
-    applyPatch(posterEl ? posterEl.value.trim() : undefined);
-  }
-}
-function saSaveManageRealPatch_(orgId, patch) {
+  var patch = {};
+  if (nameEl && nameEl.value.trim()) patch.name = nameEl.value.trim();
+  if (colorEl) patch.accent = colorEl.value;
   sb.from('organizations').update(patch).eq('id', orgId).then(function(res){
     if (res.error) { showToast('Update failed: ' + res.error.message); return; }
     SA_EXPANDED_SLUG = null;
@@ -6415,13 +6482,15 @@ function saProvisionTenantReal_(){
   if (!adminEmail) { fail('Admin email is required so someone can actually sign in to this tenant.'); return; }
   sb.from('organizations').select('id').eq('slug', slug).maybeSingle().then(function(existing){
     if (existing.data) { fail('That slug is already registered — pick another.'); return; }
-    function createOrg(finalPosterUrl) {
-      sb.from('organizations').insert({ slug: slug, name: orgName, accent: colorEl.value || '#15803D', status: 'active', poster_url: finalPosterUrl, publicly_listed: publiclyListed }).select().single().then(function(res){
-        if (res.error) { fail('Create failed: ' + res.error.message); return; }
-        var orgId = res.data.id;
-        /* tournaments.id has no server-side default (unlike organizations.id) —
-           it must be supplied on every insert. */
-        sb.from('tournaments').insert({ id: newTournamentId_(), org_id: orgId, name: trnName }).then(function(trnRes){
+    sb.from('organizations').insert({ slug: slug, name: orgName, accent: colorEl.value || '#15803D', status: 'active' }).select().single().then(function(res){
+      if (res.error) { fail('Create failed: ' + res.error.message); return; }
+      var orgId = res.data.id;
+      /* tournaments.id has no server-side default (unlike organizations.id) —
+         it must be supplied on every insert. Generated up front so it can
+         also serve as the storage path for this tournament's poster. */
+      var trnId = newTournamentId_();
+      function createTournament(finalPosterUrl) {
+        sb.from('tournaments').insert({ id: trnId, org_id: orgId, name: trnName, poster_url: finalPosterUrl || '', publicly_listed: publiclyListed }).then(function(trnRes){
           if (trnRes.error) { fail('Organizer created, but the tournament failed to create: ' + trnRes.error.message + '.'); return; }
           sb.from('org_members').insert({ org_id: orgId, email: adminEmail, role: 'admin' }).then(function(memRes){
             if (memRes.error) { fail('Tenant created, but adding the admin failed: ' + memRes.error.message + '. Add them from Manage.'); return; }
@@ -6434,16 +6503,16 @@ function saProvisionTenantReal_(){
             renderSuperadmin();
           });
         });
-      });
-    }
-    if (posterFile) {
-      uploadPosterFile_(posterFile, slug, function(uploadedUrl, uploadErr) {
-        if (uploadErr) { fail('Poster upload failed: ' + uploadErr.message); return; }
-        createOrg(uploadedUrl || posterUrl);
-      });
-    } else {
-      createOrg(posterUrl);
-    }
+      }
+      if (posterFile) {
+        uploadPosterFile_(posterFile, trnId, function(uploadedUrl, uploadErr) {
+          if (uploadErr) { fail('Poster upload failed: ' + uploadErr.message); return; }
+          createTournament(uploadedUrl || posterUrl);
+        });
+      } else {
+        createTournament(posterUrl);
+      }
+    });
   });
 }
 function saProvisionTenant(){
@@ -7166,18 +7235,29 @@ function bootDemoTenantPath_(slug){
                 setTenantSigninTitle_(trnName);
               });
             } else {
-              /* No tournament named in the URL (this is how the gallery's
-                 cards link in) — if the organizer runs just one, show its
-                 name rather than the organizer's business name, so the
-                 sign-in card keeps matching the poster they just clicked.
-                 An organizer with 2+ tournaments stays ambiguous until
-                 after sign-in (the picker), so it falls back to the org
-                 name here. */
-              sb.from('tournament_names').select('name').eq('org_id', res.data.id).then(function(tRes){
+              /* No tournament named in the URL (this is how the root
+                 gallery's cards link in). One tournament: show its name,
+                 not the organizer's business name, so the sign-in card
+                 keeps matching whatever poster they clicked. Two or
+                 more: show a pre-sign-in poster gallery of just this
+                 organizer's own tournaments (the ones that opted into
+                 public listing and have a slug to link to — anything
+                 private stays reachable only via its own direct link or
+                 by actually signing in). */
+              sb.from('tournament_names').select('*').eq('org_id', res.data.id).then(function(tRes){
                 var rows = tRes.data || [];
-                var displayName = (rows.length === 1) ? rows[0].name : res.data.name;
-                try { var snR2 = el('sb-trn-name'); if (snR2) snR2.textContent = displayName; } catch(e){}
-                setTenantSigninTitle_(displayName);
+                if (rows.length === 1) {
+                  try { var snR2 = el('sb-trn-name'); if (snR2) snR2.textContent = rows[0].name; } catch(e){}
+                  setTenantSigninTitle_(rows[0].name);
+                  return;
+                }
+                var pickable = rows.filter(function(r){ return r.publicly_listed && r.slug; });
+                if (rows.length > 1 && pickable.length) {
+                  renderTenantTournamentGallery_(slug, res.data.name, res.data.accent, pickable);
+                  return;
+                }
+                try { var snR3 = el('sb-trn-name'); if (snR3) snR3.textContent = res.data.name; } catch(e){}
+                setTenantSigninTitle_(res.data.name);
               });
             }
           } else {
