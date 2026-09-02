@@ -5701,7 +5701,7 @@ function renderTournamentGallery_() {
   return html;
 }
 function galleryCardHtml_(t, isDemo) {
-  var hasPoster = !isDemo && t.poster_url;
+  var hasPoster = !!t.poster_url;
   var bg = hasPoster
     ? ('background-image:url(\'' + esc(t.poster_url) + '\');background-size:cover;background-position:center;')
     : ('background:linear-gradient(160deg,' + esc(t.accent || '#15803D') + ',rgba(0,0,0,.65));');
@@ -6188,10 +6188,11 @@ function renderSaDirectoryRows_(dir, isReal){
       html += '<div style="padding:14px;background:var(--n3);border-radius:8px;margin:-4px 0 10px">';
       html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(key) + '" value="' + esc(t.name) + '"></div>';
       html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(key) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
+      if (t.poster_url) { html += '<img src="' + esc(t.poster_url) + '" style="width:70px;height:93px;object-fit:cover;border-radius:6px;border:1px solid var(--nb);margin-bottom:8px" alt="Current poster">'; }
+      html += '<div class="field"><label>Poster image</label><input id="sa-poster-file-' + esc(key) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
+      html += '<div class="field"><label>...or a poster image URL</label><input id="sa-poster-' + esc(key) + '" value="' + esc(t.poster_url || '') + '" placeholder="https://.../poster.jpg"></div>';
+      if (!isReal) { html += '<div style="font-size:var(--fs12);color:var(--tm);margin:-4px 0 10px">Stored locally in this browser only — max 1.5MB.</div>'; }
       if (isReal) {
-        if (t.poster_url) { html += '<img src="' + esc(t.poster_url) + '" style="width:70px;height:93px;object-fit:cover;border-radius:6px;border:1px solid var(--nb);margin-bottom:8px" alt="Current poster">'; }
-        html += '<div class="field"><label>Poster image</label><input id="sa-poster-file-' + esc(key) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
-        html += '<div class="field"><label>...or a poster image URL</label><input id="sa-poster-' + esc(key) + '" value="' + esc(t.poster_url || '') + '" placeholder="https://.../poster.jpg"></div>';
         html += '<div class="field" style="display:flex;align-items:center;gap:8px"><input id="sa-public-' + esc(key) + '" type="checkbox" style="width:auto"' + (t.publicly_listed ? ' checked' : '') + '><label for="sa-public-' + esc(key) + '" style="margin:0">List publicly on the homepage gallery</label></div>';
       }
       html += '<button class="btn primary sm" onclick="' + (isReal ? 'saSaveManageReal_' : 'saSaveManage') + '(\'' + esc(key) + '\')"><i class="ti ti-check"></i> Save</button>';
@@ -6209,6 +6210,20 @@ function renderSaDirectoryRows_(dir, isReal){
    tournament baked into its seed data. */
 function newTournamentId_(){
   return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('t-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+}
+/* Local/demo tenants never touch Supabase (same rule as everywhere else
+   in this file), so their poster upload just reads the file into a data
+   URL and stores that string directly in the local directory entry —
+   no bucket involved. Capped well under the real bucket's 5MB since
+   data URLs live in localStorage's much smaller per-origin quota. */
+var DEMO_POSTER_MAX_BYTES = 1572864;
+function readImageFileAsDataUrl_(file, cb) {
+  if (!file) { cb(null); return; }
+  if (file.size > DEMO_POSTER_MAX_BYTES) { cb(null, new Error('Image is too large for the local/demo directory (max 1.5MB). Try a smaller file.')); return; }
+  var reader = new FileReader();
+  reader.onload = function () { cb(reader.result, null); };
+  reader.onerror = function () { cb(null, reader.error || new Error('Could not read file')); };
+  reader.readAsDataURL(file);
 }
 /* Uploads to the public tournament-posters bucket (RLS: read is public,
    writes are platform-admin only) and hands back its public URL.
@@ -6294,18 +6309,31 @@ function saToggleSuspend(slug){
 }
 function saSaveManage(slug){
   var nameEl = el('sa-name-' + slug), colorEl = el('sa-color-' + slug);
-  var dir = getTenantDirectory();
-  for (var i = 0; i < dir.length; i++) {
-    if (dir[i].slug === slug) {
-      if (nameEl && nameEl.value.trim()) dir[i].name = nameEl.value.trim();
-      if (colorEl) dir[i].accent = colorEl.value;
-      break;
+  var posterEl = el('sa-poster-' + slug), posterFileEl = el('sa-poster-file-' + slug);
+  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
+  function applyLocal(finalPosterUrl) {
+    var dir = getTenantDirectory();
+    for (var i = 0; i < dir.length; i++) {
+      if (dir[i].slug === slug) {
+        if (nameEl && nameEl.value.trim()) dir[i].name = nameEl.value.trim();
+        if (colorEl) dir[i].accent = colorEl.value;
+        if (finalPosterUrl !== undefined) dir[i].poster_url = finalPosterUrl;
+        break;
+      }
     }
+    saveTenantDirectory(dir);
+    SA_EXPANDED_SLUG = null;
+    renderSuperadmin();
+    showToast('Tenant updated');
   }
-  saveTenantDirectory(dir);
-  SA_EXPANDED_SLUG = null;
-  renderSuperadmin();
-  showToast('Tenant updated');
+  if (posterFile) {
+    readImageFileAsDataUrl_(posterFile, function(dataUrl, err) {
+      if (err) { showToast(err.message); return; }
+      applyLocal(dataUrl);
+    });
+  } else {
+    applyLocal(posterEl ? posterEl.value.trim() : undefined);
+  }
 }
 function saToggleSuspendReal_(orgId){
   var org = null;
@@ -6358,9 +6386,10 @@ function renderSaProvision_(){
   html += '<div class="field"><label>Tournament name</label><input id="sa-new-trn-name" placeholder="e.g. Rally Point Open 2026"></div>';
   html += '<div class="field"><label>Accent color</label><input id="sa-new-color" type="color" value="#15803D" style="width:70px;padding:2px;height:38px"></div>';
   html += '<div class="field"><label>Admin email</label><input id="sa-new-admin" type="email" placeholder="admin@example.com"></div>';
+  html += '<div class="field"><label>Poster image</label><input id="sa-new-poster-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
+  html += '<div class="field"><label>...or a poster image URL</label><input id="sa-new-poster" placeholder="https://.../poster.jpg"></div>';
+  if (!real) { html += '<div style="font-size:var(--fs12);color:var(--tm);margin:-4px 0 10px">Stored locally in this browser only — max 1.5MB.</div>'; }
   if (real) {
-    html += '<div class="field"><label>Poster image</label><input id="sa-new-poster-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
-    html += '<div class="field"><label>...or a poster image URL</label><input id="sa-new-poster" placeholder="https://.../poster.jpg"></div>';
     html += '<div class="field" style="display:flex;align-items:center;gap:8px"><input id="sa-new-public" type="checkbox" style="width:auto"><label for="sa-new-public" style="margin:0">List publicly on the homepage gallery</label></div>';
   }
   html += '<div id="sa-provision-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-bottom:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb)"></div>';
@@ -6419,6 +6448,8 @@ function saProvisionTenantReal_(){
 }
 function saProvisionTenant(){
   var slugEl = el('sa-new-slug'), orgNameEl = el('sa-new-org-name'), trnNameEl = el('sa-new-trn-name'), colorEl = el('sa-new-color'), adminEl = el('sa-new-admin');
+  var posterEl = el('sa-new-poster'), posterFileEl = el('sa-new-poster-file');
+  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
   var errEl = el('sa-provision-error');
   var slug = (slugEl.value || '').trim().toLowerCase();
   var orgName = (orgNameEl.value || '').trim();
@@ -6428,17 +6459,29 @@ function saProvisionTenant(){
   if (!orgName) { fail('Organizer / business name is required.'); return; }
   var dir = getTenantDirectory();
   for (var i = 0; i < dir.length; i++) { if (dir[i].slug === slug) { fail('That slug is already registered — pick another.'); return; } }
-  dir.push({
-    slug: slug, name: orgName, accent: colorEl.value || '#15803D',
-    admin: (adminEl.value || '').trim() || (slug + '@dulahq.test'), status: 'active',
-    demo: { stage: 'group', meta: { name: trnName, venue: '', date: '' } }
-  });
-  saveTenantDirectory(dir);
-  errEl.style.display = 'none';
-  showToast('Tenant "' + orgName + '" created — visit /t/' + slug + ' to seed and view it');
-  slugEl.value = ''; orgNameEl.value = ''; trnNameEl.value = ''; adminEl.value = '';
-  SUPERADMIN_TAB = 'directory';
-  renderSuperadmin();
+  function finish(finalPosterUrl) {
+    dir.push({
+      slug: slug, name: orgName, accent: colorEl.value || '#15803D',
+      admin: (adminEl.value || '').trim() || (slug + '@dulahq.test'), status: 'active',
+      poster_url: finalPosterUrl || '',
+      demo: { stage: 'group', meta: { name: trnName, venue: '', date: '' } }
+    });
+    saveTenantDirectory(dir);
+    errEl.style.display = 'none';
+    showToast('Tenant "' + orgName + '" created — visit /t/' + slug + ' to seed and view it');
+    slugEl.value = ''; orgNameEl.value = ''; trnNameEl.value = ''; adminEl.value = '';
+    if (posterEl) posterEl.value = ''; if (posterFileEl) posterFileEl.value = '';
+    SUPERADMIN_TAB = 'directory';
+    renderSuperadmin();
+  }
+  if (posterFile) {
+    readImageFileAsDataUrl_(posterFile, function(dataUrl, err) {
+      if (err) { fail(err.message); return; }
+      finish(dataUrl);
+    });
+    return;
+  }
+  finish((posterEl && posterEl.value || '').trim());
 }
 
 var FEATURE_IDEAS_LS = 'dulahq:platform-feature-ideas';
