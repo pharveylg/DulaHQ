@@ -5663,9 +5663,15 @@ function renderSignInPage() {
   if (S._tournamentMeta.guestAccessEnabled) {
     guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="enterGuestView()">Continue as Guest</span>');
   }
-  guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showOfflineMode()">Tenant Admin (preview)</span>');
-  guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showSuperadminConsole()">Platform Console (superadmin preview)</span>');
-  html += '<div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">' + guestLinks.join('') + '</div>';
+  if (guestLinks.length) { html += '<div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">' + guestLinks.join('') + '</div>'; }
+  if (S._demoOrg) {
+    html += '<div style="margin-top:18px;padding:12px;background:var(--n3);border-radius:8px;text-align:left">';
+    html += '<div style="font-size:var(--fs12);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tm);margin-bottom:6px">Demo accounts — sign in as any role</div>';
+    for (var dri = 0; dri < DEMO_RBAC_ACCOUNTS.length; dri++) {
+      html += '<div style="font-size:var(--fs12);color:var(--ts);font-family:monospace">' + esc(DEMO_RBAC_ACCOUNTS[dri].email) + ' <span style="color:var(--tm)">(' + esc(DEMO_RBAC_ACCOUNTS[dri].role) + ')</span></div>';
+    }
+    html += '</div>';
+  }
   html += '</div></div>';
   return html;
 }
@@ -5688,10 +5694,6 @@ function renderTournamentGallery_() {
   html += '<div id="gallery-grid" style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px">';
   html += '<div style="grid-column:1/-1;text-align:center;color:var(--tm);padding:40px 0">Loading tournaments&hellip;</div>';
   html += '</div>';
-  html += '<div style="max-width:1100px;margin:36px auto 0;text-align:center;display:flex;justify-content:center;gap:20px;flex-wrap:wrap">';
-  html += '<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showOfflineMode()">Tenant Admin (preview)</span>';
-  html += '<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="showSuperadminConsole()">Platform Console (superadmin preview)</span>';
-  html += '</div>';
   html += '</div>';
   if (sb) {
     sb.from('tournament_names').select('*').eq('publicly_listed', true).then(function(res){
@@ -5708,9 +5710,9 @@ function renderTournamentGallery_() {
    normalized here rather than at every call site. */
 function galleryCardHtml_(t, isDemo) {
   var posterUrl = t.poster_url;
-  var accent = isDemo ? t.accent : t.org_accent;
-  var linkSlug = isDemo ? t.slug : t.org_slug;
-  var title = isDemo ? ((t.demo && t.demo.meta && t.demo.meta.name) || t.name) : t.name;
+  var accent = t.org_accent;
+  var linkSlug = t.org_slug;
+  var title = t.name;
   var bg = posterUrl
     ? ('background-image:url(\'' + esc(posterUrl) + '\');background-size:cover;background-position:center;')
     : ('background:linear-gradient(160deg,' + esc(accent || '#15803D') + ',rgba(0,0,0,.65));');
@@ -5726,9 +5728,20 @@ function renderGalleryGrid_(publicTournaments) {
   var grid = el('gallery-grid');
   if (!grid) return;
   var demoTenants = getTenantDirectory().filter(function(t){ return t.status !== 'suspended'; });
+  /* One card per demo tournament (not per tenant) — same granularity as
+     the real side, so a demo organizer running two tournaments shows
+     two cards, each still linking to the shared /t/{org-slug} page. */
+  var demoCards = [];
+  for (var d = 0; d < demoTenants.length; d++) {
+    var org = demoTenants[d];
+    var trns = getTenantTournaments_(org);
+    for (var e = 0; e < trns.length; e++) {
+      demoCards.push({ org_slug: org.slug, org_accent: org.accent, name: trns[e].name, poster_url: trns[e].poster_url || '' });
+    }
+  }
   var html = '';
   for (var i = 0; i < publicTournaments.length; i++) html += galleryCardHtml_(publicTournaments[i], false);
-  for (var j = 0; j < demoTenants.length; j++) html += galleryCardHtml_(demoTenants[j], true);
+  for (var j = 0; j < demoCards.length; j++) html += galleryCardHtml_(demoCards[j], true);
   grid.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;color:var(--tm);padding:40px 0">No tournaments listed yet.</div>';
   hydrateIcons(document.body);
 }
@@ -5777,10 +5790,19 @@ function renderPlatformConsoleSignIn_() {
   html += '<div style="text-align:left"><div class="field" style="margin-bottom:10px"><label>Email</label><input id="login-email" type="email" autocomplete="email" placeholder="name@example.com" onkeydown="if(event.key===\'Enter\')attemptEmailLogin()"></div></div>';
   html += '<button class="btn primary" style="width:100%;padding:11px" onclick="attemptEmailLogin()"><i class="ti ti-login"></i> Sign in</button>';
   html += '<div id="auth-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-top:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb);text-align:left"></div>';
-  html += '<div style="margin-top:20px"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="location.href=\'/\'">&larr; Back to tournaments</span></div>';
+  html += '<div style="margin:20px 0 14px;border-top:1px solid var(--nb)"></div>';
+  html += '<div style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="testLocalPlatformAdmin_()">Test locally as ' + esc(LOCAL_PLATFORM_ADMIN_EMAIL) + '</div>';
+  html += '<div style="margin-top:14px"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="location.href=\'/\'">&larr; Back to tournaments</span></div>';
   html += '</div></div>';
   return html;
 }
+/* Local-only stand-in for the real magic-link platform admin sign-in
+   above — no backend call, gated to one hardcoded email rather than an
+   open "anyone can click this" link, so it isn't something a random
+   visitor discovers, but the one platform admin can still test the
+   console without waiting on a real email round trip every time. */
+var LOCAL_PLATFORM_ADMIN_EMAIL = 'pharveylg@gmail.com';
+function testLocalPlatformAdmin_() { showSuperadminConsole(); }
 /* Decides what an unauthenticated visitor sees: the real branded sign-in
    for any /t/{org-slug} URL (unchanged), the dedicated platform-admin
    sign-in at /platformconsole, or the public gallery for everything
@@ -6104,27 +6126,6 @@ function enterGuestView() {
   renderNav();
   render();
 }
-/* Always-visible admin preview shortcut \u2014 separate from the real (gated)
-   Guest view above. Not tied to the guestAccessEnabled toggle since it's
-   meant as a quick way to look around as admin without needing the
-   seeded account, mainly useful for testing/demo purposes. */
-function showOfflineMode() {
-  AUTH.signedIn = true;
-  AUTH.email = 'preview@dulahq.local';
-  AUTH.name = 'Admin (preview)';
-  AUTH.role = 'admin';
-  S.role = 'admin';
-  S.page = NAV.admin[0].p;
-  var sWrap = el('signin-wrap');
-  if (sWrap) sWrap.innerHTML = '';
-  var aEl = el('app-shell');
-  if (aEl) aEl.style.display = 'flex';
-  updateUserBadge();
-  renderRoleViewAs();
-  renderSyncActions();
-  renderNav();
-  render();
-}
 /* Superadmin Console entry — same "manually reached, no self-serve
    signup" spirit as the pickleball app's real Firebase-auth-gated
    console, adapted to this app having no backend: reachable from the
@@ -6218,7 +6219,9 @@ function renderSaDirectoryRows_(dir, isReal){
     html += '<span class="sa-swatch" style="background:' + esc(t.accent || '#999') + '"></span>';
     html += '<div style="flex:1;min-width:0"><div style="font-weight:600">' + esc(t.name) + ' ' + (suspended ? '<span class="badge b-amber">Suspended</span>' : '<span class="badge b-green">Active</span>') + '</div>';
     html += '<div style="font-size:var(--fs12);color:var(--tm)">/t/' + esc(t.slug) + '</div></div>';
-    html += '<button class="btn sm" onclick="window.open(location.origin+\'/t/' + esc(t.slug) + '\',\'_blank\')"><i class="ti ti-external-link"></i> Open</button>';
+    html += isReal
+      ? ('<button class="btn sm" onclick="window.open(location.origin+\'/t/' + esc(t.slug) + '\',\'_blank\')"><i class="ti ti-external-link"></i> Open</button>')
+      : ('<button class="btn sm" onclick="saOpenTenantAsAdmin_(\'' + esc(key) + '\')"><i class="ti ti-login"></i> Open</button>');
     html += '<button class="btn sm" onclick="saToggleManage(\'' + esc(key) + '\')"><i class="ti ti-settings"></i> Manage</button>';
     html += '<button class="btn sm' + (suspended ? ' primary' : '') + '" onclick="' + (isReal ? 'saToggleSuspendReal_' : 'saToggleSuspend') + '(\'' + esc(key) + '\')">' + (suspended ? 'Activate' : 'Suspend') + '</button>';
     html += '</div>';
@@ -6226,14 +6229,9 @@ function renderSaDirectoryRows_(dir, isReal){
       html += '<div style="padding:14px;background:var(--n3);border-radius:8px;margin:-4px 0 10px">';
       html += '<div class="field"><label>Business name</label><input id="sa-name-' + esc(key) + '" value="' + esc(t.name) + '"></div>';
       html += '<div class="field"><label>Accent color</label><input id="sa-color-' + esc(key) + '" type="color" value="' + esc(t.accent || '#15803D') + '" style="width:70px;padding:2px;height:38px"></div>';
-      if (!isReal) {
-        if (t.poster_url) { html += '<img src="' + esc(t.poster_url) + '" style="width:70px;height:93px;object-fit:cover;border-radius:6px;border:1px solid var(--nb);margin-bottom:8px" alt="Current poster">'; }
-        html += '<div class="field"><label>Poster image</label><input id="sa-poster-file-' + esc(key) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>';
-        html += '<div class="field"><label>...or a poster image URL</label><input id="sa-poster-' + esc(key) + '" value="' + esc(t.poster_url || '') + '" placeholder="https://.../poster.jpg"></div>';
-        html += '<div style="font-size:var(--fs12);color:var(--tm);margin:-4px 0 10px">Stored locally in this browser only — max 1.5MB.</div>';
-      }
       html += '<button class="btn primary sm" onclick="' + (isReal ? 'saSaveManageReal_' : 'saSaveManage') + '(\'' + esc(key) + '\')"><i class="ti ti-check"></i> Save</button>';
-      if (isReal) { html += '<div style="font-size:var(--fs12);color:var(--tm);margin-top:10px">Posters and public listing are set per tournament below.</div>'; html += renderSaTournaments_(key); }
+      html += '<div style="font-size:var(--fs12);color:var(--tm);margin-top:10px">Posters and public listing are set per tournament below' + (isReal ? '.' : ' — stored locally in this browser only, max 1.5MB each.') + '</div>';
+      html += isReal ? renderSaTournaments_(key) : renderSaLocalTournaments_(key);
       html += '</div>';
     }
   }
@@ -6391,33 +6389,168 @@ function saToggleSuspend(slug){
   saveTenantDirectory(dir);
   renderSuperadmin();
 }
+/* "Open" on a local/demo tenant, from inside the console — drops straight
+   into that tenant's admin dashboard (no sign-in step; local/demo never
+   had real credentials to check anyway) with the existing "Viewing ·
+   {name} [Return]" banner as the "viewing as" indicator, plus the normal
+   View As dropdown (already available to anyone signed in as admin) to
+   preview other roles from there. A multi-tournament tenant opens its
+   first tournament directly rather than stopping at a picker — visit the
+   tenant's own /t/{slug} URL instead if you want the picker. */
+function saOpenTenantAsAdmin_(slug){
+  var tenant = findTenant(slug);
+  if (!tenant) return;
+  if (tenant.status === 'suspended') { showToast('This tenant is suspended.'); return; }
+  var list = getTenantTournaments_(tenant);
+  if (!list.length) { showToast('This tenant has no tournaments yet.'); return; }
+  var trn = list[0];
+  document.body.classList.remove('superadmin-mode');
+  enterDemoOrg(tenant, trn.slug || null);
+  AUTH.signedIn = true;
+  AUTH.email = tenant.admin || (slug + '@dulahq.test');
+  AUTH.name = 'Tournament Admin';
+  AUTH.role = 'admin';
+  S.role = 'admin';
+  S.page = NAV.admin[0].p;
+  try { history.pushState(null, '', '/t/' + slug + (trn.slug ? ('/' + trn.slug) : '')); } catch(e){}
+  var sWrap = el('signin-wrap'); if (sWrap) sWrap.innerHTML = '';
+  var aEl = el('app-shell'); if (aEl) aEl.style.display = 'flex';
+  updateUserBadge();
+  renderRoleViewAs();
+  renderSyncActions();
+  renderNav();
+  render();
+  renderDemoBanner_();
+}
 function saSaveManage(slug){
   var nameEl = el('sa-name-' + slug), colorEl = el('sa-color-' + slug);
-  var posterEl = el('sa-poster-' + slug), posterFileEl = el('sa-poster-file-' + slug);
-  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
-  function applyLocal(finalPosterUrl) {
-    var dir = getTenantDirectory();
-    for (var i = 0; i < dir.length; i++) {
-      if (dir[i].slug === slug) {
-        if (nameEl && nameEl.value.trim()) dir[i].name = nameEl.value.trim();
-        if (colorEl) dir[i].accent = colorEl.value;
-        if (finalPosterUrl !== undefined) dir[i].poster_url = finalPosterUrl;
-        break;
-      }
+  var dir = getTenantDirectory();
+  for (var i = 0; i < dir.length; i++) {
+    if (dir[i].slug === slug) {
+      if (nameEl && nameEl.value.trim()) dir[i].name = nameEl.value.trim();
+      if (colorEl) dir[i].accent = colorEl.value;
+      break;
     }
-    saveTenantDirectory(dir);
-    SA_EXPANDED_SLUG = null;
+  }
+  saveTenantDirectory(dir);
+  renderSuperadmin();
+  showToast('Tenant updated');
+}
+/* Local mirror of renderSaTournaments_ (real) — same per-tournament
+   poster/slug editing, but reading and writing the localStorage
+   directory directly instead of Supabase. Tournaments are addressed by
+   array index rather than a stable id since local records have no
+   database-assigned key to key off of; every mutation reads the full
+   record, edits in place, and saves it back in one shot. */
+function renderSaLocalTournaments_(slug){
+  var tenant = findTenant(slug);
+  if (!tenant) return '';
+  var list = getTenantTournaments_(tenant);
+  var html = '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--nb)">';
+  html += '<div style="font-weight:600;font-size:var(--fs13);text-transform:uppercase;letter-spacing:1px;color:var(--tm);margin-bottom:10px">Tournaments</div>';
+  for (var i = 0; i < list.length; i++) {
+    var trn = list[i];
+    var pfx = esc(slug) + '-' + i;
+    html += '<div style="padding:10px;margin-bottom:8px;background:var(--n2);border-radius:8px;border:1px solid var(--nb)">';
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+    html += '<input id="sa-ltrn-name-' + pfx + '" value="' + esc(trn.name) + '" placeholder="Tournament name" style="flex:1">';
+    html += '<input id="sa-ltrn-slug-' + pfx + '" value="' + esc(trn.slug || '') + '" placeholder="slug (if 2+ tournaments)" style="flex:1">';
+    html += '</div>';
+    if (trn.poster_url) { html += '<img src="' + esc(trn.poster_url) + '" style="width:56px;height:74px;object-fit:cover;border-radius:6px;border:1px solid var(--nb);margin-bottom:8px" alt="Current poster">'; }
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+    html += '<input id="sa-ltrn-poster-file-' + pfx + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="flex:1">';
+    html += '<input id="sa-ltrn-poster-' + pfx + '" value="' + esc(trn.poster_url || '') + '" placeholder="...or a poster image URL" style="flex:1">';
+    html += '</div>';
+    html += '<button class="btn sm" onclick="saSaveLocalTournament_(\'' + esc(slug) + '\',' + i + ')"><i class="ti ti-check"></i> Save</button>';
+    if (list.length > 1) { html += ' <button class="btn sm danger" onclick="saRemoveLocalTournament_(\'' + esc(slug) + '\',' + i + ')"><i class="ti ti-trash"></i></button>'; }
+    html += '</div>';
+  }
+  html += '<div style="padding:10px;background:var(--n2);border-radius:8px;border:1px dashed var(--nb)">';
+  html += '<div style="font-size:var(--fs13);font-weight:600;margin-bottom:8px">Add a tournament</div>';
+  html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+  html += '<input id="sa-new-ltrn-name-' + esc(slug) + '" placeholder="New tournament name" style="flex:1">';
+  html += '<input id="sa-new-ltrn-slug-' + esc(slug) + '" placeholder="slug (required if adding another)" style="flex:1">';
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+  html += '<input id="sa-new-ltrn-poster-file-' + esc(slug) + '" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="flex:1">';
+  html += '<input id="sa-new-ltrn-poster-' + esc(slug) + '" placeholder="...or a poster image URL" style="flex:1">';
+  html += '</div>';
+  html += '<button class="btn sm" onclick="saAddLocalTournament_(\'' + esc(slug) + '\')"><i class="ti ti-plus"></i> Add</button>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+function saFindLocalOrg_(slug){
+  var dir = getTenantDirectory();
+  for (var i = 0; i < dir.length; i++) { if (dir[i].slug === slug) return { dir: dir, org: dir[i] }; }
+  return null;
+}
+function saAddLocalTournament_(slug){
+  var found = saFindLocalOrg_(slug);
+  if (!found) return;
+  var nameEl = el('sa-new-ltrn-name-' + slug), slugEl = el('sa-new-ltrn-slug-' + slug);
+  var posterEl = el('sa-new-ltrn-poster-' + slug), posterFileEl = el('sa-new-ltrn-poster-file-' + slug);
+  var name = (nameEl.value || '').trim();
+  var newSlug = (slugEl.value || '').trim().toLowerCase();
+  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
+  var list = getTenantTournaments_(found.org);
+  if (!name) { showToast('Tournament name is required.'); return; }
+  if (list.length >= 1 && !newSlug) { showToast('A slug is required once an organizer has more than one tournament.'); return; }
+  if (newSlug && !/^[a-z0-9-]+$/.test(newSlug)) { showToast('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
+  function finish(posterUrl){
+    found.org.tournaments = list;
+    found.org.tournaments.push({ slug: newSlug || null, name: name, venue: '', date: '', stage: 'group', poster_url: posterUrl || '' });
+    delete found.org.demo;
+    saveTenantDirectory(found.dir);
     renderSuperadmin();
-    showToast('Tenant updated');
+    showToast('Tournament "' + name + '" added');
   }
   if (posterFile) {
-    readImageFileAsDataUrl_(posterFile, function(dataUrl, err) {
-      if (err) { showToast(err.message); return; }
-      applyLocal(dataUrl);
-    });
+    readImageFileAsDataUrl_(posterFile, function(dataUrl, err){ if (err) { showToast(err.message); return; } finish(dataUrl); });
   } else {
-    applyLocal(posterEl ? posterEl.value.trim() : undefined);
+    finish((posterEl && posterEl.value || '').trim());
   }
+}
+function saSaveLocalTournament_(slug, idx){
+  var found = saFindLocalOrg_(slug);
+  if (!found) return;
+  var nameEl = el('sa-ltrn-name-' + slug + '-' + idx), slugEl = el('sa-ltrn-slug-' + slug + '-' + idx);
+  var posterEl = el('sa-ltrn-poster-' + slug + '-' + idx), posterFileEl = el('sa-ltrn-poster-file-' + slug + '-' + idx);
+  var name = (nameEl.value || '').trim();
+  var newSlug = (slugEl.value || '').trim().toLowerCase();
+  var posterFile = posterFileEl && posterFileEl.files && posterFileEl.files[0];
+  if (!name) { showToast('Tournament name is required.'); return; }
+  if (newSlug && !/^[a-z0-9-]+$/.test(newSlug)) { showToast('Slug must be lowercase letters, numbers, and hyphens only.'); return; }
+  var list = getTenantTournaments_(found.org);
+  function finish(posterUrl){
+    found.org.tournaments = list;
+    if (found.org.tournaments[idx]) {
+      found.org.tournaments[idx].name = name;
+      found.org.tournaments[idx].slug = newSlug || null;
+      if (posterUrl !== undefined) found.org.tournaments[idx].poster_url = posterUrl;
+    }
+    delete found.org.demo;
+    saveTenantDirectory(found.dir);
+    renderSuperadmin();
+    showToast('Tournament updated');
+  }
+  if (posterFile) {
+    readImageFileAsDataUrl_(posterFile, function(dataUrl, err){ if (err) { showToast(err.message); return; } finish(dataUrl); });
+  } else {
+    finish((posterEl && posterEl.value || '').trim());
+  }
+}
+function saRemoveLocalTournament_(slug, idx){
+  var found = saFindLocalOrg_(slug);
+  if (!found) return;
+  var list = getTenantTournaments_(found.org);
+  if (list.length <= 1) { showToast('An organizer needs at least one tournament.'); return; }
+  list.splice(idx, 1);
+  found.org.tournaments = list;
+  delete found.org.demo;
+  saveTenantDirectory(found.dir);
+  renderSuperadmin();
+  showToast('Tournament removed');
 }
 function saToggleSuspendReal_(orgId){
   var org = null;
@@ -6532,8 +6665,7 @@ function saProvisionTenant(){
     dir.push({
       slug: slug, name: orgName, accent: colorEl.value || '#15803D',
       admin: (adminEl.value || '').trim() || (slug + '@dulahq.test'), status: 'active',
-      poster_url: finalPosterUrl || '',
-      demo: { stage: 'group', meta: { name: trnName, venue: '', date: '' } }
+      tournaments: [{ slug: null, name: trnName, venue: '', date: '', stage: 'group', poster_url: finalPosterUrl || '' }]
     });
     saveTenantDirectory(dir);
     errEl.style.display = 'none';
@@ -6962,18 +7094,37 @@ function findTenant(slug){
   for (var i=0;i<dir.length;i++) if (dir[i].slug === slug) return dir[i];
   return null;
 }
+/* Some organizers run one tournament, some run several — the demo
+   directory mirrors that on purpose so the multi-tournament picker/
+   gallery flow has real local data to exercise, not just the real
+   backend. tournaments[].slug is only required once an org has 2+
+   (matches the real-tenant rule); a single-tournament org can leave it
+   null. getTenantTournaments_() normalizes older single-demo.meta
+   records (from before this array existed) so nothing cached in an
+   existing browser's localStorage breaks. */
 var DEMO_ORGS = [
-  { slug:'usnagali', name:'Copa Gali Futbol', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active',
-    demo:{ stage:'complete', meta:{ name:'Copa Gali Futbol 2026', venue:'Gali Valley Sports Complex', date:'2026-05-09' } } },
-  { slug:'copa-davao', name:'Copa Davao', accent:'#FF6B35', admin:'copa.davao@dulahq.test', status:'active',
-    demo:{ stage:'complete', meta:{ name:'Copa Davao 2026', venue:'Davao Delta Fields', date:'2026-06-20' } } },
-  { slug:'manila-summer', name:'Manila Summer Invitational', accent:'#3B82F6', admin:'msi@dulahq.test', status:'active',
-    demo:{ stage:'complete', meta:{ name:'Manila Summer Invitational 2026', venue:'Rizal Memorial Coliseum', date:'2026-04-11' } } },
-  { slug:'cebu-volley', name:'Cebu Volley Classic', accent:'#A855F7', admin:'volley@dulahq.test', status:'active',
-    demo:{ stage:'group', meta:{ name:'Cebu Volley Classic 2026', venue:'Cebu Coliseum', date:'2026-08-22' } } },
-  { slug:'davao-hoops', name:'Davao Hoops League', accent:'#F59E0B', admin:'hoops@dulahq.test', status:'active',
-    demo:{ stage:'group', meta:{ name:'Davao Hoops League S2', venue:'Davao City Gym', date:'2026-08-29' } } }
+  { slug:'usnagali', name:'Copa Gali Sports Group', accent:'#CCFF00', admin:'pharveylg@gmail.com', status:'active',
+    tournaments:[ { slug:null, name:'Copa Gali Futbol 2026', venue:'Gali Valley Sports Complex', date:'2026-05-09', stage:'complete', poster_url:'' } ] },
+  { slug:'copa-davao', name:'Davao Football Circuit', accent:'#FF6B35', admin:'copa.davao@dulahq.test', status:'active',
+    tournaments:[ { slug:null, name:'Copa Davao 2026', venue:'Davao Delta Fields', date:'2026-06-20', stage:'complete', poster_url:'' } ] },
+  { slug:'manila-summer', name:'Manila Summer Sports', accent:'#3B82F6', admin:'msi@dulahq.test', status:'active',
+    tournaments:[ { slug:null, name:'Manila Summer Invitational 2026', venue:'Rizal Memorial Coliseum', date:'2026-04-11', stage:'complete', poster_url:'' } ] },
+  { slug:'cebu-sports', name:'Cebu Sports Council', accent:'#A855F7', admin:'volley@dulahq.test', status:'active',
+    tournaments:[
+      { slug:'volley-classic', name:'Cebu Volley Classic 2026', venue:'Cebu Coliseum', date:'2026-08-22', stage:'group', poster_url:'' },
+      { slug:'volley-womens', name:'Cebu Women’s Volley Cup', venue:'Cebu Coliseum', date:'2026-09-10', stage:'group', poster_url:'' }
+    ] },
+  { slug:'davao-sports', name:'Davao Sports Authority', accent:'#F59E0B', admin:'hoops@dulahq.test', status:'active',
+    tournaments:[
+      { slug:'hoops-league', name:'Davao Hoops League S2', venue:'Davao City Gym', date:'2026-08-29', stage:'group', poster_url:'' },
+      { slug:'hoops-3x3', name:'Davao 3x3 Showdown', venue:'Davao City Gym', date:'2026-09-05', stage:'group', poster_url:'' }
+    ] }
 ];
+function getTenantTournaments_(t){
+  if (t.tournaments && t.tournaments.length) return t.tournaments;
+  if (t.demo && t.demo.meta) return [{ slug:null, name:t.demo.meta.name, venue:t.demo.meta.venue||'', date:t.demo.meta.date||'', stage:t.demo.stage||'group', poster_url:t.poster_url||'' }];
+  return [];
+}
 
 /* In-place S swap that PRESERVES the category accessor proxies.
    Proxied fields (teams/groups/groupMatches/knockoutRounds/generated/
@@ -6989,13 +7140,24 @@ function swapStateInPlace_(next){
 function demoSanitize_(st){ try { var c = JSON.parse(JSON.stringify(st)); c.timerInterval = null; return c; } catch(e){ return st; } }
 var DEMO_S_TEMPLATE = (function(){ try { return JSON.parse(JSON.stringify(S)); } catch(e){ return null; } })();
 
-function buildDemoState_(org){
+/* One shared, documented set of role accounts seeded into every demo
+   tenant (in addition to that org's own admin) so any role can be
+   tested against any demo tournament without hunting for credentials —
+   shown to the visitor right on the sign-in form (see renderSignInPage). */
+var DEMO_RBAC_ACCOUNTS = [
+  { role: 'referee', email: 'demo-referee@dulahq.test', name: 'Demo Referee' },
+  { role: 'official', email: 'demo-official@dulahq.test', name: 'Demo Official' },
+  { role: 'team', email: 'demo-team@dulahq.test', name: 'Demo Team Manager' },
+  { role: 'audience', email: 'demo-guest@dulahq.test', name: 'Demo Guest' }
+];
+function buildDemoState_(org, trn){
   var st = DEMO_S_TEMPLATE ? JSON.parse(JSON.stringify(DEMO_S_TEMPLATE)) : { categories: [], users: [], referees: [] };
-  st._tournamentMeta = { name: org.demo.meta.name, venue: org.demo.meta.venue, date: org.demo.meta.date, pitches: [], guestAccessEnabled: false };
+  st._tournamentMeta = { name: trn.name, venue: trn.venue, date: trn.date, pitches: [], guestAccessEnabled: false };
   st.categories = []; st.users = []; st.referees = [];
   st._demoOrg = org.slug;
+  st._demoTrn = trn.slug || null;
   swapStateInPlace_(st); /* mutate S in place — generateDraw()/proxy layer keep working */
-  var frac = org.demo.stage === 'complete' ? 1 : 0.5;
+  var frac = trn.stage === 'complete' ? 1 : 0.5;
   var c1 = defaultCategory(); c1.name = 'Open Division'; c1.ageGroup = 'Open';
   st.categories.push(c1);
   var unplayed = seedDemoCategory_(c1, 12, 4, frac);
@@ -7006,7 +7168,14 @@ function buildDemoState_(org){
   var admin = defaultUser(); admin.name = 'Tournament Admin'; admin.email = org.admin || 'admin@dulahq.test'; admin.role = 'admin';
   st.users.push(admin);
   var ref = defaultReferee(); ref.name = 'Center Referee'; st.referees.push(ref);
-  if (org.demo.stage !== 'complete' && unplayed && unplayed.length){
+  for (var i = 0; i < DEMO_RBAC_ACCOUNTS.length; i++) {
+    var acc = DEMO_RBAC_ACCOUNTS[i];
+    var u = defaultUser(); u.name = acc.name; u.email = acc.email; u.role = acc.role;
+    if (acc.role === 'referee') u.linkedRefereeId = ref.id;
+    if (acc.role === 'team' && c1.teams && c1.teams.length) u.assignedTeams = [c1.teams[0].id];
+    st.users.push(u);
+  }
+  if (trn.stage !== 'complete' && unplayed && unplayed.length){
     var lm = unplayed[0];
     lm.inProgress = true; lm.homeScore = 1; lm.awayScore = 0; lm.refereeId = ref.id;
     st.timerSeconds = 28 * 60; st.timerStarted = true; st.timerRunning = false;
@@ -7016,17 +7185,27 @@ function buildDemoState_(org){
   return S;
 }
 
-function enterDemoOrg(org){
+/* tSlug selects one of org's tournaments (getTenantTournaments_) when it
+   runs more than one; omit it for a single-tournament org. Falls back to
+   the first tournament if tSlug doesn't match anything, rather than
+   failing boot. */
+function enterDemoOrg(org, tSlug){
   try {
+    var list = getTenantTournaments_(org);
+    var trn = tSlug ? null : list[0];
+    if (tSlug) { for (var i = 0; i < list.length; i++) { if (list[i].slug === tSlug) { trn = list[i]; break; } } if (!trn) trn = list[0]; }
+    if (!trn) return;
+    var cacheKey = 'dulahq:demo-state:' + org.slug + (trn.slug ? (':' + trn.slug) : '');
     if (S && S._demoOrg){
-      try { localStorage.setItem('dulahq:demo-state:' + S._demoOrg, JSON.stringify(demoSanitize_(S))); } catch(e){}
+      var prevKey = 'dulahq:demo-state:' + S._demoOrg + (S._demoTrn ? (':' + S._demoTrn) : '');
+      try { localStorage.setItem(prevKey, JSON.stringify(demoSanitize_(S))); } catch(e){}
     } else {
       try { if (!localStorage.getItem('dulahq:demo-backup')) localStorage.setItem('dulahq:demo-backup', JSON.stringify(demoSanitize_(S))); } catch(e){}
     }
     var saved = null;
-    try { saved = JSON.parse(localStorage.getItem('dulahq:demo-state:' + org.slug) || 'null'); } catch(e){}
+    try { saved = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch(e){}
     if (saved && saved._demoOrg === org.slug){ swapStateInPlace_(saved); }
-    else { buildDemoState_(org); try { localStorage.setItem('dulahq:demo-state:' + org.slug, JSON.stringify(demoSanitize_(S))); } catch(e){} }
+    else { buildDemoState_(org, trn); try { localStorage.setItem(cacheKey, JSON.stringify(demoSanitize_(S))); } catch(e){} }
   } catch(e){ /* never block boot */ }
 }
 function leaveDemoOrgIfNeeded(){
@@ -7197,12 +7376,30 @@ function placeActions(){
    signed-in user only ever sees orgs they actually belong to. Slugs that
    aren't a real org fall through to the existing local demo-tenant path
    unchanged. */
-function bootDemoTenantPath_(slug){
+/* Mirrors the real-tenant boot logic one level down: a demo org with
+   just one tournament enters it directly regardless of tSlug; one with
+   several either enters the named tournament or, with none named,
+   shows a local picker gallery (no network call — everything's already
+   in the directory) instead of guessing. */
+function bootDemoTenantPath_(slug, tSlug){
   var tenant_ = findTenant(slug);
-  if (tenant_) {
-    if (tenant_.status === 'suspended') { showTenantPausedScreen_(tenant_); }
-    else if (!S._demoOrg || S._demoOrg !== slug) { enterDemoOrg(tenant_); renderDemoBanner_(); try { renderNav(); } catch(e){} }
+  if (!tenant_) return;
+  if (tenant_.status === 'suspended') { showTenantPausedScreen_(tenant_); return; }
+  var list = getTenantTournaments_(tenant_);
+  if (list.length > 1 && !tSlug) {
+    renderTenantTournamentGallery_(slug, tenant_.name, tenant_.accent, list);
+    return;
   }
+  var target = tSlug ? null : list[0];
+  if (tSlug) { for (var i = 0; i < list.length; i++) { if (list[i].slug === tSlug) { target = list[i]; break; } } if (!target) target = list[0]; }
+  if (target) { try { var sn = el('sb-trn-name'); if (sn) sn.textContent = target.name; } catch(e){} setTenantSigninTitle_(target.name); }
+  var alreadyThere = S._demoOrg === slug && (list.length <= 1 || S._demoTrn === tSlug);
+  if (!alreadyThere) { enterDemoOrg(tenant_, tSlug); renderDemoBanner_(); try { renderNav(); } catch(e){} }
+  /* Re-render the sign-in form now that S._demoOrg is set, so the demo
+     accounts hint (which only shows once inside a demo tenant) actually
+     appears — nothing else re-renders #signin-wrap after entering demo
+     state, unlike the banner/title which update themselves in place. */
+  try { var sWrap = el('signin-wrap'); if (sWrap) sWrap.innerHTML = renderSignInPage(); } catch(e){}
 }
 /* boot — /t/{slug} enters a demo tenant; any other path restores your real state */
 (function(){
@@ -7261,11 +7458,11 @@ function bootDemoTenantPath_(slug){
               });
             }
           } else {
-            bootDemoTenantPath_(slug);
+            bootDemoTenantPath_(slug, tSlug);
           }
-        }).catch(function(){ bootDemoTenantPath_(slug); });
+        }).catch(function(){ bootDemoTenantPath_(slug, tSlug); });
       } else {
-        bootDemoTenantPath_(slug);
+        bootDemoTenantPath_(slug, tSlug);
       }
     } else {
       leaveDemoOrgIfNeeded();
