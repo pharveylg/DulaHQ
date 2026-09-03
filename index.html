@@ -374,7 +374,7 @@ try{ if(localStorage.getItem('dulahq-theme')==='dark') document.documentElement.
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <div class="shell" id="app-shell" style="display:none">
-<header class="app-header" id="app-header"><div class="app-header-brand"><div class="app-header-name">Dula HQ</div><div class="app-header-sub" id="sb-trn-name">Tournament Manager</div></div><div class="hdr-dropdown-wrap" id="viewas-dropdown-wrap"></div><div class="hdr-dropdown-wrap" id="manage-dropdown-wrap"></div><button onclick="seedDemo()" class="hdr-demo-btn"><i class="ti ti-wand"></i> Demo</button><div class="app-header-user"><span id="user-badge" style="font-size:var(--fs13);color:var(--tm);white-space:nowrap">Not signed in</span><div id="sync-actions-wrap" style="display:flex;gap:6px"></div><button onclick="signOut()" class="hdr-icon-btn" title="Sign out"><i class="ti ti-logout"></i></button></div></header><div class="category-strip" id="category-strip"></div><div class="sb-overlay" id="sb-overlay" onclick="closeDropdowns()"></div><span id="sb-trn-meta" style="display:none"></span>
+<header class="app-header" id="app-header"><div class="app-header-brand"><div class="app-header-name">Dula HQ</div><div class="app-header-sub" id="sb-trn-name">Tournament Manager</div></div><div class="hdr-dropdown-wrap" id="viewas-dropdown-wrap"></div><div class="hdr-dropdown-wrap" id="manage-dropdown-wrap"></div><button onclick="seedDemo()" class="hdr-demo-btn"><i class="ti ti-wand"></i> Demo</button><div class="app-header-user"><span id="user-badge" style="font-size:var(--fs13);color:var(--tm);white-space:nowrap">Not signed in</span><div id="sync-actions-wrap" style="display:flex;gap:6px"></div><button onclick="goBackToTournaments_()" class="hdr-icon-btn" title="Back to all tournaments"><i class="ti ti-arrow-left"></i></button><button onclick="signOut()" class="hdr-icon-btn" title="Sign out"><i class="ti ti-logout"></i></button></div></header><div class="category-strip" id="category-strip"></div><div class="sb-overlay" id="sb-overlay" onclick="closeDropdowns()"></div><span id="sb-trn-meta" style="display:none"></span>
 <main class="main" id="app-main">
     <div class="topbar" id="topbar">
       <div><h1 class="tb-title" id="tb-title">Setup</h1><div class="tb-sub" id="tb-sub"></div></div>
@@ -5653,6 +5653,21 @@ function renderSignInPage() {
   html += '<div style="text-align:left"><div class="field" style="margin-bottom:10px"><label>Email</label><input id="login-email" type="email" autocomplete="email" placeholder="name@example.com" onkeydown="if(event.key===\'Enter\')attemptEmailLogin()"></div></div>';
   html += '<button class="btn primary" style="width:100%;padding:11px" onclick="attemptEmailLogin()"><i class="ti ti-login"></i> Sign in</button>';
   html += '<div id="auth-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-top:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb);text-align:left"></div>';
+  /* Placed right under the email field, above registration/guest links,
+     so it's immediately visible for testing rather than buried below
+     several other sections — that's the whole point of listing it here. */
+  if (S._demoOrg) {
+    html += '<div style="margin-top:16px;padding:12px;background:var(--n3);border-radius:8px;text-align:left">';
+    html += '<div style="font-size:var(--fs12);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tm);margin-bottom:6px">Demo accounts — sign in as any role</div>';
+    var demoTenant_ = findTenant(S._demoOrg);
+    var demoAdminEmail_ = (demoTenant_ && demoTenant_.admin) || 'admin@dulahq.test';
+    html += '<div class="demo-acct-row" style="font-size:var(--fs12);color:var(--ts);font-family:monospace;cursor:pointer" onclick="fillLoginEmail_(this)" data-email="' + esc(demoAdminEmail_) + '">' + esc(demoAdminEmail_) + ' <span style="color:var(--tm)">(admin)</span></div>';
+    for (var dri = 0; dri < DEMO_RBAC_ACCOUNTS.length; dri++) {
+      html += '<div class="demo-acct-row" style="font-size:var(--fs12);color:var(--ts);font-family:monospace;cursor:pointer" onclick="fillLoginEmail_(this)" data-email="' + esc(DEMO_RBAC_ACCOUNTS[dri].email) + '">' + esc(DEMO_RBAC_ACCOUNTS[dri].email) + ' <span style="color:var(--tm)">(' + esc(DEMO_RBAC_ACCOUNTS[dri].role) + ')</span></div>';
+    }
+    html += '<div style="font-size:var(--fs11);color:var(--tm);margin-top:6px;font-style:italic">Click one to fill it in</div>';
+    html += '</div>';
+  }
   html += '<div style="margin:20px 0 14px;border-top:1px solid var(--nb)"></div>';
   html += '<div style="font-size:var(--fs14);color:var(--tm);margin-bottom:10px">New here?</div>';
   html += '<div style="display:flex;flex-direction:column;gap:8px">';
@@ -5664,19 +5679,13 @@ function renderSignInPage() {
     guestLinks.push('<span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="enterGuestView()">Continue as Guest</span>');
   }
   if (guestLinks.length) { html += '<div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">' + guestLinks.join('') + '</div>'; }
-  if (S._demoOrg) {
-    html += '<div style="margin-top:18px;padding:12px;background:var(--n3);border-radius:8px;text-align:left">';
-    html += '<div style="font-size:var(--fs12);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tm);margin-bottom:6px">Demo accounts — sign in as any role</div>';
-    var demoTenant_ = findTenant(S._demoOrg);
-    var demoAdminEmail_ = (demoTenant_ && demoTenant_.admin) || 'admin@dulahq.test';
-    html += '<div style="font-size:var(--fs12);color:var(--ts);font-family:monospace">' + esc(demoAdminEmail_) + ' <span style="color:var(--tm)">(admin)</span></div>';
-    for (var dri = 0; dri < DEMO_RBAC_ACCOUNTS.length; dri++) {
-      html += '<div style="font-size:var(--fs12);color:var(--ts);font-family:monospace">' + esc(DEMO_RBAC_ACCOUNTS[dri].email) + ' <span style="color:var(--tm)">(' + esc(DEMO_RBAC_ACCOUNTS[dri].role) + ')</span></div>';
-    }
-    html += '</div>';
-  }
+  html += '<div style="margin-top:18px"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="goBackToTournaments_()">&larr; Back to all tournaments</span></div>';
   html += '</div></div>';
   return html;
+}
+function fillLoginEmail_(elem) {
+  var emailEl = el('login-email');
+  if (emailEl) { emailEl.value = elem.getAttribute('data-email'); emailEl.focus(); }
 }
 
 /* Root landing page ("/", no /t/ segment): a public gallery of tournament
@@ -5774,7 +5783,7 @@ function renderTenantTournamentGallery_(orgSlug, orgName, orgAccent, tournaments
     html += '</div></div>';
   }
   html += '</div>';
-  html += '<div style="max-width:900px;margin:36px auto 0;text-align:center"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="location.href=\'/\'">&larr; All tournaments</span></div>';
+  html += '<div style="max-width:900px;margin:36px auto 0;text-align:center"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="goBackToTournaments_()">&larr; All tournaments</span></div>';
   html += '</div>';
   sWrap.innerHTML = html;
 }
@@ -5795,7 +5804,7 @@ function renderPlatformConsoleSignIn_() {
   html += '<div id="auth-error" style="display:none;color:var(--red);font-size:var(--fs14);margin-top:10px;padding:8px;background:var(--rdbg);border-radius:6px;border:1px solid var(--rdb);text-align:left"></div>';
   html += '<div style="margin:20px 0 14px;border-top:1px solid var(--nb)"></div>';
   html += '<div style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="testLocalPlatformAdmin_()">Test locally as ' + esc(LOCAL_PLATFORM_ADMIN_EMAIL) + '</div>';
-  html += '<div style="margin-top:14px"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="location.href=\'/\'">&larr; Back to tournaments</span></div>';
+  html += '<div style="margin-top:14px"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="goBackToTournaments_()">&larr; Back to tournaments</span></div>';
   html += '</div></div>';
   return html;
 }
@@ -6741,6 +6750,16 @@ function updateUserBadge() {
   var roleLabels = { admin: 'Admin', team: 'Team', referee: 'Referee', official: 'Committee', audience: 'Guest' };
   if (badge) badge.textContent = (roleLabels[S.role] || S.role) + ' \u00b7 ' + (AUTH.name || AUTH.email || 'User');
 }
+/* Persistent header button, every signed-in screen (real tenant, demo
+   tenant, or Superadmin Console) — leaves whichever tenant/session
+   you're in and returns to the root gallery. A full navigation rather
+   than an in-place reset, so boot runs fresh exactly like a first visit
+   would; leaveDemoOrgIfNeeded() first so a demo tenant's in-progress
+   state is saved (same as the existing "Return" banner already did). */
+function goBackToTournaments_() {
+  try { if (S && S._demoOrg) leaveDemoOrgIfNeeded(); } catch(e){}
+  location.href = location.origin + '/';
+}
 function signOut() {
   AUTH.signedIn = false; AUTH.email = ''; AUTH.name = ''; AUTH.role = '';
   UI_DROPDOWN.viewas = false; UI_DROPDOWN.manage = false;
@@ -7248,6 +7267,7 @@ function showTenantPausedScreen_(tenant){
       + '<i class="ti ti-player-pause" style="font-size:var(--fs44);color:var(--tm)"></i>'
       + '<div style="font-size:var(--fs22);font-weight:700;margin:14px 0 8px">' + esc(tenant.name) + ' is paused</div>'
       + '<div style="font-size:var(--fs14);color:var(--tm);line-height:1.5">This tournament page has been temporarily suspended by the platform admin.</div>'
+      + '<div style="margin-top:18px"><span style="font-size:var(--fs13);color:var(--tm);cursor:pointer;text-decoration:underline" onclick="goBackToTournaments_()">&larr; Back to all tournaments</span></div>'
       + '</div></div>';
   } catch(e){}
 }
