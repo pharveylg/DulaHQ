@@ -7172,12 +7172,18 @@ var DEMO_RBAC_ACCOUNTS = [
   { role: 'team', email: 'demo-team@dulahq.test', name: 'Demo Team Manager' },
   { role: 'audience', email: 'demo-guest@dulahq.test', name: 'Demo Guest' }
 ];
+/* Bump this whenever buildDemoState_'s seed shape changes (new fields,
+   new accounts, etc.) so browsers holding an older cached demo state
+   (see enterDemoOrg's localStorage cache) rebuild fresh instead of
+   silently replaying stale data forever. */
+var DEMO_STATE_VERSION = 2;
 function buildDemoState_(org, trn){
   var st = DEMO_S_TEMPLATE ? JSON.parse(JSON.stringify(DEMO_S_TEMPLATE)) : { categories: [], users: [], referees: [] };
   st._tournamentMeta = { name: trn.name, venue: trn.venue, date: trn.date, pitches: [], guestAccessEnabled: false };
   st.categories = []; st.users = []; st.referees = [];
   st._demoOrg = org.slug;
   st._demoTrn = trn.slug || null;
+  st._demoVer = DEMO_STATE_VERSION;
   swapStateInPlace_(st); /* mutate S in place — generateDraw()/proxy layer keep working */
   var frac = trn.stage === 'complete' ? 1 : 0.5;
   var c1 = defaultCategory(); c1.name = 'Open Division'; c1.ageGroup = 'Open';
@@ -7226,7 +7232,7 @@ function enterDemoOrg(org, tSlug){
     }
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch(e){}
-    if (saved && saved._demoOrg === org.slug){ swapStateInPlace_(saved); }
+    if (saved && saved._demoOrg === org.slug && saved._demoVer === DEMO_STATE_VERSION){ swapStateInPlace_(saved); }
     else { buildDemoState_(org, trn); try { localStorage.setItem(cacheKey, JSON.stringify(demoSanitize_(S))); } catch(e){} }
   } catch(e){ /* never block boot */ }
 }
