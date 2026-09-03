@@ -5667,6 +5667,9 @@ function renderSignInPage() {
   if (S._demoOrg) {
     html += '<div style="margin-top:18px;padding:12px;background:var(--n3);border-radius:8px;text-align:left">';
     html += '<div style="font-size:var(--fs12);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tm);margin-bottom:6px">Demo accounts — sign in as any role</div>';
+    var demoTenant_ = findTenant(S._demoOrg);
+    var demoAdminEmail_ = (demoTenant_ && demoTenant_.admin) || 'admin@dulahq.test';
+    html += '<div style="font-size:var(--fs12);color:var(--ts);font-family:monospace">' + esc(demoAdminEmail_) + ' <span style="color:var(--tm)">(admin)</span></div>';
     for (var dri = 0; dri < DEMO_RBAC_ACCOUNTS.length; dri++) {
       html += '<div style="font-size:var(--fs12);color:var(--ts);font-family:monospace">' + esc(DEMO_RBAC_ACCOUNTS[dri].email) + ' <span style="color:var(--tm)">(' + esc(DEMO_RBAC_ACCOUNTS[dri].role) + ')</span></div>';
     }
