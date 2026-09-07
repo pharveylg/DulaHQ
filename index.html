@@ -21,7 +21,12 @@
      this available before the main boot script runs (it's a classic inline
      script, not a module, so it executes synchronously during parsing —
      a deferred script here would still be loading when it does). -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- Pinned to the same version dula-hq-2.0's server/client code uses
+     (its node_modules/@supabase/supabase-js), not just "@2" -- the
+     cookie storage adapter below hardcodes an assumption about how this
+     library derives its default session storage key, and an unpinned
+     "@2" could silently drift that out of sync between the two apps. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -412,8 +417,138 @@ try{ if(localStorage.getItem('dulahq-theme')==='dark') document.documentElement.
    (non-demo) sign-ins and the Superadmin Console talk to this. */
 var SUPABASE_URL = 'https://zytyakbgwaegvftblkcn.supabase.co';
 var SUPABASE_ANON_KEY = 'sb_publishable_Lu9O2SAwGkHqlSILlkWEDA_EQFhr1pN';
+
+/* Cookie-backed session storage (Dula HQ consolidation §6.B), wire-compatible
+   with @supabase/ssr's browser cookie format so a session started on either
+   app (this one, or dulahq-2.0's Next.js app under the same dulahq.app
+   origin) is picked up by the other with no second sign-in.
+
+   Why hand-rolled instead of importing @supabase/ssr's own
+   createBrowserClient: this file is ~7,000 lines of classic synchronous
+   inline <script> -- every onclick="..." in the markup calls a global
+   function directly, and the whole file assumes `sb` exists synchronously
+   the instant this script runs (right after the UMD <script src> above
+   loads). createBrowserClient is an ES module -- inherently async, and
+   doesn't leak to window -- so using it as intended would mean either
+   converting this whole file to a module (exposing every function via
+   window.* so the inline onclicks still resolve) or gating every
+   sb-dependent call behind an async-ready check. Both are a much larger,
+   riskier change to a file this project's docs explicitly say to leave
+   alone. This keeps the existing synchronous boot order untouched.
+
+   Encoding verified against @supabase/ssr@0.5.2's actual source
+   (cookies.js, utils/chunker.js, utils/base64url.js) rather than guessed:
+     - cookie name = supabase-js's own default storage key,
+       `sb-<first label of the SUPABASE_URL hostname>-auth-token`
+       (SupabaseClient.ts) -- computed here, not hardcoded, so it keeps
+       matching if SUPABASE_URL ever changes.
+     - value = 'base64-' + base64url(UTF-8 bytes of the JSON session),
+       no padding -- @supabase/ssr's default cookieEncoding.
+     - past 3180 chars the value is split across `<name>.0`, `<name>.1`, …
+       cookies (MAX_CHUNK_SIZE in @supabase/ssr/utils/chunker.js). That
+       chunker also has to worry about not splitting a URI-escape sequence
+       in half; base64url's alphabet ([A-Za-z0-9_-]) plus the literal
+       "base64-" prefix are already encodeURIComponent-safe, so a plain
+       character-count slice here produces byte-identical chunks.
+     - Path=/, SameSite=Lax, Max-Age=400 days on write, 0 on delete --
+       @supabase/ssr's DEFAULT_COOKIE_OPTIONS. No Domain attribute (host-
+       only cookie), which is what makes this only work because both apps
+       are served from the same dulahq.app origin now (next.config.js
+       rewrites) -- it would NOT work across two different hostnames.
+
+   If a future @supabase/ssr or supabase-js upgrade changes any of the
+   above, this silently stops matching -- there's no test that would catch
+   that automatically. Verify by hand after upgrading either library: sign
+   in on one app, load a page proxied from the other, confirm no second
+   sign-in is required. */
+var AUTH_STORAGE_KEY_ = 'sb-' + (new URL(SUPABASE_URL).hostname.split('.')[0]) + '-auth-token';
+var COOKIE_CHUNK_SIZE_ = 3180;
+function b64urlEncode_(str) {
+  var bytes = new TextEncoder().encode(str);
+  var binary = '';
+  for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlDecode_(str) {
+  var b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  var binary = atob(b64);
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function parseCookies_() {
+  var out = {};
+  document.cookie.split(';').forEach(function (part) {
+    var eq = part.indexOf('=');
+    if (eq === -1) return;
+    var name = part.slice(0, eq).trim();
+    if (!name) return;
+    try { out[name] = decodeURIComponent(part.slice(eq + 1).trim()); } catch (e) {}
+  });
+  return out;
+}
+function isChunkLike_(cookieName, key) {
+  if (cookieName === key) return true;
+  var m = cookieName.match(/^(.*)[.](0|[1-9][0-9]*)$/);
+  return !!(m && m[1] === key);
+}
+function expireCookie_(name) {
+  document.cookie = name + '=; Path=/; Max-Age=0; SameSite=Lax';
+}
+var cookieAuthStorage_ = {
+  isServer: false,
+  getItem: function (key) {
+    var cookies = parseCookies_();
+    var combined = cookies[key];
+    if (combined === undefined) {
+      var parts = [];
+      for (var i = 0; ; i++) {
+        var chunk = cookies[key + '.' + i];
+        if (chunk === undefined) break;
+        parts.push(chunk);
+      }
+      if (!parts.length) return null;
+      combined = parts.join('');
+    }
+    if (combined.indexOf('base64-') === 0) {
+      try { return b64urlDecode_(combined.slice(7)); } catch (e) { return null; }
+    }
+    return combined;
+  },
+  setItem: function (key, value) {
+    var existingNames = Object.keys(parseCookies_()).filter(function (n) { return isChunkLike_(n, key); });
+    var encoded = 'base64-' + b64urlEncode_(value);
+    var chunks = [];
+    if (encoded.length <= COOKIE_CHUNK_SIZE_) {
+      chunks.push({ name: key, value: encoded });
+    } else {
+      for (var pos = 0; pos < encoded.length; pos += COOKIE_CHUNK_SIZE_) {
+        chunks.push({ name: key + '.' + chunks.length, value: encoded.slice(pos, pos + COOKIE_CHUNK_SIZE_) });
+      }
+    }
+    var keep = {};
+    chunks.forEach(function (c) { keep[c.name] = true; });
+    existingNames.forEach(function (n) { if (!keep[n]) expireCookie_(n); });
+    chunks.forEach(function (c) {
+      document.cookie = c.name + '=' + encodeURIComponent(c.value) + '; Path=/; Max-Age=' + (400 * 24 * 60 * 60) + '; SameSite=Lax';
+    });
+  },
+  removeItem: function (key) {
+    Object.keys(parseCookies_()).filter(function (n) { return isChunkLike_(n, key); }).forEach(expireCookie_);
+  },
+};
+
 var sb = (typeof supabase !== 'undefined' && supabase.createClient)
-  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: AUTH_STORAGE_KEY_,
+        storage: cookieAuthStorage_,
+      },
+    })
   : null;
 /* Set once a real (non-demo) session resolves to a platform admin or an
    org member — see completeSupabaseLogin(). Null means "no real backend
