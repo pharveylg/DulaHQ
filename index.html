@@ -593,7 +593,7 @@ var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQrs3lvXxZzrE0wyvdZSS
 var GOOGLE_CLIENT_ID = '';
  // used for watermarks; sidebar/mobile header keep their own inline copy (static HTML)
 
-var AUTH = { email: '', name: '', role: '', team: '', token: '', signedIn: false };
+var AUTH = { email: '', name: '', role: '', team: '', token: '', signedIn: false, guestTeamReg: false };
 /* Purely local UI state for the collapsible sidebar sections \u2014 deliberately
    kept OUTSIDE of S so it never gets swept into the Google Sheets save/load
    cycle; it's just "is this accordion open right now" on this device. */
@@ -1347,6 +1347,12 @@ var ROLE_PILL_DEFS = {
    between each other (closely related, both work matches); Guest gets
    no switcher at all \u2014 there's nothing else for them to preview. */
 function visibleRolesForAuth(authRole) {
+  // A guest filling out the registration form (guestRegisterTeam()) is put
+  // in AUTH.role='team' just to reuse that page, but has no real account --
+  // the "View as" role switcher would let them wander into Team/Guest
+  // screens that don't apply to them yet. See the matching guard in
+  // renderNav() for the main nav dropdown/category tabs.
+  if (AUTH.guestTeamReg) return [];
   if (authRole === 'admin') return ['admin', 'team', 'referee', 'official', 'audience'];
   if (authRole === 'team') return ['team', 'audience'];
   if (authRole === 'referee' || authRole === 'official') return ['referee', 'official'];
@@ -1488,6 +1494,21 @@ function renderNav() {
     var cse = el('category-strip'); if (cse) cse.innerHTML = '';
     var mni = el('mob-nav-inner'); if (mni) mni.innerHTML = '';
     var mms = el('mob-more-sheet'); if (mms) { mms.innerHTML = ''; mms.className = 'mob-more-sheet'; }
+    return;
+  }
+  /* A prospective team manager filling out the registration form
+     (guestRegisterTeam()) is put in role 'team' just to reuse that page's
+     rendering, but they don't have a real account or team yet -- the full
+     Team nav (Dashboard/Schedule/Bracket/Standings/Roster/Documents) and
+     the category tabs would only expose empty/irrelevant screens and a
+     confusing "already inside the app" impression. Same bail-out shape as
+     the superadmin case above: no dropdown, no category strip, no mobile
+     tabs, just the registration form itself. */
+  if (AUTH.guestTeamReg) {
+    var gmdw = el('manage-dropdown-wrap'); if (gmdw) gmdw.innerHTML = '';
+    var gcse = el('category-strip'); if (gcse) gcse.innerHTML = '';
+    var gmni = el('mob-nav-inner'); if (gmni) gmni.innerHTML = '';
+    var gmms = el('mob-more-sheet'); if (gmms) { gmms.innerHTML = ''; gmms.className = 'mob-more-sheet'; }
     return;
   }
   migrateLegacyData();
@@ -5983,6 +6004,7 @@ function attemptEmailLogin() {
 }
 function completeLogin(user) {
   AUTH.signedIn = true;
+  AUTH.guestTeamReg = false;
   AUTH.email = user.email;
   AUTH.name = user.name;
   AUTH.role = user.role;
@@ -6105,6 +6127,7 @@ function enterTenantTournament_(row, orgId, role, email) {
   S._tenantOrgId = orgId;
   S._tenantTournamentId = row ? row.id : null;
   AUTH.signedIn = true;
+  AUTH.guestTeamReg = false;
   AUTH.email = email;
   AUTH.name = (TENANT_ORG && TENANT_ORG.name ? TENANT_ORG.name + ' — ' : '') + email;
   AUTH.role = role;
@@ -6258,6 +6281,7 @@ function rejectAccessRequest(id) {
 }
 function enterGuestView() {
   AUTH.signedIn = true;
+  AUTH.guestTeamReg = false;
   AUTH.email = 'guest@dulahq.local';
   AUTH.name = 'Guest';
   AUTH.role = 'audience';
@@ -6281,6 +6305,7 @@ function enterGuestView() {
    into (renderNav() bails out for it before that would matter). */
 function showSuperadminConsole() {
   AUTH.signedIn = true;
+  AUTH.guestTeamReg = false;
   AUTH.email = 'platform@dulahq.local';
   AUTH.name = 'Platform Admin';
   AUTH.role = 'superadmin';
@@ -6554,6 +6579,7 @@ function saOpenTenantAsAdmin_(slug){
   document.body.classList.remove('superadmin-mode');
   enterDemoOrg(tenant, trn.slug || null);
   AUTH.signedIn = true;
+  AUTH.guestTeamReg = false;
   AUTH.email = tenant.admin || (slug + '@dulahq.test');
   AUTH.name = 'Tournament Admin';
   AUTH.role = 'admin';
@@ -6871,6 +6897,7 @@ function saRemoveIdea(idx){
 function guestRegisterTeam() {
   AUTH.signedIn = true;
   AUTH.email = ''; AUTH.name = ''; AUTH.role = 'team';
+  AUTH.guestTeamReg = true;
   S.role = 'team';
   var sWrap = el('signin-wrap'); if (sWrap) sWrap.innerHTML = '';
   var aEl = el('app-shell'); if (aEl) aEl.style.display = 'flex';
@@ -6896,7 +6923,7 @@ function goBackToTournaments_() {
   location.href = location.origin + '/';
 }
 function signOut() {
-  AUTH.signedIn = false; AUTH.email = ''; AUTH.name = ''; AUTH.role = '';
+  AUTH.signedIn = false; AUTH.email = ''; AUTH.name = ''; AUTH.role = ''; AUTH.guestTeamReg = false;
   UI_DROPDOWN.viewas = false; UI_DROPDOWN.manage = false;
   var rvw = el('viewas-dropdown-wrap'); if (rvw) rvw.innerHTML = '';
   var mvw = el('manage-dropdown-wrap'); if (mvw) mvw.innerHTML = '';
@@ -6929,7 +6956,7 @@ function handleCredentialResponse(response) {
       }
       return;
     }
-    AUTH.name = res.name; AUTH.role = res.role; AUTH.team = res.team; AUTH.signedIn = true;
+    AUTH.name = res.name; AUTH.role = res.role; AUTH.team = res.team; AUTH.signedIn = true; AUTH.guestTeamReg = false;
     S.role = res.role; S.page = NAV[res.role][0].p;
     apiFetch('getState', '', function (sr, se) {
       if (sr && sr.ok && sr.state) {
@@ -7056,6 +7083,14 @@ function seedDemoData() {
   S._tournamentMeta.name = 'Mindanao Cup 2026';
   S._tournamentMeta.venue = 'CDO Sports Complex';
   S._tournamentMeta.date = '2026-08-15';
+  // This placeholder is what a tournament with no data (an empty `data`
+  // column -- see dulahq-2.0's CLAUDE.md \u00a710) renders instead, which
+  // includes the /demo page's "Demo tournament (guest view)" link. Guest
+  // access defaults off for real tournaments (an admin opts in via Setup),
+  // but a guest-facing demo landing on the sign-in wall with no way to
+  // actually browse anything defeats the point of the link, so this one
+  // placeholder enables it.
+  S._tournamentMeta.guestAccessEnabled = true;
   S.categories = [];
 
   var general = defaultCategory();
