@@ -373,8 +373,12 @@ body.superadmin-mode .app-header,body.superadmin-mode .category-strip,body.super
 }
 </style>
 <script>
-/* apply saved theme before first paint (cream is the default/light) */
-try{ if(localStorage.getItem('dulahq-theme')==='dark') document.documentElement.setAttribute('data-theme','dark'); }catch(e){}
+/* Apply saved theme before first paint. Dark is the default now, matching
+   dula-hq-2.0's ThemeInitScript exactly (same polarity: dark unless
+   localStorage explicitly holds 'light') -- this used to default light,
+   the opposite of the Club Manager side, which is exactly the kind of
+   mismatch the rest of this reskin was fixing. */
+try{ if(localStorage.getItem('dulahq-theme')!=='light') document.documentElement.setAttribute('data-theme','dark'); }catch(e){document.documentElement.setAttribute('data-theme','dark');}
 </script>
 </head>
 <body>
