@@ -3575,6 +3575,11 @@ function buildKnockout() {
   if (played < total) return null;
   var advancers = getAdvancers();
   if (!advancers.length) return null;
+  return buildKnockoutFrom(advancers);
+}
+/* The bracket's shape depends only on how many teams advance, not on who they
+   are, so the same builder serves the real bracket and the placeholder. */
+function buildKnockoutFrom(advancers) {
   var rounds = [];
   var current = [];
   for (var ci = 0; ci < advancers.length; ci += 2) {
@@ -3590,6 +3595,22 @@ function buildKnockout() {
     prev = next;
   }
   return rounds;
+}
+/* Blank bracket for while the group stage is still running: one slot per
+   qualifying position (A1, A2, B1, ...) with no team in it. Render-only. It is
+   deliberately never written to S.knockoutRounds, which is saved with the
+   tournament and is what tells renderBracket the real draw hasn't been made. */
+function placeholderKnockout() {
+  var k = S.tournament.structure || 'groups_knockout';
+  if (k === 'knockout') return null;
+  var adv = [];
+  for (var gi = 0; gi < S.groups.length; gi++) {
+    var grp = S.groups[gi];
+    var advPer = (k === 'round_robin' || k === 'double_round_robin') ? Math.min(2, grp.teamIds.length) : Math.min(S.tournament.advancePer || 2, grp.teamIds.length);
+    for (var ri = 0; ri < advPer; ri++) { adv.push({ id: null, seed: grp.name + (ri + 1) }); }
+  }
+  if (adv.length < 2) return null;
+  return buildKnockoutFrom(adv);
 }
 function propagateKnockout() {
   for (var ri = 1; ri < S.knockoutRounds.length; ri++) {
@@ -3633,7 +3654,7 @@ function renderBracketChart(rounds) {
   function drawSlot(x, y, team, tid, winner, score, seed, flip) {
     var isW = !!(winner && tid && tid === winner);
     var isL = !!(winner && tid && tid !== winner);
-    var fill = isW ? goldFill : navy3, bdr = isW ? gold : nb, nc = isL ? muted : ((team || seed) ? textC : muted);
+    var fill = isW ? goldFill : navy3, bdr = isW ? gold : nb, nc = isL ? muted : (team ? textC : muted);
     var nm = team ? (team.name.length > 15 ? (team.name.slice(0, 14) + '\u2026') : team.name) : (seed || 'TBD');
     var sc = (score !== null && score !== undefined) ? String(score) : '';
     s += '<rect x="' + x + '" y="' + y + '" width="' + SW + '" height="' + SH + '" rx="4" fill="' + fill + '" stroke="' + bdr + '" stroke-width="1"/>';
@@ -3719,7 +3740,12 @@ function renderBracket() {
   for (var i = 0; i < S.groupMatches.length; i++) { if (S.groupMatches[i].played) played++; }
   if (k !== 'knockout' && played < total && !S.knockoutRounds.length) {
     var pct = Math.round(played / total * 100);
-    mc.innerHTML = '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
+    var progressHtml = '<div class="card"><div class="card-title"><i class="ti ti-lock"></i> Group stage in progress</div><div style="font-size:var(--fs14);color:var(--tm);margin-bottom:8px">' + played + ' of ' + total + ' played</div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
+    /* The bracket is always visible: with the group stage still running it is
+       drawn with empty slots, and fills in once the last group match is played. */
+    var ph = placeholderKnockout();
+    if (!ph) { mc.innerHTML = progressHtml; return; }
+    mc.innerHTML = progressHtml + '<div style="border:1px solid var(--nb);border-radius:10px;overflow-x:auto;overflow-y:visible;margin:14px 0"><div style="min-width:600px">' + renderBracketChart(ph) + '</div></div>';
     return;
   }
   if (!S.knockoutRounds.length) { var built = buildKnockout(); if (built) S.knockoutRounds = built; }
