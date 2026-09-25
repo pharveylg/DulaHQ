@@ -3659,7 +3659,7 @@ function renderBracketChart(rounds) {
   function leftCount(ri) { return Math.ceil(rounds[ri].matches.length / 2); }
   var perSide = numSide > 0 ? leftCount(0) : 1;
   var top = PY + LH;
-  var totH = top + perSide * PITCH + 50;
+  var totH = top + perSide * PITCH + 66;
   var totW = PX * 2 + (numSide * 2 + 1) * CP - (CP - SW);
   var fX = PX + numSide * CP;
   function colX(side, ri) { return side === 0 ? PX + ri * CP : fX + (numSide - ri) * CP; }
@@ -3730,7 +3730,7 @@ function renderBracketChart(rounds) {
   }
   s += '<text x="' + (fX + SW / 2) + '" y="' + (PY + LH - 3) + '" font-size="9" font-weight="600" fill="' + gold + '" text-anchor="middle" letter-spacing="0.07em">FINAL</text>';
   drawMatch(fX, fY, rounds[rounds.length - 1].matches[0], false);
-  var tY = fY + MH + 14;
+  var tY = fY + MH + 28;
   s += '<text x="' + (fX + SW / 2) + '" y="' + (tY + 16) + '" font-size="20" text-anchor="middle">🏆</text>';
   var lastM = rounds[rounds.length - 1].matches[0];
   var champ = lastM.winner ? getTeamById(lastM.winner.id) : null;
