@@ -3475,14 +3475,32 @@ function saveMatchScore(mid) {
 function getAdvancers() {
   var k = S.tournament.structure || 'groups_knockout';
   if (k === 'knockout') return [];
-  var adv = [];
+  var perGroup = [];
   for (var gi = 0; gi < S.groups.length; gi++) {
     var grp = S.groups[gi];
     var standings = calcGroupStandings(gi);
     var advPer = (k === 'round_robin' || k === 'double_round_robin') ? Math.min(2, standings.length) : Math.min(S.tournament.advancePer || 2, standings.length);
-    for (var ri = 0; ri < advPer; ri++) { adv.push({ id: standings[ri].id, seed: grp.name + (ri + 1) }); }
+    var picks = [];
+    for (var ri = 0; ri < advPer; ri++) { picks.push({ id: standings[ri].id, seed: grp.name + (ri + 1) }); }
+    perGroup.push(picks);
   }
-  return adv;
+  return orderKnockoutSeeds(perGroup);
+}
+/* First-round pairings cross the groups: A1 v B2, and A2 v B1 on the other
+   half of the bracket, so two teams from one group can only meet again in the
+   final. Takes each group's qualifiers in rank order and returns them as one
+   list that buildKnockoutFrom pairs two at a time. Anything that isn't an even
+   number of equally-sized groups keeps the old in-order pairing. */
+function orderKnockoutSeeds(perGroup) {
+  var n = perGroup.length ? perGroup[0].length : 0, even = perGroup.length >= 2 && perGroup.length % 2 === 0 && n >= 2;
+  for (var i = 0; i < perGroup.length && even; i++) { if (perGroup[i].length !== n) even = false; }
+  if (!even) { return [].concat.apply([], perGroup); }
+  var firstHalf = [], secondHalf = [], cut = Math.ceil(n / 2);
+  for (var p = 0; p < perGroup.length; p += 2) {
+    var a = perGroup[p], b = perGroup[p + 1];
+    for (var k = 0; k < n; k++) { (k < cut ? firstHalf : secondHalf).push(a[k], b[n - 1 - k]); }
+  }
+  return firstHalf.concat(secondHalf);
 }
 var STANDINGS_ACTIVE_TAB = 'all';
 function setStandingsTab_(id) { STANDINGS_ACTIVE_TAB = id; renderStandings(); }
@@ -3603,12 +3621,15 @@ function buildKnockoutFrom(advancers) {
 function placeholderKnockout() {
   var k = S.tournament.structure || 'groups_knockout';
   if (k === 'knockout') return null;
-  var adv = [];
+  var perGroup = [];
   for (var gi = 0; gi < S.groups.length; gi++) {
     var grp = S.groups[gi];
     var advPer = (k === 'round_robin' || k === 'double_round_robin') ? Math.min(2, grp.teamIds.length) : Math.min(S.tournament.advancePer || 2, grp.teamIds.length);
-    for (var ri = 0; ri < advPer; ri++) { adv.push({ id: null, seed: grp.name + (ri + 1) }); }
+    var picks = [];
+    for (var ri = 0; ri < advPer; ri++) { picks.push({ id: null, seed: grp.name + (ri + 1) }); }
+    perGroup.push(picks);
   }
+  var adv = orderKnockoutSeeds(perGroup);
   if (adv.length < 2) return null;
   return buildKnockoutFrom(adv);
 }
@@ -7131,7 +7152,9 @@ function seedDemoData() {
   var women = defaultCategory();
   women.name = "Women's Open"; women.ageGroup = 'Women';
   S.categories.push(women);
-  seedDemoCategory_(women, 6, 2, 0.5);
+  /* Fully played, so the demo shows a finished group stage and a populated
+     bracket alongside the two categories that are still in progress. */
+  seedDemoCategory_(women, 6, 2, 1);
 
   S.activeCategoryId = general.id;
 
