@@ -3630,24 +3630,33 @@ function propagateKnockout() {
 function renderBracketChart(rounds) {
   if (!rounds || !rounds.length) return '<p style="padding:20px;color:var(--tm)">No bracket data.</p>';
   var gold = '#c8960a', goldFill = 'rgba(200,150,10,0.14)', textC = '#1a1a1a', muted = '#9aa0a8', nb = '#e6dcc2', navy3 = '#f7f3ea', navy4 = '#ffffff';
-  var SW = 130, SH = 28, SGAP = 6, MH = SH * 2 + SGAP, CP = SW + 50, PX = 14, PY = 30, LH = 16;
+  var SW = 130, SH = 28, SGAP = 6, MH = SH * 2 + SGAP, CP = SW + 50, PX = 14, PY = 30, LH = 16, PITCH = MH + 18;
   var numSide = rounds.length - 1;
-  var maxM = rounds[0].matches.length;
-  var sP = Math.max(38, 280 / maxM);
-  var totS = maxM * 2;
-  var totH = PY + LH + totS * sP + PY + 48;
-  var totW = PX * 2 + (numSide * 2 + 1) * CP;
-  function cX(ci) { return PX + ci * CP; }
+  /* Each round's matches are split between the two halves of the chart: the
+     first ceil(n/2) on the left, the rest on the right, so no match is drawn
+     twice. Positions use the index within a half. */
+  function leftCount(ri) { return Math.ceil(rounds[ri].matches.length / 2); }
+  var perSide = numSide > 0 ? leftCount(0) : 1;
+  var top = PY + LH;
+  var totH = top + perSide * PITCH + 50;
+  var totW = PX * 2 + (numSide * 2 + 1) * CP - (CP - SW);
   var fX = PX + numSide * CP;
-  function rX(ci) { return fX + (ci + 1) * CP; }
-  function mY(ri, mi) {
-    var f = Math.pow(2, ri);
-    var ts = mi * f * 2;
-    var bs = ts + f * 2 - 1;
-    var cs = (ts + bs) / 2;
-    return PY + LH + cs * sP - MH / 2;
+  function colX(side, ri) { return side === 0 ? PX + ri * CP : fX + (numSide - ri) * CP; }
+  /* Vertical centre of a match: first-round matches are evenly spaced, later
+     rounds sit midway between the matches that feed them. */
+  function centreY(side, ri, g) {
+    var lc = leftCount(ri);
+    var local = side === 0 ? g : g - lc;
+    if (ri === 0) return top + Math.max(0, local) * PITCH + MH / 2;
+    var ys = [];
+    for (var f = 2 * g; f <= 2 * g + 1; f++) {
+      if (f < rounds[ri - 1].matches.length) ys.push(centreY(side, ri - 1, f));
+    }
+    if (!ys.length) return top + Math.max(0, local) * PITCH + MH / 2;
+    return ys.reduce(function (p, c) { return p + c; }, 0) / ys.length;
   }
-  var fY = PY + LH + (totS / 2 - 1) * sP - MH / 2 + sP / 2;
+  var finalCY = numSide > 0 ? (centreY(0, numSide - 1, 0) + centreY(1, numSide - 1, leftCount(numSide - 1))) / 2 : top + MH / 2;
+  var fY = finalCY - MH / 2;
   var s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + totW + '" height="' + totH + '" viewBox="0 0 ' + totW + ' ' + totH + '" style="width:100%;height:auto;display:block;font-family:Inter,system-ui,sans-serif">';
   s += '<rect width="' + totW + '" height="' + totH + '" fill="' + navy4 + '" rx="10"/>';
   function ln(x1, y1, x2, y2) { s += '<line x1="' + Math.round(x1) + '" y1="' + Math.round(y1) + '" x2="' + Math.round(x2) + '" y2="' + Math.round(y2) + '" stroke="' + nb + '" stroke-width="1"/>'; }
@@ -3676,47 +3685,32 @@ function renderBracketChart(rounds) {
       s += '<text x="' + (x + SW / 2) + '" y="' + (y + MH + 11) + '" font-size="9" fill="#7c3aed" text-anchor="middle" font-weight="600">PENS ' + m.ps1 + '\u2013' + m.ps2 + '</text>';
     }
   }
-  for (var ri = 0; ri < numSide; ri++) {
-    var cx = cX(ri), ncx = ri < numSide - 1 ? cX(ri + 1) : fX, midX = cx + SW + (ncx - cx - SW) / 2;
-    var matches = rounds[ri].matches;
-    for (var mi = 0; mi < matches.length; mi++) {
-      var y0 = mY(ri, mi), cy0 = y0 + SH / 2, cy1 = y0 + SH + SGAP + SH / 2;
-      ln(cx + SW, cy0, midX, cy0); ln(cx + SW, cy1, midX, cy1); ln(midX, cy0, midX, cy1);
-      var nmi = Math.floor(mi / 2), nsl = mi % 2;
-      var ny = ri + 1 < numSide ? mY(ri + 1, nmi) : fY;
-      var ncy = ny + nsl * (SH + SGAP) + SH / 2;
-      ln(midX, (cy0 + cy1) / 2, midX, ncy); ln(midX, ncy, ncx, ncy);
+  for (var side = 0; side < 2; side++) {
+    for (var ri = 0; ri < numSide; ri++) {
+      var lc = leftCount(ri), n = rounds[ri].matches.length;
+      var from = side === 0 ? 0 : lc, to = side === 0 ? lc : n;
+      var x = colX(side, ri);
+      s += '<text x="' + (x + SW / 2) + '" y="' + (PY + LH - 3) + '" font-size="9" font-weight="600" fill="' + muted + '" text-anchor="middle" letter-spacing="0.07em">' + rounds[ri].name.toUpperCase() + '</text>';
+      for (var g = from; g < to; g++) {
+        var cy = centreY(side, ri, g);
+        drawMatch(x, cy - MH / 2, rounds[ri].matches[g], side === 1);
+        // connector to the match this one feeds
+        var last = ri === numSide - 1;
+        var nx = last ? fX : colX(side, ri + 1);
+        var targetCY, slot;
+        if (last) { targetCY = finalCY; slot = side; }
+        else { var ng = Math.floor(g / 2); targetCY = centreY(side, ri + 1, ng); slot = g % 2; }
+        var tgtY = targetCY - MH / 2 + slot * (SH + SGAP) + SH / 2;
+        var x1 = side === 0 ? x + SW : x, x2 = side === 0 ? nx : nx + SW;
+        var midX = (x1 + x2) / 2;
+        ln(x1, cy, midX, cy); ln(midX, cy, midX, tgtY); ln(midX, tgtY, x2, tgtY);
+      }
     }
-  }
-  for (var rj = 0; rj < numSide; rj++) {
-    var srcRi = numSide - 1 - rj, rcx = rX(rj), rncx = rj < numSide - 1 ? rX(rj + 1) : (fX + SW), rmidX = rcx - (rcx - rncx) / 2;
-    var matches2 = rounds[srcRi].matches;
-    for (var mj = 0; mj < matches2.length; mj++) {
-      var y02 = mY(srcRi, mj), cy02 = y02 + SH / 2, cy12 = y02 + SH + SGAP + SH / 2;
-      ln(rcx, cy02, rmidX, cy02); ln(rcx, cy12, rmidX, cy12); ln(rmidX, cy02, rmidX, cy12);
-      var nmi2 = Math.floor(mj / 2), nsl2 = mj % 2;
-      var prv = srcRi - 1;
-      var ny2 = prv >= 0 ? mY(prv, nmi2) : fY;
-      var ncy2 = ny2 + nsl2 * (SH + SGAP) + SH / 2;
-      ln(rmidX, (cy02 + cy12) / 2, rmidX, ncy2); ln(rmidX, ncy2, rncx, ncy2);
-    }
-  }
-  for (var li = 0; li < numSide; li++) {
-    var lcx = cX(li);
-    s += '<text x="' + (lcx + SW / 2) + '" y="' + (PY + LH - 3) + '" font-size="9" font-weight="600" fill="' + muted + '" text-anchor="middle" letter-spacing="0.07em">' + rounds[li].name.toUpperCase() + '</text>';
-    var lm = rounds[li].matches;
-    for (var lmi = 0; lmi < lm.length; lmi++) { drawMatch(cX(li), mY(li, lmi), lm[lmi], false); }
-  }
-  for (var rk = 0; rk < numSide; rk++) {
-    var srcR2 = numSide - 1 - rk, rcx2 = rX(rk);
-    s += '<text x="' + (rcx2 + SW / 2) + '" y="' + (PY + LH - 3) + '" font-size="9" font-weight="600" fill="' + muted + '" text-anchor="middle" letter-spacing="0.07em">' + rounds[srcR2].name.toUpperCase() + '</text>';
-    var rm = rounds[srcR2].matches;
-    for (var rmi = 0; rmi < rm.length; rmi++) { drawMatch(rX(rk), mY(srcR2, rmi), rm[rmi], true); }
   }
   s += '<text x="' + (fX + SW / 2) + '" y="' + (PY + LH - 3) + '" font-size="9" font-weight="600" fill="' + gold + '" text-anchor="middle" letter-spacing="0.07em">FINAL</text>';
   drawMatch(fX, fY, rounds[rounds.length - 1].matches[0], false);
   var tY = fY + MH + 14;
-  s += '<text x="' + (fX + SW / 2) + '" y="' + (tY + 16) + '" font-size="20" text-anchor="middle">\u{1F3C6}</text>';
+  s += '<text x="' + (fX + SW / 2) + '" y="' + (tY + 16) + '" font-size="20" text-anchor="middle">🏆</text>';
   var lastM = rounds[rounds.length - 1].matches[0];
   var champ = lastM.winner ? getTeamById(lastM.winner.id) : null;
   if (champ) {
