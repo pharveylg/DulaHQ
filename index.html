@@ -7112,6 +7112,33 @@ function seedDemoCategory_(cat, numTeams, numGroups, playFraction) {
   for (var j = 0; j < cat.groupMatches.length; j++) { if (!cat.groupMatches[j].played) unplayed.push(cat.groupMatches[j]); }
   return unplayed;
 }
+/* Plays out a category's whole knockout: decisive semi-finals, and a final that
+   is level after normal time and goes to penalties, so the demo shows a winner
+   highlight, a penalties label and a champion. Needs the group stage finished. */
+function seedDemoKnockout_(cat) {
+  var savedActive = S.activeCategoryId;
+  S.activeCategoryId = cat.id;
+  var built = buildKnockout();
+  if (built) {
+    S.knockoutRounds = built;
+    for (var ri = 0; ri < S.knockoutRounds.length; ri++) {
+      propagateKnockout();
+      var isFinal = ri === S.knockoutRounds.length - 1;
+      var ms = S.knockoutRounds[ri].matches;
+      for (var mi = 0; mi < ms.length; mi++) {
+        var m = ms[mi];
+        if (!m.p1 || !m.p2) continue;
+        var homeWins = Math.random() < 0.5;
+        if (isFinal) { m.s1 = 1; m.s2 = 1; m.ps1 = homeWins ? 5 : 4; m.ps2 = homeWins ? 4 : 5; }
+        else { var lo = Math.floor(Math.random() * 2), hi = lo + 1 + Math.floor(Math.random() * 2); m.s1 = homeWins ? hi : lo; m.s2 = homeWins ? lo : hi; }
+        m.played = true;
+        m.winner = { id: homeWins ? m.p1.id : m.p2.id };
+      }
+    }
+    propagateKnockout();
+  }
+  S.activeCategoryId = savedActive;
+}
 function seedGoalEvents_(match, teamId, count, team) {
   if (!team || !team.players.length) return;
   for (var g = 0; g < count; g++) {
@@ -7152,9 +7179,11 @@ function seedDemoData() {
   var women = defaultCategory();
   women.name = "Women's Open"; women.ageGroup = 'Women';
   S.categories.push(women);
-  /* Fully played, so the demo shows a finished group stage and a populated
-     bracket alongside the two categories that are still in progress. */
+  /* Fully played, groups and knockout, so the demo shows a finished
+     tournament (winner highlight, penalties, champion) alongside the two
+     categories that are still in progress. */
   seedDemoCategory_(women, 6, 2, 1);
+  seedDemoKnockout_(women);
 
   S.activeCategoryId = general.id;
 
