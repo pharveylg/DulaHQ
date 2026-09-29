@@ -5890,75 +5890,19 @@ function fillLoginEmail_(elem) {
   if (emailEl) { emailEl.value = elem.getAttribute('data-email'); emailEl.focus(); }
 }
 
-/* Root landing page ("/", no /t/ segment): a public gallery of tournament
-   posters instead of a sign-in form. Posters belong to individual
-   tournaments (tournament_names view, publicly_listed opt-in per
-   tournament, set from the Superadmin Console) — an organizer running
-   several publicly-listed tournaments gets one card per tournament here.
-   Every card still links to its organizer's own /t/{org-slug} page, not
-   straight to the tournament, so a visitor sees everything else that
-   organizer runs before picking one. Demo tenants always appear as a
-   stand-in for organizers who haven't set a poster yet. */
-function renderTournamentGallery_() {
-  var html = '<div id="gallery-screen" style="min-height:100vh;background:var(--navy);padding:48px 20px 60px">';
-  html += '<div style="max-width:1100px;margin:0 auto 36px;text-align:center">';
-  html += '<div style="font-size:var(--fs52);font-weight:700;letter-spacing:.01em;line-height:1;margin-bottom:10px">Dula HQ</div>';
-  html += '<div style="font-size:var(--fs16);color:var(--tm)">Find your tournament</div>';
-  html += '</div>';
-  html += '<div id="gallery-grid" style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px">';
-  html += '<div style="grid-column:1/-1;text-align:center;color:var(--tm);padding:40px 0">Loading tournaments&hellip;</div>';
-  html += '</div>';
-  html += '</div>';
-  if (sb) {
-    sb.from('tournament_names').select('*').eq('publicly_listed', true).then(function(res){
-      var rows = (res.data || []).filter(function(r){ return r.org_status === 'active'; });
-      renderGalleryGrid_(rows);
-    });
-  } else {
-    renderGalleryGrid_([]);
-  }
-  return html;
-}
-/* t is either a tournament_names row (real) or a local demo tenant
-   object — the two shapes differ (org_slug/org_accent vs slug/accent),
-   normalized here rather than at every call site. */
-function galleryCardHtml_(t, isDemo) {
-  var posterUrl = t.poster_url;
-  var accent = t.org_accent;
-  var linkSlug = t.org_slug;
-  var title = t.name;
-  var bg = posterUrl
-    ? ('background-image:url(\'' + esc(posterUrl) + '\');background-size:cover;background-position:center;')
-    : ('background:linear-gradient(160deg,' + esc(accent || '#059669') + ',rgba(0,0,0,.65));');
-  var html = '<div onclick="location.href=\'/t/' + esc(linkSlug) + '\'" style="position:relative;aspect-ratio:3/4;border-radius:var(--r);overflow:hidden;cursor:pointer;box-shadow:var(--shadow);' + bg + '">';
-  if (isDemo) html += '<span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:4px;font-family:var(--font-heading)">Demo</span>';
-  html += '<div style="position:absolute;left:0;right:0;bottom:0;padding:16px 14px;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent)">';
-  html += '<div style="color:#fff;font-weight:700;font-size:var(--fs16);font-family:var(--font-heading);text-transform:uppercase;letter-spacing:.02em">' + esc(title) + '</div>';
-  html += '<div style="color:rgba(255,255,255,.8);font-size:var(--fs12);margin-top:2px">View Tournament &rarr;</div>';
-  html += '</div></div>';
-  return html;
-}
-function renderGalleryGrid_(publicTournaments) {
-  var grid = el('gallery-grid');
-  if (!grid) return;
-  var demoTenants = getTenantDirectory().filter(function(t){ return t.status !== 'suspended'; });
-  /* One card per demo tournament (not per tenant) — same granularity as
-     the real side, so a demo organizer running two tournaments shows
-     two cards, each still linking to the shared /t/{org-slug} page. */
-  var demoCards = [];
-  for (var d = 0; d < demoTenants.length; d++) {
-    var org = demoTenants[d];
-    var trns = getTenantTournaments_(org);
-    for (var e = 0; e < trns.length; e++) {
-      demoCards.push({ org_slug: org.slug, org_accent: org.accent, name: trns[e].name, poster_url: trns[e].poster_url || '' });
-    }
-  }
-  var html = '';
-  for (var i = 0; i < publicTournaments.length; i++) html += galleryCardHtml_(publicTournaments[i], false);
-  for (var j = 0; j < demoCards.length; j++) html += galleryCardHtml_(demoCards[j], true);
-  grid.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;color:var(--tm);padding:40px 0">No tournaments listed yet.</div>';
-  hydrateIcons(document.body);
-}
+/* Root landing page ("/", no /t/ segment) used to be a public gallery of
+   tournament posters ("Find your tournament") mixing real listings with
+   fake DEMO_ORGS cards -- removed 2026-09-28. Its "real" side had quietly
+   gone dead anyway (it queried the tournament_names view, dropped per
+   CLAUDE.md §3.4), so every card it ever showed here was the DEMO_ORGS
+   placeholder set. This is now just the plain sign-in shell (see
+   renderRootEntry_ below) -- dula-hq.vercel.app isn't the public entry
+   point anymore (dulahq.app's own /tournaments is), it's the proxy target
+   for /t/... and a break-glass URL (CLAUDE.md §1/§6.A). DEMO_ORGS itself,
+   the /t/{slug} demo-tenant preview boot, and the Superadmin Console's
+   Tenant Directory are untouched -- a different, deliberate feature
+   (reached only by a direct URL, not stumbled onto at "/"), not what was
+   reported. */
 /* /t/{org-slug} with no tournament segment, for an organizer running 2+
    tournaments: a small poster gallery scoped to just this organizer,
    shown in place of the sign-in form. Each card links to
@@ -6025,9 +5969,8 @@ function renderRootEntry_() {
   var sWrap = el('signin-wrap');
   if (!sWrap) return;
   var path = location.pathname;
-  if (/^\/t\//i.test(path)) { sWrap.innerHTML = renderSignInPage(); }
-  else if (/^\/platformconsole\/?$/i.test(path)) { sWrap.innerHTML = renderPlatformConsoleSignIn_(); }
-  else { sWrap.innerHTML = renderTournamentGallery_(); }
+  if (/^\/platformconsole\/?$/i.test(path)) { sWrap.innerHTML = renderPlatformConsoleSignIn_(); }
+  else { sWrap.innerHTML = renderSignInPage(); }
 }
 function attemptEmailLogin() {
   var emailEl = el('login-email');
@@ -6960,10 +6903,11 @@ function updateUserBadge() {
 }
 /* Persistent header button, every signed-in screen (real tenant, demo
    tenant, or Superadmin Console) — leaves whichever tenant/session
-   you're in and returns to the root gallery. A full navigation rather
-   than an in-place reset, so boot runs fresh exactly like a first visit
-   would; leaveDemoOrgIfNeeded() first so a demo tenant's in-progress
-   state is saved (same as the existing "Return" banner already did). */
+   you're in and returns to the root sign-in screen. A full navigation
+   rather than an in-place reset, so boot runs fresh exactly like a first
+   visit would; leaveDemoOrgIfNeeded() first so a demo tenant's
+   in-progress state is saved (same as the existing "Return" banner
+   already did). */
 function goBackToTournaments_() {
   try { if (S && S._demoOrg) leaveDemoOrgIfNeeded(); } catch(e){}
   location.href = location.origin + '/';
