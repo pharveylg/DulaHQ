@@ -6065,6 +6065,7 @@ function completeSupabaseLogin_(session) {
      local no matter what real session exists in the background. */
   if (S && S._demoOrg) return;
   var email = session.user.email.toLowerCase();
+  var uid = session.user.id;
   function goSuperadmin(){
     IS_PLATFORM_ADMIN_SESSION = true;
     AUTH.email = email;
@@ -6076,11 +6077,33 @@ function completeSupabaseLogin_(session) {
       else { showLoginError('Signed in as ' + email + ', but this account has no role in this tournament here. Continue as a guest below, or sign in with a different account.'); }
     });
   }
+  /* A linked official (dula-hq-2.0's org_officials, keyed on user_id, matched
+     by RLS's own self-branch) has no org_members row on purpose -- the newer
+     system never treats an official as an org member, since that would widen
+     what dula-hq-2.0's own RLS grants them. This app has no separate concept
+     for "official", so it recognizes them as role='referee' directly, the
+     same way it already does for a real org_members row -- entering scores
+     works identically either way once loadTenantTournament_ takes over. Only
+     reachable from a /t/{org-slug}... URL (orgRow known); a bare root sign-in
+     has no single org to check an official against. */
+  function checkOrgOfficial(orgRow, fallbackToPlatformAdmin){
+    sb.from('org_officials').select('id').eq('org_id', orgRow.id).eq('user_id', uid).eq('active', true).maybeSingle().then(function(res4){
+      if (res4.data) {
+        if (orgRow.status === 'suspended') { showTenantPausedScreen_(orgRow); return; }
+        TENANT_ORG = orgRow;
+        loadTenantTournament_(orgRow.id, 'referee', email);
+        return;
+      }
+      if (fallbackToPlatformAdmin) { checkPlatformAdmin(); }
+      else { showLoginError('Signed in as ' + email + ', but this account has no role in this tournament here. Continue as a guest below, or sign in with a different account.'); }
+    });
+  }
   function resolveOrgMember(orgRow, fallbackToPlatformAdmin){
     var q = sb.from('org_members').select('org_id,role').eq('email', email);
     if (orgRow) q = q.eq('org_id', orgRow.id);
     q.limit(1).maybeSingle().then(function(res2){
       if (!res2.data) {
+        if (orgRow) { checkOrgOfficial(orgRow, fallbackToPlatformAdmin); return; }
         if (fallbackToPlatformAdmin) { checkPlatformAdmin(); }
         else { showLoginError('Signed in as ' + email + ', but no tenant membership was found. Contact your platform admin.'); }
         return;
