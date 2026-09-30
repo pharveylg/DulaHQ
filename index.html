@@ -1516,6 +1516,23 @@ function renderNav() {
     var gmms = el('mob-more-sheet'); if (gmms) { gmms.innerHTML = ''; gmms.className = 'mob-more-sheet'; }
     return;
   }
+  /* Nobody has actually entered the app yet -- the sign-in screen
+     (#signin-wrap) is showing over the top of whatever S.role's default
+     content is, but the underlying nav (bottom tabs, category strip, the
+     header dropdown) was rendering anyway, so a visitor who hadn't signed
+     in or chosen "Continue as Guest" still saw a full, clickable bottom
+     tab bar behind the sign-in form -- confusing on mobile, where the
+     tabs sit right where a real app's tabs would. Every real entry point
+     (completeLogin, enterGuestView, the demo/superadmin/tenant logins,
+     guestRegisterTeam) sets AUTH.signedIn = true right before its own
+     renderNav() call, so this bails out exactly until one of those runs. */
+  if (!AUTH.signedIn) {
+    var nmdw = el('manage-dropdown-wrap'); if (nmdw) nmdw.innerHTML = '';
+    var ncse = el('category-strip'); if (ncse) ncse.innerHTML = '';
+    var nmni = el('mob-nav-inner'); if (nmni) nmni.innerHTML = '';
+    var nmms = el('mob-more-sheet'); if (nmms) { nmms.innerHTML = ''; nmms.className = 'mob-more-sheet'; }
+    return;
+  }
   migrateLegacyData();
   var items = NAV[S.role];
   var roleLabels = { admin: 'Manage', team: 'Team', referee: 'Referee', official: 'Committee', audience: 'View' };
@@ -1545,12 +1562,21 @@ function renderNav() {
     var mi = mobItems[j];
     mh += '<button class="mob-tab' + (S.page === mi.p ? ' active' : '') + '" onclick="navTo(\'' + mi.p + '\')" style="position:relative"><i class="ti ' + mi.i + '"></i>' + mi.l + navItemBadgeHtml(mi.p, cat, liveNow) + '</button>';
   }
+  /* The "More" sheet used to render every item in the role's full nav list,
+     duplicating whatever already has its own bottom tab (e.g. admin's
+     "Teams" bottom tab and a second, identical "Teams" row under People in
+     the sheet). It should only hold what the bottom bar didn't have room
+     for. */
+  var mobPages = {};
+  for (var mp = 0; mp < mobItems.length; mp++) mobPages[mobItems[mp].p] = true;
+  var moreItems = [];
+  for (var oi = 0; oi < items.length; oi++) { if (!mobPages[items[oi].p]) moreItems.push(items[oi]); }
   var moreSheetEl = el('mob-more-sheet');
-  if (mobItems.length < items.length) {
+  if (moreItems.length > 0) {
     mh += '<button class="mob-tab mob-more-btn" onclick="toggleMobMoreSheet()" style="position:relative"><i class="ti ti-dots"></i>More</button>';
     if (moreSheetEl) {
       moreSheetEl.innerHTML = UI_DROPDOWN.mobMore
-        ? '<div class="mob-more-backdrop" onclick="closeMobMoreSheet()"></div><div class="mob-more-panel">' + buildGroupedNavListHtml(items, cat, liveNowDrawer) + demoSystemGroupHtml_() + '</div>'
+        ? '<div class="mob-more-backdrop" onclick="closeMobMoreSheet()"></div><div class="mob-more-panel">' + buildGroupedNavListHtml(moreItems, cat, liveNowDrawer) + demoSystemGroupHtml_() + '</div>'
         : '';
       moreSheetEl.className = 'mob-more-sheet' + (UI_DROPDOWN.mobMore ? ' show' : '');
       hydrateIcons(moreSheetEl);
