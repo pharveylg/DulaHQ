@@ -6073,7 +6073,7 @@ function completeSupabaseLogin_(session) {
   function checkPlatformAdmin(){
     sb.from('platform_admins').select('email').eq('email', email).maybeSingle().then(function(res){
       if (res.data) { goSuperadmin(); }
-      else { showLoginError('Signed in as ' + email + ', but no tenant membership was found. Contact your platform admin.'); }
+      else { showLoginError('Signed in as ' + email + ', but this account has no role in this tournament here. Continue as a guest below, or sign in with a different account.'); }
     });
   }
   function resolveOrgMember(orgRow, fallbackToPlatformAdmin){
