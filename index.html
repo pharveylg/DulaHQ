@@ -6117,18 +6117,27 @@ function completeSupabaseLogin_(session) {
       else { sb.from('organizations').select('*').eq('id', res2.data.org_id).maybeSingle().then(function(orgRes){ enter(orgRes.data); }); }
     });
   }
-  /* PENDING_TENANT_ORG_SLUG is captured synchronously (from the URL, no
-     network round trip) the instant the boot script runs — see the /t/
-     boot path further down this file — so it's always ready by the time
-     this async auth callback fires, no race with that path's own
-     (separately async) branding fetch. If someone explicitly navigated to
-     /t/{org-slug}, honor that intent: try them as a member of THAT org
-     first, even if they're also a platform admin, and only fall back to
-     the Superadmin Console if they don't actually belong to it. Plain
-     sign-in (no tenant URL) keeps the original platform-admin-first
-     behavior. */
-  if (PENDING_TENANT_ORG_SLUG) {
-    sb.from('organizations').select('*').eq('slug', PENDING_TENANT_ORG_SLUG).maybeSingle().then(function(orgRes){
+  /* Parsed fresh from location.pathname rather than read off
+     PENDING_TENANT_ORG_SLUG -- that global is only set once the /t/ boot
+     path further down this file actually runs, and this comment used to
+     claim that always happens first. It doesn't: an *already-persisted*
+     session (exactly what a shared cookie means arriving here from an
+     already-signed-in dula-hq-2.0 page, §6.B) fires this auth callback the
+     instant the client restores it, which can race ahead of that later
+     script block. Confirmed live -- a linked official clicking through
+     from /official intermittently hit the platform-admin-first branch
+     below with PENDING_TENANT_ORG_SLUG still null, instead of being tried
+     against the org in the URL. Re-parsing here (pure string match, no
+     network call, no shared mutable state) removes the race outright. If
+     someone explicitly navigated to /t/{org-slug}, honor that intent: try
+     them as a member of THAT org first, even if they're also a platform
+     admin, and only fall back to the Superadmin Console if they don't
+     actually belong to it. Plain sign-in (no tenant URL) keeps the
+     original platform-admin-first behavior. */
+  var currentTenantOrgSlug_ = (location.pathname.match(/^\/t\/([a-z0-9-]+)/i) || [])[1];
+  if (currentTenantOrgSlug_) {
+    currentTenantOrgSlug_ = currentTenantOrgSlug_.toLowerCase();
+    sb.from('organizations').select('*').eq('slug', currentTenantOrgSlug_).maybeSingle().then(function(orgRes){
       if (!orgRes.data) { checkPlatformAdmin(); return; }
       if (orgRes.data.status === 'suspended') { showTenantPausedScreen_(orgRes.data); return; }
       resolveOrgMember(orgRes.data, true);
