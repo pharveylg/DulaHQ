@@ -7891,5 +7891,18 @@ function bootDemoTenantPath_(slug, tSlug){
   }
 })();
 </script>
+<script>
+/* ?guest=1 on a /t/ link (e.g. the demo page's guest button) enters guest view
+   directly, instead of stopping on the sign-in screen. Skipped when a real
+   session exists, so a signed-in user following the link isn't forced into guest. */
+function autoGuestIfRequested_() {
+  if (!/[?&]guest=1(&|$)/.test(location.search) || AUTH.signedIn) return;
+  if (!sb) { enterGuestView(); return; }
+  sb.auth.getSession().then(function (r) {
+    if (!(r && r.data && r.data.session) && !AUTH.signedIn) enterGuestView();
+  });
+}
+setTimeout(autoGuestIfRequested_, 800);
+</script>
 </body>
 </html>
