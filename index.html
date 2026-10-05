@@ -6006,10 +6006,13 @@ function attemptEmailLogin() {
      system already makes ("demo data never reaches the sheet") — never
      touch the real backend while previewing a demo org. */
   if (sb && !(S && S._demoOrg)) {
-    sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.origin + location.pathname } }).then(function(res){
-      if (res.error) { showLoginError(res.error.message || 'Sign-in failed. Try again.'); return; }
-      showLoginMessage_('Check your email for a sign-in link.');
-    }).catch(function(e){ showLoginError('Sign-in service unavailable: ' + ((e && e.message) || 'unknown error')); });
+    fetch(SIGN_IN_CODE_URL_, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) })
+      .then(function(res){ return res.json().then(function(body){ return { ok: res.ok, body: body }; }); })
+      .then(function(r){
+        if (!r.ok) { showLoginError(r.body.error || 'Could not send a code. Try again.'); return; }
+        showCodeEntry_(email);
+      })
+      .catch(function(e){ showLoginError('Sign-in service unavailable: ' + ((e && e.message) || 'unknown error')); });
     return;
   }
   var user = null;
@@ -6047,6 +6050,42 @@ function showLoginError(msg) {
 function showLoginMessage_(msg) {
   var errEl = el('auth-error');
   if (errEl) { errEl.style.color = 'var(--green)'; errEl.style.background = 'var(--grbg)'; errEl.style.borderColor = 'var(--grb)'; errEl.textContent = msg; errEl.style.display = 'block'; }
+}
+/* Sign-in codes are emailed by Dula HQ itself through Resend (dulahq.app), not
+   Supabase's own mailer, so there is no link to open in a different browser:
+   the person types the code into this same tab. */
+var SIGN_IN_CODE_URL_ = 'https://dulahq.app/api/auth/send-code';
+function showCodeEntry_(email) {
+  var box = el('auth-error');
+  var field = el('signin-screen');
+  if (!field) return;
+  var holder = el('code-entry');
+  if (!holder) {
+    holder = document.createElement('div');
+    holder.id = 'code-entry';
+    holder.style.cssText = 'margin-top:16px;text-align:left';
+    holder.innerHTML = '<div class="field" style="margin-bottom:10px"><label>6-digit code</label><input id="login-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" onkeydown="if(event.key===\'Enter\')verifyLoginCode_()"></div>' +
+      '<button class="btn primary" style="width:100%;padding:11px" onclick="verifyLoginCode_()">Verify and sign in</button>' +
+      '<div style="margin-top:10px;font-size:var(--fs13);color:var(--tm)">Sent to ' + esc(email) + '. The code works once and expires soon.</div>';
+    var signInBtn = field.querySelector('button.btn.primary');
+    if (signInBtn && signInBtn.parentNode) signInBtn.parentNode.insertBefore(holder, box);
+    else field.appendChild(holder);
+  }
+  holder.setAttribute('data-email', email);
+  if (box) { box.style.display = 'none'; }
+  var codeEl = el('login-code');
+  if (codeEl) codeEl.focus();
+}
+function verifyLoginCode_() {
+  var holder = el('code-entry');
+  var codeEl = el('login-code');
+  var email = holder ? holder.getAttribute('data-email') : '';
+  var token = ((codeEl ? codeEl.value : '') || '').replace(/\s/g, '');
+  if (!email || !/^\d{6}$/.test(token)) { showLoginError('Enter the 6-digit code from your email.'); return; }
+  sb.auth.verifyOtp({ email: email, token: token, type: 'email' }).then(function(res){
+    if (res.error) { showLoginError(res.error.message || 'That code is invalid or has expired. Request a new one.'); return; }
+    /* The session is set in this tab; the existing auth-state listener completes the login. */
+  }).catch(function(e){ showLoginError('Sign-in service unavailable: ' + ((e && e.message) || 'unknown error')); });
 }
 
 /* ============================================================
