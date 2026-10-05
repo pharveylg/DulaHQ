@@ -2806,7 +2806,7 @@ function openEditRoster(tid) {
     returnPage: S.page === 'roster' ? 'roster' : 'teams',
     name: tm.name,
     staff: (tm.staff || []).map(function (s) { return { id: s.id, name: s.name, role: s.role, roleOther: s.roleOther || '', phone: s.phone || '' }; }),
-    players: tm.players.map(function (p) { return { id: p.id, name: p.name, jersey: p.jersey, pos: p.pos, age: p.age }; })
+    players: tm.players.map(function (p) { return { id: p.id, name: p.name, jersey: p.jersey, pos: p.pos, age: p.age, dob: p.dob || '', guardianEmail: p.guardianEmail || '' }; })
   };
   navTo('editroster');
 }
@@ -2822,6 +2822,56 @@ function updateRosterStaff(i, key, val) {
 function addRosterPlayer() { S.rosterDraft.players.push({ id: uid(), name: '', jersey: '', pos: '', age: '' }); render(); }
 function removeRosterPlayer(i) { S.rosterDraft.players.splice(i, 1); render(); }
 function updateRosterPlayer(i, key, val) { if (S.rosterDraft.players[i]) S.rosterDraft.players[i][key] = val; }
+var ROSTER_CSV_POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
+function downloadRosterTemplate() {
+  var csv = 'Name,Date of birth,Jersey,Position,Guardian email\r\n'
+    + 'Ana Santos,2012-03-14,7,FWD,parent@example.com\r\n'
+    + 'Bea Cruz,1998-11-02,10,MID,\r\n';
+  downloadTextFile(csv, 'roster-template.csv', 'text/csv');
+}
+/* Whole years between a date of birth and a given day. */
+function rosterAgeOn(dob, on) {
+  var years = on.getFullYear() - dob.getFullYear();
+  var m = on.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && on.getDate() < dob.getDate())) years--;
+  return years;
+}
+function parseRosterDob(raw) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw || '').trim());
+  if (!m) return null;
+  var d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return (d.getFullYear() === +m[1] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[3]) ? d : null;
+}
+/* All-or-nothing: one bad row stops the whole file, so a roster is never half-imported. */
+function handleRosterCsvUpload(input) {
+  if (!S.rosterDraft) return;
+  readSpreadsheetFile(input, function (rows) {
+    var errors = [], added = [], today = new Date();
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i], line = i + 2, name = csvField(r, ['Name', 'Full Name']);
+      if (!name) continue;
+      var dobRaw = csvField(r, ['Date of birth', 'DOB', 'Birthdate']);
+      var dob = parseRosterDob(dobRaw);
+      if (!dob) { errors.push('Row ' + line + ' (' + name + '): date of birth must be YYYY-MM-DD.'); continue; }
+      var pos = csvField(r, ['Position']).toUpperCase();
+      if (pos && ROSTER_CSV_POSITIONS.indexOf(pos) < 0) { errors.push('Row ' + line + ' (' + name + '): position must be GK, DEF, MID or FWD.'); continue; }
+      var age = rosterAgeOn(dob, today);
+      var guardian = csvField(r, ['Guardian email', 'Guardian Email']);
+      if (age < 18 && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(guardian)) { errors.push('Row ' + line + ' (' + name + '): under 18, so a valid guardian email is required.'); continue; }
+      added.push({ id: uid(), name: name, jersey: csvField(r, ['Jersey']), pos: pos, age: String(age), dob: dobRaw, guardianEmail: age < 18 ? guardian : '' });
+    }
+    if (errors.length) {
+      alert('No players were imported. Fix these rows and upload again:\n\n' + errors.slice(0, 12).join('\n') + (errors.length > 12 ? '\n...and ' + (errors.length - 12) + ' more' : ''));
+      return;
+    }
+    if (!added.length) { showToast('The file had no player rows.'); return; }
+    S.rosterDraft.players = S.rosterDraft.players.concat(added);
+    logAudit('Roster CSV import', added.length + ' player(s) imported', null);
+    renderEditRoster();
+    showToast(added.length + ' player' + (added.length === 1 ? '' : 's') + ' imported');
+  });
+}
+
 function renderEditRoster() {
   var d = S.rosterDraft;
   if (!d) { navTo('teams'); return; }
@@ -2851,7 +2901,10 @@ function renderEditRoster() {
       + '<div style="display:flex;gap:6px;align-items:end"><div class="field" style="margin-bottom:0;flex:1"><label>Age</label><input value="' + esc(p.age) + '" oninput="updateRosterPlayer(' + j + ',\'age\',this.value)"></div><button class="btn sm danger" onclick="removeRosterPlayer(' + j + ')"><i class="ti ti-trash"></i></button></div>'
       + '</div>';
   }
-  html += '<button class="btn" onclick="addRosterPlayer()"><i class="ti ti-user-plus"></i> Add player</button></div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="addRosterPlayer()"><i class="ti ti-user-plus"></i> Add player</button>'
+    + '<button class="btn" onclick="downloadRosterTemplate()"><i class="ti ti-download"></i> CSV template</button>'
+    + '<button class="btn" onclick="document.getElementById(\'roster-csv\').click()"><i class="ti ti-upload"></i> Import CSV</button>'
+    + '<input type="file" id="roster-csv" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleRosterCsvUpload(this)"></div></div>';
   html += '<div style="display:flex;gap:8px"><button class="btn" onclick="cancelEditRoster()">Cancel</button><button class="btn primary" style="flex:1" onclick="saveEditRoster()"><i class="ti ti-check"></i> Save roster</button></div>';
   el('main-content').innerHTML = html;
 }
@@ -2864,7 +2917,7 @@ function saveEditRoster() {
   if (!tm) { showToast('Team no longer exists'); S.rosterDraft = null; navTo(backTo); return; }
   tm.name = d.name.trim();
   tm.staff = d.staff.map(function (s) { return { id: s.id, name: (s.name || '').trim(), role: s.role, roleOther: (s.roleOther || '').trim(), phone: (s.phone || '').trim() }; }).filter(function (s) { return s.name; });
-  tm.players = d.players.map(function (p) { return { id: p.id, name: (p.name || '').trim(), jersey: p.jersey || '\u2014', pos: p.pos || '\u2014', age: p.age || '\u2014' }; }).filter(function (p) { return p.name; });
+  tm.players = d.players.map(function (p) { return { id: p.id, name: (p.name || '').trim(), jersey: p.jersey || '\u2014', pos: p.pos || '\u2014', age: p.age || '\u2014', dob: p.dob || '', guardianEmail: p.guardianEmail || '' }; }).filter(function (p) { return p.name; });
   var headCoach = null;
   for (var i = 0; i < tm.staff.length; i++) { if (tm.staff[i].role === 'Head Coach') { headCoach = tm.staff[i]; break; } }
   tm.coach = headCoach ? headCoach.name : (tm.coach || '');
