@@ -7851,5 +7851,45 @@ function bootDemoTenantPath_(slug, tSlug){
   try { placeActions(); } catch(e){}
 })();
 </script>
+<script>
+/* Registers the minimal service worker and offers installation. Chrome/Edge
+   fire beforeinstallprompt; iOS Safari has no prompt, so it gets the manual steps. */
+(function () {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  }
+  var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  if (standalone) return;
+  var deferredPrompt = null;
+  var dismissed = false;
+  var bar = null;
+  function makeBar(html) {
+    if (bar) bar.remove();
+    bar = document.createElement('div');
+    bar.id = 'install-bar';
+    bar.setAttribute('style', 'position:fixed;left:12px;right:12px;top:12px;z-index:9999;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:#111c2f;color:#fff;font-size:13.5px;box-shadow:0 6px 24px rgba(0,0,0,.25)');
+    bar.innerHTML = html + '<button type="button" id="install-close" aria-label="Dismiss" style="margin-left:auto;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">&times;</button>';
+    document.body.appendChild(bar);
+    document.getElementById('install-close').onclick = function () { dismissed = true; bar.remove(); bar = null; };
+    return bar;
+  }
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (dismissed) return;
+    makeBar('<span style="flex:1">Install Dulà HQ for quick access to tournaments.</span><button type="button" id="install-go" style="background:#dfa239;color:#111c2f;border:none;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer">Install</button>');
+    document.getElementById('install-go').onclick = function () {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function () { deferredPrompt = null; if (bar) { bar.remove(); bar = null; } });
+    };
+  });
+  window.addEventListener('appinstalled', function () { deferredPrompt = null; if (bar) { bar.remove(); bar = null; } });
+  var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isIOS && !dismissed) {
+    makeBar('<span style="flex:1">To install: tap <b>Share</b>, then <b>Add to Home Screen</b>.</span>');
+  }
+})();
+</script>
 </body>
 </html>
